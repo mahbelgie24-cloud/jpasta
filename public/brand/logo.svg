@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 112">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&amp;family=Alexandria:wght@600&amp;display=swap');
+  </style>
+  <g transform="translate(4,8)">
+    <rect width="96" height="96" rx="24" fill="#1B4831"/>
+    <g stroke="#F9F5EC" stroke-width="4" stroke-linecap="round" fill="none">
+      <path d="M 43.5 22 L 43.5 40"/>
+      <path d="M 48 22 L 48 40"/>
+      <path d="M 52.5 22 L 52.5 40"/>
+    </g>
+    <path d="M 48 50 L 48 79" stroke="#F9F5EC" stroke-width="6" stroke-linecap="round" fill="none"/>
+    <path d="M 53 46 A 5 5 0 0 1 43 46 A 7 7 0 0 1 57 46 A 9 9 0 0 1 39 46 A 11 11 0 0 1 61 46 A 13 13 0 0 1 35 46" fill="none" stroke="#F9F5EC" stroke-width="6" stroke-linecap="round"/>
+    <path d="M 40 41.4 A 11 11 0 0 1 56 36.8" fill="none" stroke="#E3C98F" stroke-width="6" stroke-linecap="round"/>
+    <path d="M 70 60 C 76 55.5, 82.5 59.5, 81.5 66.5 C 74.5 68, 69.5 65, 70 60 Z" fill="#5FA47C"/>
+  </g>
+  <text x="118" y="56" font-family="Fraunces, Georgia, serif" font-size="46" font-weight="600" fill="#1B4831">JPasta</text>
+  <text x="119" y="84" font-family="Alexandria, 'Segoe UI', sans-serif" font-size="12.5" font-weight="600" letter-spacing="3.4" fill="#2C714B">FRESH PASTA &amp; CHICKEN</text>
+</svg>

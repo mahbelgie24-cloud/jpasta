@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "baseUrl": "..",
+    "paths": {
+      "@/*": ["./*"],
+      "server-only": ["./test/server-only-stub.ts"]
+    }
+  }
+}

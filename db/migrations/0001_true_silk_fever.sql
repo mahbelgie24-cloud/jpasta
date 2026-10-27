@@ -1,0 +1,1 @@
+ALTER TABLE "recipes" ADD CONSTRAINT "recipes_product_id_ingredient_id_pk" PRIMARY KEY("product_id","ingredient_id");
