@@ -56,8 +56,30 @@ never the security boundary.
 
 The production target is Cloudflare Workers (`@opennextjs/cloudflare`,
 spec §4). Keep `npm run build` green — it is the deploy gate. Platform
-bindings (DO, R2, KV) are added in Phase 1+ and configured in `wrangler.jsonc`,
-never hardcoded.
+bindings (DO, R2, D1, Hyperdrive) are configured in `wrangler.jsonc`, never
+hardcoded. `worker.ts` is the custom entry: it exports `OrderFeed` and
+intercepts `/api/realtime` before Next.js.
+
+## v2 invariants (do not regress)
+
+- **Delivery fee = the customer's selected zone.** `zoneId` is validated
+  server-side; never pick the cheapest active zone.
+- **Idempotency is payload-bound.** `payload_hash` must match on replay.
+- **Transitions are conditional.** Update with `WHERE status = expected`
+  inside a transaction; append to `order_status_history`.
+- **Business time is `Asia/Hebron`.** Use `lib/domain/time.ts`; never
+  `new Date(y,m,d)` or the process timezone.
+- **Order numbers are gap-free per local day** (`order_counters`).
+- **Every restricted action awaits a guard** (`lib/server/guard.ts` or
+  `requireOwner`/`requireStaff`). An un-awaited async guard is a security bug.
+- **Stock never goes negative.** Use `lib/domain/qty.ts` (integer
+  hundredths), not floats.
+- **Realtime is a Durable Object**, not an in-process bus. Keep
+  `notifyOrdersChanged()` after commit.
+- **Photos** live in R2; `DishMedia` falls back to `DishArt` — never a
+  broken image.
+- **Console uses the dark `theme-console` tokens**; the KDS uses
+  `theme-kitchen`. New console code must use semantic tokens directly.
 
 ## When the spec doesn't answer a question
 

@@ -7,9 +7,11 @@ import { formatPrice, toMinorUnits } from "@/lib/pricing";
 import {
   fetchAdminProducts,
   setProductAvailability,
+  setProductImage,
   setProductPrice,
   type AdminProduct,
 } from "@/app/actions/menu-admin";
+import { uploadProductImage } from "@/app/actions/media";
 
 /**
  * Menu manager v1 — availability toggles + price edits. Every price change
@@ -42,10 +44,26 @@ export function MenuAdmin() {
   }, [load]);
 
   async function toggle(row: AdminProduct) {
+    const next = !row.isAvailable;
     setBusyId(row.id);
-    await setProductAvailability(row.id, !row.isAvailable);
+    // Optimistic: the switch responds immediately, then reconciles.
+    setRows(
+      (current) =>
+        current?.map((r) =>
+          r.id === row.id ? { ...r, isAvailable: next } : r,
+        ) ?? current,
+    );
+    const res = await setProductAvailability(row.id, next);
     setBusyId(null);
-    await load();
+    if (!res.ok) {
+      setRows(
+        (current) =>
+          current?.map((r) =>
+            r.id === row.id ? { ...r, isAvailable: row.isAvailable } : r,
+          ) ?? current,
+      );
+      setNotice(res.error ?? "تعذر تحديث التوفر.");
+    }
   }
 
   async function savePrice(row: AdminProduct) {
@@ -59,7 +77,37 @@ export function MenuAdmin() {
         ? `✓ حُفظ سعر ${row.nameAr} (مسجّل في سجل التدقيق)`
         : (res.error ?? "تعذر الحفظ"),
     );
-    if (res.ok) await load();
+    if (res.ok) {
+      // Update only this row — reloading the list would wipe unsaved drafts
+      // in every other row (v1 defect).
+      setRows(
+        (current) =>
+          current?.map((r) =>
+            r.id === row.id ? { ...r, basePriceMinor: minor } : r,
+          ) ?? current,
+      );
+      setDrafts((current) => ({ ...current, [row.id]: formatPrice(minor) }));
+    }
+  }
+
+  async function uploadImage(row: AdminProduct, file: File) {
+    setBusyId(row.id);
+    const form = new FormData();
+    form.set("file", file);
+    const uploaded = await uploadProductImage(form);
+    if (!uploaded.ok) {
+      setBusyId(null);
+      setNotice(uploaded.error);
+      return;
+    }
+    const res = await setProductImage(row.id, {
+      key: uploaded.key,
+      alt: row.nameAr,
+    });
+    setBusyId(null);
+    setNotice(
+      res.ok ? `✓ حُفظت صورة ${row.nameAr}` : (res.error ?? "تعذر حفظ الصورة"),
+    );
   }
 
   const inputClass =
@@ -151,6 +199,29 @@ export function MenuAdmin() {
                   className="font-bold text-ink"
                 />
               </div>
+            </div>
+            <div className="mt-3 flex items-center gap-3 border-t border-cream-200 pt-3">
+              <label
+                htmlFor={`image-${row.id}`}
+                className="inline-flex min-h-11 cursor-pointer items-center rounded-full border border-cream-300 px-4 text-xs font-bold text-ink-soft transition-colors hover:border-basil-400 hover:text-ink"
+              >
+                رفع صورة الطبق
+              </label>
+              <input
+                id={`image-${row.id}`}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/avif"
+                className="sr-only"
+                disabled={busyId === row.id}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void uploadImage(row, file);
+                  event.target.value = "";
+                }}
+              />
+              <span className="text-[11px] text-ink-soft">
+                JPG / PNG / WebP — حتى 8MB
+              </span>
             </div>
             {!row.isAvailable && (
               <p className="mt-2 text-xs font-bold text-bronze">

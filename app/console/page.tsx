@@ -12,5 +12,5 @@ export const metadata = {
 export default async function ConsolePage() {
   const user = await getSessionUser();
   if (!user) redirect("/console/login");
-  return <ConsoleBoard ownerName={user.name} role={user.role} />;
+  return <ConsoleBoard ownerName={user.name} />;
 }

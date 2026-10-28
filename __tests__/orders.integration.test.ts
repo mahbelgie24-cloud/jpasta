@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq, sql } from "drizzle-orm";
 import { db, pool } from "@/lib/db";
-import { orderItems, orders, products } from "@/db/schema";
+import { deliveryZones, orderItems, orders, products } from "@/db/schema";
 import { orderInputSchema, placeOrder } from "@/lib/server/orders";
 
 /**
@@ -34,10 +34,18 @@ async function productIdBySlug(slug: string): Promise<string> {
 d("placeOrder — order pipeline", () => {
   let alfredoId = "";
   let marinaraId = "";
+  let zoneId = "";
 
   beforeAll(async () => {
     alfredoId = await productIdBySlug("alfredo-classico");
     marinaraId = await productIdBySlug("marinara");
+    const [zone] = await db
+      .select({ id: deliveryZones.id })
+      .from(deliveryZones)
+      .where(eq(deliveryZones.isActive, true))
+      .limit(1);
+    if (!zone) throw new Error("seeded delivery zone missing");
+    zoneId = zone.id;
     await db.execute(sql`TRUNCATE order_items, orders CASCADE`);
   });
 
@@ -90,6 +98,7 @@ d("placeOrder — order pipeline", () => {
       const result = await placeOrder({
         idempotencyKey: `test-20-orders-${i}`,
         channel: delivery ? "delivery" : "takeaway",
+        ...(delivery ? { zoneId } : {}),
         customer: {
           name: `زبون الاختبار ${i + 1}`,
           phone: "0566064976",
@@ -104,7 +113,7 @@ d("placeOrder — order pipeline", () => {
       ).toBe(true);
       if (result.ok) {
         expect(result.order.totalMinor).toBe(expected);
-        expect(result.order.orderNumber).toMatch(/^JP-\d{5}$/);
+        expect(result.order.orderNumber).toMatch(/^JP-\d{6}-\d{3}$/);
       }
     }
 
@@ -213,6 +222,7 @@ d("placeOrder — order pipeline", () => {
     const result = await placeOrder({
       idempotencyKey: "test-snapshot-1",
       channel: "delivery",
+      zoneId,
       customer: {
         name: "زبون اللقطات",
         phone: "0566064976",

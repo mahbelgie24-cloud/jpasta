@@ -14,6 +14,8 @@ export const metadata = {
 export default async function SettingsPage() {
   const user = await getSessionUser();
   if (!user) redirect("/console/login");
+  // Money-affecting settings are owner-only on the server, not just in nav.
+  if (user.role !== "owner") redirect("/console");
 
   return (
     <div className="min-h-dvh bg-cream-100">

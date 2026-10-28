@@ -44,20 +44,22 @@ export function ConsoleNav({ role }: { role: "owner" | "staff" }) {
       className="-mx-1 flex [scrollbar-width:none] gap-1.5 overflow-x-auto px-1 py-1 [&::-webkit-scrollbar]:hidden"
     >
       {links.map((link) => {
-        const active = pathname === link.href;
+        const active =
+          pathname === link.href ||
+          (link.href !== "/console" && pathname.startsWith(`${link.href}/`));
         return (
           <Link
             key={link.href}
             href={link.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-xs font-bold transition-colors",
+              "inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-bold transition-colors",
               active
-                ? "bg-basil-700 text-cream-50 shadow-card"
-                : "bg-cream-100 text-ink-soft hover:bg-cream-200 hover:text-ink",
+                ? "bg-brand text-action-text shadow-card"
+                : "bg-surface-raised text-text-secondary hover:bg-surface-sunken hover:text-text-primary",
             )}
           >
-            <link.icon className="size-3.5" aria-hidden />
+            <link.icon className="size-4" aria-hidden />
             {link.label}
           </Link>
         );

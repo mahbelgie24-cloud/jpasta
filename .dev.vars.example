@@ -1,0 +1,13 @@
+# Local Workers runtime vars for `npm run preview` (wrangler dev).
+# Copy to `.dev.vars` (gitignored, never commit the real copy).
+# These feed the workerd process only — `next dev`/`next start` use .env.local.
+NEXTJS_ENV=development
+DATABASE_URL=postgres://jpasta:jpasta@localhost:54330/jpasta
+JPASTA_OWNER_PIN=000000
+NEXT_PUBLIC_SITE_URL=http://localhost:8787
+NEXT_PUBLIC_WHATSAPP_NUMBER=970566064976
+# Local-only values. Production values must be generated with `openssl rand -hex 32`.
+# Matches lib/server/pin.ts's local fallback so `next start` and
+# `wrangler dev` share the same lookup. Production: `openssl rand -hex 32`.
+AUTH_PEPPER=jpasta-dev-pepper
+REALTIME_SECRET=jpasta-dev-realtime-secret

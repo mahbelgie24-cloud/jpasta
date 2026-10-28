@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -12,8 +12,15 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Price } from "@/components/ui/price";
-import { addMinor, multiplyMinor, sumMinor, type Minor } from "@/lib/pricing";
-import { placeStorefrontOrder } from "@/app/actions/orders";
+import {
+  addMinor,
+  formatPrice,
+  multiplyMinor,
+  sumMinor,
+  type Minor,
+} from "@/lib/pricing";
+import { fetchDeliveryZones, placeConsoleOrder } from "@/app/actions/orders";
+import { arabicIncludes } from "@/lib/arabic";
 
 /**
  * Manual order entry (Phase 3) — phone/walk-in orders through the SAME
@@ -72,11 +79,35 @@ export function ManualEntry({
     accessToken: string;
   } | null>(null);
   const [query, setQuery] = useState("");
+  const [zones, setZones] = useState<Array<{
+    id: string;
+    nameAr: string;
+    feeMinor: number;
+  }> | null>(null);
+  const [zoneId, setZoneId] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    fetchDeliveryZones()
+      .then((list) => {
+        if (!alive) return;
+        setZones(list);
+        setZoneId((current) => current || list[0]?.id || "");
+      })
+      .catch(() => {
+        if (alive) setZones([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return products;
     const q = query.trim();
-    return products.filter((p) => p.nameAr.includes(q));
+    return products.filter(
+      (p) => arabicIncludes(p.nameAr, q) || arabicIncludes(p.categoryNameAr, q),
+    );
   }, [products, query]);
 
   const grouped = useMemo(() => {
@@ -120,6 +151,10 @@ export function ManualEntry({
   const subtotal = sumMinor(
     lines.map((l) => multiplyMinor(unitPrice(l), l.quantity)),
   );
+  const selectedZone = zones?.find((z) => z.id === zoneId) ?? null;
+  const deliveryFee: Minor =
+    orderType === "delivery" ? (selectedZone?.feeMinor ?? 0) : 0;
+  const total = addMinor(subtotal, deliveryFee);
 
   async function submit() {
     if (lines.length === 0) return setError("أضف صنفاً واحداً على الأقل.");
@@ -128,13 +163,15 @@ export function ManualEntry({
       return setError("رقم هاتف الزبون مطلوب.");
     if (orderType === "delivery" && address.trim().length < 5)
       return setError("عنوان التوصيل مطلوب.");
+    if (orderType === "delivery" && !zoneId)
+      return setError("اختر منطقة التوصيل.");
     setError(null);
     setBusy(true);
     try {
-      const result = await placeStorefrontOrder({
+      const result = await placeConsoleOrder({
         idempotencyKey: crypto.randomUUID(),
-        source: "console",
         channel: orderType,
+        ...(orderType === "delivery" ? { zoneId } : {}),
         customer: {
           name: name.trim(),
           phone: phone.trim(),
@@ -177,7 +214,7 @@ export function ManualEntry({
 
   if (placed) {
     return (
-      <div className="py-8 text-center">
+      <div className="py-8 text-center" role="status" aria-live="polite">
         <CheckCircle2 className="mx-auto size-14 text-basil-600" aria-hidden />
         <h2 className="mt-4 type-title">
           طلب {placed.orderNumber} دخل الطابور
@@ -443,15 +480,34 @@ export function ManualEntry({
             maxLength={15}
           />
           {orderType === "delivery" && (
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="عنوان التوصيل"
-              aria-label="عنوان التوصيل"
-              className={inputClass}
-              maxLength={140}
-            />
+            <>
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="عنوان التوصيل"
+                aria-label="عنوان التوصيل"
+                className={inputClass}
+                maxLength={140}
+              />
+              <select
+                value={zoneId}
+                onChange={(e) => setZoneId(e.target.value)}
+                aria-label="منطقة التوصيل"
+                className={inputClass}
+                disabled={!zones || zones.length === 0}
+              >
+                {!zones && <option value="">جارٍ تحميل المناطق…</option>}
+                {zones && zones.length === 0 && (
+                  <option value="">لا توجد مناطق توصيل</option>
+                )}
+                {zones?.map((z) => (
+                  <option key={z.id} value={z.id}>
+                    {z.nameAr} — {formatPrice(z.feeMinor)} ₪
+                  </option>
+                ))}
+              </select>
+            </>
           )}
           <input
             type="text"
@@ -463,10 +519,30 @@ export function ManualEntry({
             maxLength={200}
           />
 
-          <div className="flex items-center justify-between border-t border-cream-200 pt-3 font-bold">
-            <span>الإجمالي (رسوم التوصيل يضيفها الخادم)</span>
-            <Price minor={subtotal} className="text-lg text-basil-800" />
-          </div>
+          <dl className="space-y-1 border-t border-cream-200 pt-3 text-sm">
+            <div className="flex items-center justify-between">
+              <dt className="text-ink-soft">المجموع</dt>
+              <dd>
+                <Price minor={subtotal} />
+              </dd>
+            </div>
+            {orderType === "delivery" && (
+              <div className="flex items-center justify-between">
+                <dt className="text-ink-soft">
+                  التوصيل{selectedZone ? ` — ${selectedZone.nameAr}` : ""}
+                </dt>
+                <dd>
+                  <Price minor={deliveryFee} />
+                </dd>
+              </div>
+            )}
+            <div className="flex items-center justify-between pt-1 font-bold">
+              <dt>الإجمالي</dt>
+              <dd>
+                <Price minor={total} className="text-lg text-basil-800" />
+              </dd>
+            </div>
+          </dl>
 
           {error && (
             <p

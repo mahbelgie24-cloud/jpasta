@@ -8,19 +8,29 @@ import {
   moveStock,
   setRecipeLine,
 } from "@/lib/server/inventory";
+import { requireOwner } from "@/lib/server/session";
+import { userMessageOf } from "@/lib/server/guard";
 
 /**
  * Inventory actions (Phase 4) — owner-only: ingredient costs and stock are
  * exactly the data a cashier must never read (AGENTS.md RBAC rule).
+ * Every movement records the actor for auditability.
  */
 
 async function guard() {
-  const { requireOwner } = await import("@/lib/server/session");
   return requireOwner();
 }
 
+function fail(err: unknown, fallback: string) {
+  return { ok: false as const, error: userMessageOf(err, fallback) };
+}
+
 export async function fetchInventoryState() {
-  await guard();
+  try {
+    await guard();
+  } catch (err) {
+    return { ok: false as const, error: userMessageOf(err) };
+  }
   const { fetchAdminProducts } = await import("@/app/actions/menu-admin");
   const ingredients = await listIngredients();
   const productsRes = await fetchAdminProducts();
@@ -32,8 +42,12 @@ export async function fetchInventoryState() {
 }
 
 export async function fetchProductRecipes(productId: string) {
-  await guard();
-  return listRecipes(productId);
+  try {
+    await guard();
+    return { ok: true as const, rows: await listRecipes(productId) };
+  } catch (err) {
+    return { ok: false as const, error: userMessageOf(err) };
+  }
 }
 
 export async function createIngredient(input: {
@@ -44,13 +58,10 @@ export async function createIngredient(input: {
   costPerUnitMinor: number;
 }): Promise<{ ok: boolean; error?: string }> {
   try {
-    await guard();
-    await addIngredient(input);
+    const user = await guard();
+    await addIngredient({ ...input, actorId: user.id });
   } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : "تعذر الإضافة",
-    };
+    return fail(err, "تعذر الإضافة");
   }
   revalidatePath("/console/inventory");
   return { ok: true };
@@ -63,13 +74,10 @@ export async function stockMove(input: {
   note?: string;
 }): Promise<{ ok: boolean; error?: string }> {
   try {
-    await guard();
-    await moveStock(input);
+    const user = await guard();
+    await moveStock({ ...input, actorId: user.id });
   } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : "تعذر تسجيل الحركة",
-    };
+    return fail(err, "تعذر تسجيل الحركة");
   }
   revalidatePath("/console/inventory");
   return { ok: true };
@@ -84,10 +92,7 @@ export async function saveRecipeLine(input: {
     await guard();
     await setRecipeLine(input);
   } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : "تعذر الحفظ",
-    };
+    return fail(err, "تعذر الحفظ");
   }
   revalidatePath("/console/inventory");
   return { ok: true };

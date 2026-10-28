@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Price } from "@/components/ui/price";
-import { ConsoleNav } from "@/components/console/console-nav";
 import { getSessionUser } from "@/lib/server/session";
 import {
   getBestSellers,
@@ -86,7 +85,6 @@ export default async function ReportsPage({
           رجوع للوحة
         </Link>
         <h1 className="mt-4 type-section text-ink">التقارير</h1>
-        <ConsoleNav role={user.role} />
 
         {/* date navigation */}
         <div className="mt-4 flex items-center justify-between gap-2 rounded-card bg-cream-50 p-3 shadow-card">

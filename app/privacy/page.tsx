@@ -8,7 +8,7 @@ import { Footer } from "@/components/site/footer";
 export const metadata: Metadata = {
   title: "سياسة الخصوصية",
   description:
-    "كيف نتعامل مع بياناتك في JPasta — ن جمعها ببساطة، ونستخدمها لخدمتك فقط.",
+    "كيف نتعامل مع بياناتك في JPasta — نجمعها ببساطة، ونستخدمها لخدمتك فقط.",
   alternates: { canonical: "/privacy" },
 };
 

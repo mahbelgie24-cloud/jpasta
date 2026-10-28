@@ -1,18 +1,23 @@
 import "server-only";
 import { z } from "zod";
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   deliveryZones,
   modifierGroups,
   modifiers,
+  orderCounters,
   orderItems,
+  orderStatusHistory,
   orders,
   products,
 } from "@/db/schema";
 import { addMinor, multiplyMinor, sumMinor, type Minor } from "@/lib/pricing";
-import { notifyOrdersChanged } from "@/lib/server/bus";
+import { notifyOrdersChanged } from "@/lib/server/order-feed";
 import { deductForOrder } from "@/lib/server/inventory";
+import { sha256Hex, stableStringify } from "@/lib/domain/hash";
+import { todayInShop } from "@/lib/domain/time";
+import { logEvent } from "@/lib/server/log";
 
 /**
  * Order placement core (spec §9/§12) — the money-critical path.
@@ -21,20 +26,27 @@ import { deductForOrder } from "@/lib/server/inventory";
  *  1. Prices are recomputed SERVER-SIDE from the DB. The client sends only
  *     product/option KEYS and quantities — never a price.
  *  2. Every order carries a client-generated idempotencyKey with a UNIQUE
- *     constraint; a replay returns the original order (inside the same
- *     transaction, plus a concurrent-race fallback on unique violation).
- *  3. Delivery fee comes from the DB (delivery_zones), never from the client.
+ *     constraint; a replay returns the original order, but only if the
+ *     normalized payload matches (payload_hash).
+ *  3. Delivery fee comes from the CUSTOMER'S ZONE (zone_id), never the
+ *     cheapest active zone and never the client.
  *  4. Line snapshots (name/detail/price) make every order reconstructable.
+ *  5. Order numbers are gap-free per local day (order_counters).
+ *  6. Every status change is recorded in order_status_history.
  */
 
-/** Thrown for user-facing validation failures — rolls the txn back. */
 class OrderError extends Error {}
+class OrderConflict extends Error {}
+
+export type OrderStatus =
+  "received" | "preparing" | "ready" | "completed" | "cancelled";
 
 export const orderInputSchema = z
   .object({
     idempotencyKey: z.string().min(8).max(80),
     channel: z.enum(["takeaway", "delivery"]),
     source: z.enum(["storefront", "console"]).default("storefront"),
+    zoneId: z.string().uuid().optional(),
     customer: z.object({
       name: z.string().trim().min(2, "الاسم مطلوب").max(60),
       phone: z
@@ -44,6 +56,9 @@ export const orderInputSchema = z
       address: z.string().trim().max(140),
     }),
     note: z.string().trim().max(200).optional(),
+    paymentMethod: z
+      .enum(["cash", "card_terminal", "cash_on_delivery"])
+      .default("cash"),
     lines: z
       .array(
         z.object({
@@ -65,18 +80,24 @@ export const orderInputSchema = z
       .min(1, "السلة فاضية")
       .max(30),
   })
-  .refine((v) => v.channel !== "delivery" || v.customer.address.length >= 5, {
-    message: "عنوان التوصيل مطلوب",
-    path: ["customer", "address"],
-  });
+  .refine(
+    (v) =>
+      v.channel !== "delivery" ||
+      (v.customer.address.length >= 5 && Boolean(v.zoneId)),
+    {
+      message: "عنوان التوصيل ومنطقته مطلوبان",
+      path: ["customer", "address"],
+    },
+  );
 
 export type OrderInput = z.input<typeof orderInputSchema>;
+export type NormalizedOrderInput = z.output<typeof orderInputSchema>;
 
 export interface PlacedOrder {
   id: string;
   orderNumber: string;
   accessToken: string;
-  status: "received" | "preparing" | "ready" | "completed" | "cancelled";
+  status: OrderStatus;
   totalMinor: Minor;
   channel: "takeaway" | "delivery" | "dine_in";
   createdAt: Date;
@@ -95,6 +116,12 @@ interface ComputedLine {
   lineTotalMinor: Minor;
 }
 
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
+
 function isUniqueViolation(err: unknown): boolean {
   return (
     typeof err === "object" &&
@@ -104,7 +131,13 @@ function isUniqueViolation(err: unknown): boolean {
   );
 }
 
-async function findReplay(idempotencyKey: string): Promise<PlacedOrder | null> {
+async function payloadHashOf(input: NormalizedOrderInput): Promise<string> {
+  return sha256Hex(stableStringify(input));
+}
+
+async function findReplay(
+  idempotencyKey: string,
+): Promise<(PlacedOrder & { payloadHash: string }) | null> {
   const [row] = await db
     .select({
       id: orders.id,
@@ -114,6 +147,7 @@ async function findReplay(idempotencyKey: string): Promise<PlacedOrder | null> {
       totalMinor: orders.totalMinor,
       channel: orders.channel,
       createdAt: orders.createdAt,
+      payloadHash: orders.payloadHash,
     })
     .from(orders)
     .where(eq(orders.idempotencyKey, idempotencyKey))
@@ -121,20 +155,35 @@ async function findReplay(idempotencyKey: string): Promise<PlacedOrder | null> {
   return row ?? null;
 }
 
-export async function placeOrder(raw: OrderInput): Promise<PlaceOrderResult> {
-  // Normalize (apply schema defaults like source=storefront) — direct
-  // callers (tests, scripts) get the same defaults as the server action.
+function assertReplayMatches(
+  existing: { payloadHash: string },
+  incomingHash: string,
+): void {
+  // Legacy rows migrated with an empty hash predate payload binding.
+  if (existing.payloadHash && existing.payloadHash !== incomingHash) {
+    throw new OrderError(
+      "هذا المفتاح مستخدم لطلب سابق مختلف — حدّث الصفحة وابدأ طلباً جديداً.",
+    );
+  }
+}
+
+export async function placeOrder(
+  raw: OrderInput,
+  options?: { actorId?: string },
+): Promise<PlaceOrderResult> {
   const parsed = orderInputSchema.safeParse(raw);
   if (!parsed.success) {
     return {
-      ok: false as const,
+      ok: false,
       error: parsed.error.issues[0]?.message ?? "بيانات الطلب غير صحيحة.",
     };
   }
   const input = parsed.data;
+  const payloadHash = await payloadHashOf(input);
+
   try {
     const result = await db.transaction(async (tx) => {
-      // (1) idempotent replay — same key returns the original order
+      // (1) idempotent replay — same key + same payload returns the order
       const [existing] = await tx
         .select({
           id: orders.id,
@@ -144,11 +193,15 @@ export async function placeOrder(raw: OrderInput): Promise<PlaceOrderResult> {
           totalMinor: orders.totalMinor,
           channel: orders.channel,
           createdAt: orders.createdAt,
+          payloadHash: orders.payloadHash,
         })
         .from(orders)
         .where(eq(orders.idempotencyKey, input.idempotencyKey))
         .limit(1);
-      if (existing) return { ok: true as const, order: existing };
+      if (existing) {
+        assertReplayMatches(existing, payloadHash);
+        return { ok: true as const, order: existing };
+      }
 
       // (2) load the requested catalog rows
       const productIds = [...new Set(input.lines.map((l) => l.productId))];
@@ -250,37 +303,56 @@ export async function placeOrder(raw: OrderInput): Promise<PlaceOrderResult> {
 
       const subtotal: Minor = sumMinor(computed.map((l) => l.lineTotalMinor));
 
-      // (4) delivery fee from the DB — never from the client
+      // (4) delivery fee from the CUSTOMER'S zone — never from the client
       let fee: Minor = 0;
+      let zoneId: string | null = null;
       if (input.channel === "delivery") {
+        if (!input.zoneId || !isUuid(input.zoneId)) {
+          throw new OrderError("اختر منطقة التوصيل.");
+        }
         const [zone] = await tx
-          .select({ feeMinor: deliveryZones.feeMinor })
+          .select({ id: deliveryZones.id, feeMinor: deliveryZones.feeMinor })
           .from(deliveryZones)
-          .where(eq(deliveryZones.isActive, true))
-          .orderBy(asc(deliveryZones.feeMinor))
+          .where(
+            and(
+              eq(deliveryZones.id, input.zoneId),
+              eq(deliveryZones.isActive, true),
+            ),
+          )
           .limit(1);
-        fee = zone?.feeMinor ?? 0;
+        if (!zone) throw new OrderError("منطقة التوصيل غير متاحة حالياً.");
+        fee = zone.feeMinor;
+        zoneId = zone.id;
       }
       const total: Minor = subtotal + fee;
 
-      // (5) sequential human-facing number: JP-00001
-      const numRes = await tx.execute(
-        sql`SELECT 'JP-' || lpad(nextval('order_seq')::text, 5, '0') AS num`,
-      );
-      const numRow = (numRes.rows as Array<{ num: string }>)[0];
-      if (!numRow) throw new OrderError("تعذر توليد رقم الطلب.");
-      const orderNumber = numRow.num;
+      // (5) gap-free human-facing number per local day: JP-YYMMDD-NNN
+      const day = todayInShop();
+      const [counter] = await tx
+        .insert(orderCounters)
+        .values({ day, lastNumber: 1 })
+        .onConflictDoUpdate({
+          target: orderCounters.day,
+          set: { lastNumber: sql`${orderCounters.lastNumber} + 1` },
+        })
+        .returning({ lastNumber: orderCounters.lastNumber });
+      if (!counter) throw new OrderError("تعذر توليد رقم الطلب.");
+      const compactDay = day.slice(2).replace(/-/g, "");
+      const orderNumber = `JP-${compactDay}-${String(counter.lastNumber).padStart(3, "0")}`;
 
       const [order] = await tx
         .insert(orders)
         .values({
           orderNumber,
           idempotencyKey: input.idempotencyKey,
+          payloadHash,
           channel: input.channel,
           source: input.source,
           customerName: input.customer.name,
           customerPhone: input.customer.phone,
           address: input.channel === "delivery" ? input.customer.address : null,
+          zoneId,
+          paymentMethod: input.paymentMethod,
           subtotalMinor: subtotal,
           deliveryFeeMinor: fee,
           totalMinor: total,
@@ -310,8 +382,14 @@ export async function placeOrder(raw: OrderInput): Promise<PlaceOrderResult> {
         })),
       );
 
-      // Phase 4: recipe-driven stock deduction — same transaction as the
-      // sale, one audited inventory_moves row per affected ingredient.
+      await tx.insert(orderStatusHistory).values({
+        orderId: order.id,
+        fromStatus: null,
+        toStatus: "received",
+        actorId: options?.actorId ?? null,
+      });
+
+      // Phase 4: recipe-driven stock deduction — same transaction as the sale
       await deductForOrder(
         tx,
         order.id,
@@ -320,10 +398,10 @@ export async function placeOrder(raw: OrderInput): Promise<PlaceOrderResult> {
 
       return { ok: true as const, order };
     });
+
     // Notify AFTER the transaction commits — notifying inside the callback
-    // races the commit: subscribers would read pre-commit data and fall back
-    // to the slow poll (measured ~2.9s instead of milliseconds).
-    if (result.ok) notifyOrdersChanged();
+    // races the commit (measured ~2.9s instead of milliseconds).
+    if (result.ok) await notifyOrdersChanged();
     return result;
   } catch (err) {
     if (err instanceof OrderError)
@@ -331,21 +409,56 @@ export async function placeOrder(raw: OrderInput): Promise<PlaceOrderResult> {
     // concurrent duplicate lost the race on the unique key → serve the winner
     if (isUniqueViolation(err)) {
       const replay = await findReplay(input.idempotencyKey);
-      if (replay) return { ok: true as const, order: replay };
+      if (replay) {
+        try {
+          assertReplayMatches(replay, payloadHash);
+        } catch (conflict) {
+          if (conflict instanceof OrderError)
+            return { ok: false as const, error: conflict.message };
+          throw conflict;
+        }
+        return { ok: true as const, order: replay };
+      }
     }
-    console.error("placeOrder failed:", err);
+    logEvent("error", "order.place_failed", {
+      message: err instanceof Error ? err.message : "unknown",
+    });
     return { ok: false as const, error: "تعذر إرسال الطلب — حاول مرة أخرى." };
   }
+}
+
+// ---------- Delivery zones (public read) ----------
+
+export interface PublicZone {
+  id: string;
+  nameAr: string;
+  feeMinor: Minor;
+}
+
+export async function getActiveDeliveryZones(): Promise<PublicZone[]> {
+  return db
+    .select({
+      id: deliveryZones.id,
+      nameAr: deliveryZones.nameAr,
+      feeMinor: deliveryZones.feeMinor,
+    })
+    .from(deliveryZones)
+    .where(eq(deliveryZones.isActive, true))
+    .orderBy(asc(deliveryZones.sortOrder), asc(deliveryZones.feeMinor));
 }
 
 // ---------- Status page (token-gated capability) ----------
 
 export type OrderStatusView = {
   orderNumber: string;
-  status: "received" | "preparing" | "ready" | "completed" | "cancelled";
+  status: OrderStatus;
   channel: "takeaway" | "delivery" | "dine_in";
+  subtotalMinor: Minor;
+  deliveryFeeMinor: Minor;
   totalMinor: Minor;
+  zoneNameAr: string | null;
   createdAt: Date;
+  updatedAt: Date;
   items: Array<{
     nameAr: string;
     detailAr: string | null;
@@ -358,14 +471,18 @@ export async function getOrderForStatus(
   orderId: string,
   token: string,
 ): Promise<OrderStatusView | null> {
-  if (!/^[0-9a-f-]{36}$/i.test(orderId) || !/^[0-9a-f-]{36}$/i.test(token))
-    return null;
-  const [order] = await db
-    .select()
+  if (!isUuid(orderId) || !isUuid(token)) return null;
+  const [row] = await db
+    .select({
+      order: orders,
+      zoneNameAr: deliveryZones.nameAr,
+    })
     .from(orders)
+    .leftJoin(deliveryZones, eq(deliveryZones.id, orders.zoneId))
     .where(and(eq(orders.id, orderId), eq(orders.accessToken, token)))
     .limit(1);
-  if (!order) return null;
+  if (!row) return null;
+  const order = row.order;
   const items = await db
     .select({
       nameAr: orderItems.nameAr,
@@ -379,18 +496,22 @@ export async function getOrderForStatus(
     orderNumber: order.orderNumber,
     status: order.status,
     channel: order.channel,
+    subtotalMinor: order.subtotalMinor,
+    deliveryFeeMinor: order.deliveryFeeMinor,
     totalMinor: order.totalMinor,
+    zoneNameAr: row.zoneNameAr,
     createdAt: order.createdAt,
+    updatedAt: order.updatedAt,
     items,
   };
 }
 
 // ---------- Console board ----------
 
-export const LEGAL_TRANSITIONS: Record<string, string[]> = {
+export const LEGAL_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   received: ["preparing", "cancelled"],
   preparing: ["ready", "cancelled"],
-  ready: ["completed"],
+  ready: ["completed", "cancelled"],
   completed: [],
   cancelled: [],
 };
@@ -414,26 +535,143 @@ export async function getConsoleOrders() {
   return rows.map((o) => ({ ...o, items: itemsByOrder.get(o.id) ?? [] }));
 }
 
-export async function transitionOrder(
-  orderId: string,
-  next: "preparing" | "ready" | "completed" | "cancelled",
-): Promise<{ ok: boolean; error?: string }> {
-  const [order] = await db
-    .select()
-    .from(orders)
-    .where(eq(orders.id, orderId))
-    .limit(1);
-  if (!order) return { ok: false, error: "الطلب غير موجود" };
-  if (!LEGAL_TRANSITIONS[order.status]?.includes(next)) {
+export interface TransitionResult {
+  ok: boolean;
+  error?: string;
+  conflict?: boolean;
+}
+
+export async function transitionOrder(input: {
+  orderId: string;
+  next: Exclude<OrderStatus, "received">;
+  expected: OrderStatus;
+  actorId?: string;
+  reason?: string;
+}): Promise<TransitionResult> {
+  const { orderId, next, expected, actorId } = input;
+  if (!isUuid(orderId)) return { ok: false, error: "رقم الطلب غير صحيح." };
+  if (!LEGAL_TRANSITIONS[expected]?.includes(next)) {
     return {
       ok: false,
-      error: `لا يمكن نقل الطلب من ${order.status} إلى ${next}`,
+      error: `لا يمكن نقل الطلب من ${expected} إلى ${next}`,
     };
   }
-  await db
-    .update(orders)
-    .set({ status: next, updatedAt: new Date() })
-    .where(eq(orders.id, orderId));
-  notifyOrdersChanged();
+  const reason = input.reason?.trim() ?? "";
+  if (next === "cancelled" && reason.length < 2) {
+    return { ok: false, error: "سبب الإلغاء مطلوب." };
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(orders)
+        .set({
+          status: next,
+          updatedAt: new Date(),
+          cancelledReason: next === "cancelled" ? reason : null,
+        })
+        .where(and(eq(orders.id, orderId), eq(orders.status, expected)))
+        .returning({ id: orders.id });
+      if (!updated) throw new OrderConflict("status-changed");
+      await tx.insert(orderStatusHistory).values({
+        orderId,
+        fromStatus: expected,
+        toStatus: next,
+        actorId,
+        reason: reason || null,
+      });
+    });
+  } catch (err) {
+    if (err instanceof OrderConflict) {
+      return {
+        ok: false,
+        conflict: true,
+        error: "تغيّرت حالة الطلب من جهاز آخر — حدّث الشاشة.",
+      };
+    }
+    logEvent("error", "order.transition_failed", {
+      orderId,
+      message: err instanceof Error ? err.message : "unknown",
+    });
+    return { ok: false, error: "تعذر تحديث الطلب — حاول مرة أخرى." };
+  }
+
+  await notifyOrdersChanged();
   return { ok: true };
+}
+
+/**
+ * Owner undo: revert the most recent transition if it happened within
+ * 5 minutes. Mis-taps on a busy KDS are otherwise unrecoverable.
+ */
+export async function undoLastTransition(input: {
+  orderId: string;
+  actorId?: string;
+}): Promise<TransitionResult> {
+  if (!isUuid(input.orderId))
+    return { ok: false, error: "رقم الطلب غير صحيح." };
+
+  const [last] = await db
+    .select()
+    .from(orderStatusHistory)
+    .where(eq(orderStatusHistory.orderId, input.orderId))
+    .orderBy(desc(orderStatusHistory.createdAt))
+    .limit(1);
+
+  if (!last || !last.fromStatus) {
+    return { ok: false, error: "لا يوجد انتقال سابق للتراجع عنه." };
+  }
+  if (Date.now() - last.createdAt.getTime() > 5 * 60_000) {
+    return { ok: false, error: "انتهت مهلة التراجع (٥ دقائق)." };
+  }
+
+  // Capture before entering the transaction closure — narrowing of a mutable
+  // object property is not preserved inside a deferred callback.
+  const previousStatus = last.fromStatus;
+  const currentStatus = last.toStatus;
+
+  try {
+    await db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(orders)
+        .set({ status: previousStatus, updatedAt: new Date() })
+        .where(
+          and(eq(orders.id, input.orderId), eq(orders.status, currentStatus)),
+        )
+        .returning({ id: orders.id });
+      if (!updated) throw new OrderConflict("status-changed");
+      await tx.insert(orderStatusHistory).values({
+        orderId: input.orderId,
+        fromStatus: currentStatus,
+        toStatus: previousStatus,
+        actorId: input.actorId ?? null,
+        reason: "تراجع",
+      });
+    });
+  } catch (err) {
+    if (err instanceof OrderConflict) {
+      return {
+        ok: false,
+        conflict: true,
+        error: "تغيّرت حالة الطلب — حدّث الشاشة.",
+      };
+    }
+    logEvent("error", "order.undo_failed", {
+      orderId: input.orderId,
+      message: err instanceof Error ? err.message : "unknown",
+    });
+    return { ok: false, error: "تعذر التراجع — حاول مرة أخرى." };
+  }
+
+  await notifyOrdersChanged();
+  return { ok: true };
+}
+
+export async function getOrderHistory(orderId: string) {
+  if (!isUuid(orderId)) return [];
+  return db
+    .select()
+    .from(orderStatusHistory)
+    .where(eq(orderStatusHistory.orderId, orderId))
+    .orderBy(asc(orderStatusHistory.createdAt));
 }

@@ -35,7 +35,7 @@ export function Stepper({
         onClick={() => onChange(Math.max(min, value - 1))}
         disabled={value <= min}
         aria-label={`إنقاص ${label}`}
-        className="flex size-10 items-center justify-center rounded-full text-basil-800 transition-colors hover:bg-cream-200 disabled:opacity-40"
+        className="flex size-11 items-center justify-center rounded-full text-basil-800 transition-colors hover:bg-cream-200 disabled:opacity-40"
       >
         <Minus className="size-4" aria-hidden />
       </button>
@@ -50,7 +50,7 @@ export function Stepper({
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={value >= max}
         aria-label={`زيادة ${label}`}
-        className="flex size-10 items-center justify-center rounded-full text-basil-800 transition-colors hover:bg-cream-200 disabled:opacity-40"
+        className="flex size-11 items-center justify-center rounded-full text-basil-800 transition-colors hover:bg-cream-200 disabled:opacity-40"
       >
         <Plus className="size-4" aria-hidden />
       </button>

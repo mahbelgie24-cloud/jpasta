@@ -18,7 +18,6 @@ import {
   X,
 } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
-import { ConsoleNav } from "@/components/console/console-nav";
 import { Price } from "@/components/ui/price";
 import { formatTimeAr, timeAgoAr } from "@/lib/format";
 import { loadSoundPreference, setSoundPreference } from "@/lib/alert";
@@ -54,27 +53,46 @@ const COLUMNS = [
   },
 ] as const;
 
-export function ConsoleBoard({
-  ownerName,
-  role,
-}: {
-  ownerName: string;
-  role: "owner" | "staff";
-}) {
+export function ConsoleBoard({ ownerName }: { ownerName: string }) {
   const router = useRouter();
-  const { orders, live, refresh } = useOrdersFeed({ alertOnNew: true });
+  const { orders, connection, lastUpdated, refresh } = useOrdersFeed({
+    alertOnNew: true,
+  });
+  const connectionLabel =
+    connection === "live"
+      ? "مباشر"
+      : connection === "polling"
+        ? "تحديث دوري"
+        : connection === "offline"
+          ? "غير متصل"
+          : "جارٍ الاتصال…";
   const [armedCancel, setArmedCancel] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [sound, setSound] = useState<boolean | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   async function move(
     orderId: string,
     next: "preparing" | "ready" | "completed" | "cancelled",
   ) {
+    const current = orders?.find((o) => o.id === orderId);
+    if (!current) return;
+    let reason: string | undefined;
+    if (next === "cancelled") {
+      const entered = window.prompt("سبب إلغاء الطلب؟");
+      if (!entered || entered.trim().length < 2) return;
+      reason = entered.trim();
+    }
     setBusyId(orderId);
+    setActionError(null);
     try {
-      await advanceOrder(orderId, next);
+      // The expected status makes the update conditional: a second device
+      // that already advanced the order gets a conflict, not a resurrection.
+      const result = await advanceOrder(orderId, next, current.status, reason);
+      if (!result.ok) setActionError(result.error ?? "تعذر تحديث الطلب.");
       await refresh();
+    } catch {
+      setActionError("تعذر تحديث الطلب — تحقق من الاتصال.");
     } finally {
       setBusyId(null);
       setArmedCancel(null);
@@ -104,7 +122,7 @@ export function ConsoleBoard({
         <div className="flex items-center gap-2.5">
           <LogoMark className="size-10" />
           <div>
-            <p className="font-display text-lg font-semibold text-basil-800">
+            <p className="font-display-ar text-lg font-semibold text-basil-800">
               لوحة الطلبات
             </p>
             <p className="text-xs text-ink-soft">مرحباً {ownerName}</p>
@@ -113,16 +131,25 @@ export function ConsoleBoard({
         <div className="flex items-center gap-1.5">
           <span
             className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${
-              live ? "bg-basil-100 text-basil-800" : "bg-bronze/15 text-bronze"
+              connection === "live"
+                ? "bg-basil-100 text-basil-800"
+                : connection === "offline"
+                  ? "bg-terracotta/10 text-terracotta"
+                  : "bg-bronze/15 text-bronze"
             }`}
             aria-live="polite"
+            title={
+              lastUpdated
+                ? `آخر تحديث ${new Date(lastUpdated).toLocaleTimeString("ar-PS")}`
+                : undefined
+            }
           >
-            {live ? (
+            {connection === "live" ? (
               <Wifi className="size-3.5" aria-hidden />
             ) : (
               <WifiOff className="size-3.5" aria-hidden />
             )}
-            {live ? "مباشر" : "إعادة اتصال…"}
+            {connectionLabel}
           </span>
           <button
             type="button"
@@ -147,7 +174,14 @@ export function ConsoleBoard({
           </button>
         </div>
       </header>
-      <ConsoleNav role={role} />
+      {actionError && (
+        <p
+          role="alert"
+          className="mt-4 rounded-xl border border-terracotta/25 bg-terracotta/10 px-4 py-3 text-sm font-bold text-terracotta"
+        >
+          {actionError}
+        </p>
+      )}
 
       {/* board */}
       {orders === null ? (

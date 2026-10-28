@@ -39,8 +39,12 @@ export default async function OrderStatusPage({
     orderNumber: order.orderNumber,
     status: order.status,
     channel: order.channel,
+    subtotalMinor: order.subtotalMinor,
+    deliveryFeeMinor: order.deliveryFeeMinor,
+    zoneNameAr: order.zoneNameAr,
     totalMinor: order.totalMinor,
     createdAt: order.createdAt.toISOString(),
+    updatedAt: order.updatedAt.toISOString(),
     items: order.items,
   };
 

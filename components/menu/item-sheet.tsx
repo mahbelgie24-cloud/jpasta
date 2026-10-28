@@ -1,49 +1,63 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DishIllustration } from "@/components/brand/dish-illustration";
+import { DishMedia } from "@/components/brand/dish-media";
 import { Button } from "@/components/ui/button";
 import { Price } from "@/components/ui/price";
 import { Sheet } from "@/components/ui/sheet";
 import { Stepper } from "@/components/ui/stepper";
 import { useCart } from "@/components/menu/cart-context";
-import { addMinor, type Minor } from "@/lib/pricing";
+import { addMinor, multiplyMinor, type Minor } from "@/lib/pricing";
 import type { ModifierGroup, Product } from "@/lib/menu-data";
 
 /**
  * Item customization sheet — pasta-accurate groups (size / heat / doneness /
- * extras) with a live total. Required groups preselect their first option;
- * the cart key hashes the selection so identical customizations merge.
+ * extras). Native radio/checkbox inputs give correct keyboard behaviour and
+ * form semantics; the visual pills are labels. Multi-group caps are enforced
+ * HERE as well as on the server, so a valid-looking cart never fails at
+ * checkout.
  */
 
 interface Selection {
-  singles: Record<string, string>; // groupId -> optionId
-  extras: Set<string>;
+  singles: Record<string, string>;
+  multi: Record<string, Set<string>>;
 }
 
 function buildSelection(product: Product): Selection {
   const singles: Record<string, string> = {};
+  const multi: Record<string, Set<string>> = {};
   for (const g of product.groups) {
     if (g.type === "single") {
       const first = g.options[0];
       if (first) singles[g.id] = first.id;
+    } else {
+      multi[g.id] = new Set();
     }
   }
-  return { singles, extras: new Set() };
+  return { singles, multi };
 }
 
 function findOption(group: ModifierGroup, optionId: string) {
   return group.options.find((o) => o.id === optionId);
 }
 
+const pillBase =
+  "inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-bold transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-basil-600";
+const pillActive = "border-2 border-basil-700 bg-basil-50 text-basil-800";
+const pillIdle =
+  "border-cream-300 bg-cream-100 text-ink-soft hover:border-basil-300";
+const pillDisabled = "cursor-not-allowed opacity-45";
+
 export function ItemSheet({
   product,
   open,
   onClose,
+  orderingEnabled = true,
 }: {
   product: Product;
   open: boolean;
   onClose: () => void;
+  orderingEnabled?: boolean;
 }) {
   const cart = useCart();
   const [selection, setSelection] = useState<Selection>(() =>
@@ -60,16 +74,15 @@ export function ItemSheet({
       if (g.type === "single") {
         const optId = selection.singles[g.id];
         const opt = optId ? findOption(g, optId) : undefined;
-        if (opt) {
-          price = addMinor(price, opt.priceMinor);
-          const isNeutral =
-            (g.id === "heat" && opt.id === "mild") ||
-            (g.id === "doneness" && opt.id === "al-dente");
-          if (!isNeutral && g.id !== "size") details.push(opt.nameAr);
-          if (g.id === "size") details.unshift(opt.nameAr);
-        }
+        if (!opt) continue;
+        price = addMinor(price, opt.priceMinor);
+        const isNeutral =
+          (g.id === "heat" && opt.id === "mild") ||
+          (g.id === "doneness" && opt.id === "al-dente");
+        if (g.id === "size") details.unshift(opt.nameAr);
+        else if (!isNeutral) details.push(opt.nameAr);
       } else {
-        for (const id of selection.extras) {
+        for (const id of selection.multi[g.id] ?? []) {
           const opt = findOption(g, id);
           if (opt) {
             price = addMinor(price, opt.priceMinor);
@@ -81,29 +94,58 @@ export function ItemSheet({
     return { unitPriceMinor: price, detailAr: details.join(" • ") };
   }, [product, selection]);
 
-  const total = unitPriceMinor * quantity;
+  const total = multiplyMinor(unitPriceMinor, quantity);
+  const trimmedNote = note.trim();
+
+  function toggleMulti(group: ModifierGroup, optionId: string) {
+    setSelection((current) => {
+      const next = { ...current.multi };
+      const set = new Set(next[group.id] ?? []);
+      if (set.has(optionId)) {
+        set.delete(optionId);
+      } else {
+        if (
+          group.maxSelections !== undefined &&
+          set.size >= group.maxSelections
+        ) {
+          return current; // cap reached — ignore silently (disabled in UI)
+        }
+        set.add(optionId);
+      }
+      next[group.id] = set;
+      return { ...current, multi: next };
+    });
+  }
 
   function add() {
-    const extrasIds = [...selection.extras].sort().join(",");
-    const key = `${product.id}:${selection.singles["size"] ?? "one"}:${selection.singles["heat"] ?? "-"}:${selection.singles["doneness"] ?? "-"}:${extrasIds}`;
-    // group.id === modifier_groups.key and option.id === modifiers.key in the
-    // seeded schema, so the selections map 1:1 onto the server contract.
+    const singlesPart = Object.entries(selection.singles)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([groupKey, optionKey]) => `${groupKey}=${optionKey}`)
+      .join(",");
+    const multiPart = Object.entries(selection.multi)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([groupKey, set]) => `${groupKey}=${[...set].sort().join("+")}`)
+      .join("|");
+    // A different kitchen note is a different line — never silently merge it
+    // into another line and drop the note (v1 defect).
+    const key = `${product.id}:${singlesPart}:${multiPart}:${trimmedNote}`;
+
     const selections = [
       ...Object.entries(selection.singles).map(([groupKey, optionKey]) => ({
         groupKey,
         optionKey,
       })),
-      ...[...selection.extras].map((optionKey) => ({
-        groupKey: "extras",
-        optionKey,
-      })),
+      ...Object.entries(selection.multi).flatMap(([groupKey, set]) =>
+        [...set].map((optionKey) => ({ groupKey, optionKey })),
+      ),
     ];
+
     cart.add({
       key,
       productId: product.id,
       nameAr: product.nameAr,
       detailAr,
-      note: note.trim() || undefined,
+      note: trimmedNote || undefined,
       quantity,
       unitPriceMinor,
       lineTotalMinor: total,
@@ -123,129 +165,141 @@ export function ItemSheet({
       footer={
         <div className="flex items-center justify-between gap-3">
           <Stepper value={quantity} onChange={setQuantity} label="الكمية" />
-          <Button size="lg" onClick={add} className="flex-1">
-            أضف للسلة · <Price minor={total} />
+          <Button
+            type="submit"
+            form={`item-form-${product.id}`}
+            size="lg"
+            className="flex-1"
+            disabled={!orderingEnabled}
+          >
+            {orderingEnabled ? (
+              <>
+                أضف للسلة · <Price minor={total} />
+              </>
+            ) : (
+              "الطلب غير متاح مؤقتاً"
+            )}
           </Button>
         </div>
       }
     >
-      <div className="flex items-start gap-4">
-        <div className="w-28 shrink-0 rounded-xl bg-cream-100 p-2">
-          <DishIllustration
-            sauce={product.sauce}
-            toppings={product.toppings}
-            className="w-full"
-          />
+      <form
+        id={`item-form-${product.id}`}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!orderingEnabled) return;
+          add();
+        }}
+      >
+        <div className="flex items-start gap-4">
+          <div className="w-32 shrink-0 overflow-hidden rounded-xl bg-cream-100">
+            <DishMedia product={product} className="w-full" />
+          </div>
+          <p className="pt-1 text-sm leading-relaxed text-ink-soft">
+            {product.descAr}
+          </p>
         </div>
-        <p className="pt-1 text-sm leading-relaxed text-ink-soft">
-          {product.descAr}
-        </p>
-      </div>
 
-      <div className="mt-5 space-y-5">
-        {product.groups.map((group) => (
-          <fieldset key={group.id}>
-            <legend className="flex items-center gap-2 text-sm font-bold text-ink">
-              {group.nameAr}
-              {group.required && <span className="text-terracotta">*</span>}
-              {group.type === "multi" && group.maxSelections && (
-                <span className="text-xs font-normal text-ink-soft">
-                  (حتى {group.maxSelections})
-                </span>
-              )}
-            </legend>
+        <div className="mt-5 space-y-5">
+          {product.groups.map((group) => {
+            const chosen = selection.multi[group.id] ?? new Set<string>();
+            const atMax =
+              group.maxSelections !== undefined &&
+              chosen.size >= group.maxSelections;
+            return (
+              <fieldset key={group.id}>
+                <legend className="flex items-center gap-2 text-sm font-bold text-ink">
+                  {group.nameAr}
+                  {group.required && (
+                    <span className="text-terracotta" aria-hidden>
+                      *
+                    </span>
+                  )}
+                  {group.type === "multi" && group.maxSelections && (
+                    <span className="text-xs font-normal text-ink-soft">
+                      (حتى {group.maxSelections})
+                    </span>
+                  )}
+                </legend>
 
-            {group.type === "single" ? (
-              <div
-                className="mt-2.5 flex flex-wrap gap-2"
-                role="radiogroup"
-                aria-label={group.nameAr}
-              >
-                {group.options.map((opt) => {
-                  const active = selection.singles[group.id] === opt.id;
-                  return (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={active}
-                      onClick={() =>
-                        setSelection((s) => ({
-                          ...s,
-                          singles: { ...s.singles, [group.id]: opt.id },
-                        }))
-                      }
-                      className={
-                        active
-                          ? "inline-flex min-h-11 items-center gap-2 rounded-full border-2 border-basil-700 bg-basil-50 px-4 text-sm font-bold text-basil-800"
-                          : "inline-flex min-h-11 items-center gap-2 rounded-full border border-cream-300 bg-cream-100 px-4 text-sm font-bold text-ink-soft transition-colors hover:border-basil-300"
-                      }
-                    >
-                      {opt.nameAr}
-                      {opt.priceMinor > 0 && (
-                        <Price minor={opt.priceMinor} className="text-xs" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="mt-2.5 flex flex-wrap gap-2">
-                {group.options.map((opt) => {
-                  const active = selection.extras.has(opt.id);
-                  return (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() =>
-                        setSelection((s) => {
-                          const next = new Set(s.extras);
-                          if (next.has(opt.id)) {
-                            next.delete(opt.id);
-                          } else {
-                            next.add(opt.id);
-                          }
-                          return { ...s, extras: next };
-                        })
-                      }
-                      className={
-                        active
-                          ? "inline-flex min-h-11 items-center gap-2 rounded-full border-2 border-basil-700 bg-basil-50 px-4 text-sm font-bold text-basil-800"
-                          : "inline-flex min-h-11 items-center gap-2 rounded-full border border-cream-300 bg-cream-100 px-4 text-sm font-bold text-ink-soft transition-colors hover:border-basil-300"
-                      }
-                    >
-                      {opt.nameAr}
-                      {opt.priceMinor > 0 && (
-                        <Price minor={opt.priceMinor} className="text-xs" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </fieldset>
-        ))}
+                <div className="mt-2.5 flex flex-wrap gap-2">
+                  {group.options.map((opt) => {
+                    if (group.type === "single") {
+                      const active = selection.singles[group.id] === opt.id;
+                      return (
+                        <label
+                          key={opt.id}
+                          className={`${pillBase} ${active ? pillActive : pillIdle}`}
+                        >
+                          <input
+                            type="radio"
+                            name={`group-${product.id}-${group.id}`}
+                            value={opt.id}
+                            checked={active}
+                            onChange={() =>
+                              setSelection((s) => ({
+                                ...s,
+                                singles: { ...s.singles, [group.id]: opt.id },
+                              }))
+                            }
+                            className="sr-only"
+                          />
+                          {opt.nameAr}
+                          {opt.priceMinor > 0 && (
+                            <Price minor={opt.priceMinor} className="text-xs" />
+                          )}
+                        </label>
+                      );
+                    }
 
-        <div>
-          <label
-            htmlFor={`note-${product.id}`}
-            className="text-sm font-bold text-ink"
-          >
-            ملاحظة للمطبخ{" "}
-            <span className="font-normal text-ink-soft">(اختياري)</span>
-          </label>
-          <input
-            id={`note-${product.id}`}
-            type="text"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            maxLength={140}
-            placeholder="مثال: بدون بصل، صلصة زيادة عالجنب…"
-            className="mt-2 min-h-12 w-full rounded-md border border-cream-300 bg-cream-50 px-4 text-sm transition-colors outline-none placeholder:text-ink-soft/50 focus:border-basil-500"
-          />
+                    const active = chosen.has(opt.id);
+                    const disabled = atMax && !active;
+                    return (
+                      <label
+                        key={opt.id}
+                        className={`${pillBase} ${active ? pillActive : pillIdle} ${disabled ? pillDisabled : ""}`}
+                      >
+                        <input
+                          type="checkbox"
+                          name={`group-${product.id}-${group.id}`}
+                          value={opt.id}
+                          checked={active}
+                          disabled={disabled}
+                          onChange={() => toggleMulti(group, opt.id)}
+                          className="sr-only"
+                        />
+                        {opt.nameAr}
+                        {opt.priceMinor > 0 && (
+                          <Price minor={opt.priceMinor} className="text-xs" />
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            );
+          })}
+
+          <div>
+            <label
+              htmlFor={`note-${product.id}`}
+              className="text-sm font-bold text-ink"
+            >
+              ملاحظة للمطبخ{" "}
+              <span className="font-normal text-ink-soft">(اختياري)</span>
+            </label>
+            <input
+              id={`note-${product.id}`}
+              type="text"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              maxLength={140}
+              placeholder="مثال: بدون بصل، صلصة زيادة عالجنب…"
+              className="mt-2 min-h-12 w-full rounded-md border border-cream-300 bg-cream-50 px-4 text-sm transition-colors outline-none placeholder:text-ink-soft/50 focus:border-basil-500"
+            />
+          </div>
         </div>
-      </div>
+      </form>
     </Sheet>
   );
 }

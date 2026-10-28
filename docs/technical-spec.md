@@ -489,3 +489,64 @@ gate (not discovered at the end); design decisions locked in the brand doc
 before screens (no mid-flight redesigns); observability via platform
 primitives instead of an app-side limiter table; i18n structured from the
 start instead of retrofitted bilingualism.
+
+---
+
+## 18. v2 Rebuild Delta (2026-10-28)
+
+This section amends the baseline above. Where it conflicts, this section wins.
+
+### 18.1 Runtime and caching
+
+- Custom Worker entry (`worker.ts`) exports the `OrderFeed` Durable Object
+  and intercepts `/api/realtime` before Next.js.
+- Realtime is a **Durable Object with hibernatable WebSockets**, not SSE and
+  not an in-process bus.
+- ISR/tag caching is the full OpenNext stack: R2 incremental cache + regional
+  cache + DO queue + D1 tag cache.
+- Next.js 16 Proxy remains the CSP/headers layer only; authorization stays in
+  every server action.
+
+### 18.2 Data integrity
+
+- `orders.zone_id` is mandatory for delivery; the fee comes from that active
+  zone. The cheapest-zone behaviour is removed.
+- `orders.payload_hash` binds an idempotency key to the normalized payload.
+- `order_status_history` records every transition (including creation and
+  undo); cancellations require `cancelled_reason`.
+- Transitions use `UPDATE … WHERE status = expected` inside a transaction.
+- Order numbers are gap-free per Asia/Hebron day via `order_counters`
+  (`JP-YYMMDD-NNN`).
+- Postgres CHECK constraints enforce non-negative amounts, total arithmetic,
+  positive quantities and non-negative stock.
+- `users.pin_lookup` is a UNIQUE HMAC-SHA256 lookup (O(1) login); login is
+  throttled in the DB and by the Workers rate-limit binding. PIN hashes are
+  PBKDF2-HMAC-SHA256 (210k iterations) via WebCrypto; legacy scrypt hashes
+  are verified and upgraded on the next successful login/provision. Sessions
+  carry `user_version`, expire after 7 days, idle out after 12 hours, and are
+  revoked on credential/role changes.
+
+### 18.3 Time
+
+`lib/domain/time.ts` is the only business-time boundary (`Asia/Hebron`).
+Reports, Z-cash, best sellers, order numbers, opening hours and status-page
+timestamps use it. Process timezone is never consulted.
+
+### 18.4 Design
+
+The “Basil Atelier” system supersedes the v1 visual layer: semantic tokens,
+Amiri/Alexandria/Fraunces, `type-display` ladder, DishArt illustration
+system, dark `theme-console`/`theme-kitchen`, PWA shell. Details in
+`docs/DESIGN.md`.
+
+### 18.5 Launch gates (v2)
+
+- All P0 defects from the v2 audit closed and regression-tested.
+- `npm run format:check && npm run lint && npm run typecheck && npm test`
+  green; `npm run build` and `npm run build:cf` green.
+- Realtime ticket latency < 1s on `wrangler dev`/production WebSocket.
+- Z report matches a manual count at 00:30 local.
+- 20 consecutive production orders with exact totals.
+- axe clean on `/`, `/menu`, `/console`, `/console/kitchen`.
+- Lighthouse ≥ 95 on `/` and `/menu` (mobile).
+- One-week parallel run before cutover.

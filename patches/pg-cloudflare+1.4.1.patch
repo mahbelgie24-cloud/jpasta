@@ -1,0 +1,21 @@
+diff --git a/node_modules/pg-cloudflare/dist/empty.js b/node_modules/pg-cloudflare/dist/empty.js
+index bd78fc9..bae6a72 100644
+--- a/node_modules/pg-cloudflare/dist/empty.js
++++ b/node_modules/pg-cloudflare/dist/empty.js
+@@ -1,6 +1,12 @@
+ "use strict";
+-Object.defineProperty(exports, "__esModule", { value: true });
+ // This is an empty module that is served up when outside of a workerd environment
+ // See the `exports` field in package.json
+-exports.default = {};
+-//# sourceMappingURL=empty.js.map
+\ No newline at end of file
++//
++// JPasta patch: re-export the real implementation instead of the stub.
++// @opennextjs/cloudflare traces this file under Node conditions (nft copies
++// ONLY what the default condition points at) while the worker re-bundle
++// resolves `workerd.require → dist/index.js` from that same traced copy —
++// with the stub the real socket implementation never reaches the bundle and
++// the build fails with "Could not resolve pg-cloudflare". On Node nothing
++// calls into it (pg gates by runtime), so re-exporting is safe.
++module.exports = require("./index.js");

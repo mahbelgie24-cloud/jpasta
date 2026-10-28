@@ -49,26 +49,35 @@ export function Sheet({
         if (e.target === ref.current) ref.current?.close();
       }}
       className={cn(
-        "fixed inset-x-0 top-auto bottom-0 m-auto w-full max-w-xl rounded-t-[28px] bg-cream-50 p-0",
-        "max-h-[88dvh] overflow-y-auto overscroll-contain shadow-overlay backdrop:bg-transparent",
+        "fixed inset-x-0 top-auto bottom-0 m-auto w-full max-w-xl rounded-t-3xl bg-surface p-0",
+        "max-h-[88dvh] overflow-y-auto overscroll-contain shadow-overlay",
         "animate-fade-up motion-reduce:animate-none",
         className,
       )}
     >
-      <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-cream-200 bg-cream-50/95 px-5 py-4 backdrop-blur">
+      {/* grab affordance — signals the sheet, sits above the drag target */}
+      <div
+        aria-hidden
+        className="absolute inset-x-0 top-1.5 z-20 flex justify-center"
+      >
+        <span className="h-1.5 w-10 rounded-full bg-border-strong/70" />
+      </div>
+      <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-border-soft bg-surface/95 px-5 pt-5 pb-4 backdrop-blur">
         <h2 className="type-title">{title}</h2>
         <button
           type="button"
           onClick={() => ref.current?.close()}
           aria-label="إغلاق"
-          className="flex size-11 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-cream-200"
+          className="flex size-11 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-surface-sunken"
         >
           <X className="size-5" aria-hidden />
         </button>
       </div>
-      <div className="px-5 pt-4 pb-5">{children}</div>
+      <div className="px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+        {children}
+      </div>
       {footer && (
-        <div className="sticky bottom-0 border-t border-cream-200 bg-cream-50/95 px-5 py-4 backdrop-blur">
+        <div className="sticky bottom-0 border-t border-border-soft bg-surface/95 px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur">
           {footer}
         </div>
       )}

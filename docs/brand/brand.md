@@ -124,9 +124,31 @@ stock photos with watermarks; never emoji as food imagery.
 
 ## 7. Application by Surface
 
-| Surface        | Priority                              | Brand expression                                                        |
-| -------------- | ------------------------------------- | ----------------------------------------------------------------------- |
-| `/` landing    | Editorial, appetizing, brand-defining | Cream base, basil display type, wheat accents, illustration hero        |
-| `/menu`        | One-hand ordering, zero friction      | Cream cards, basil pill CTAs, bottom sheets, sticky category nav        |
-| `/console`     | Calm clarity under pressure           | Cream-100 panels, big status colors, 44px+ targets, thumb-reach actions |
-| Receipts/print | Legibility                            | Monochrome mark, plain text, tabular figures                            |
+| Surface            | Priority                              | Brand expression                                                            |
+| ------------------ | ------------------------------------- | --------------------------------------------------------------------------- |
+| `/` landing        | Editorial, appetizing, brand-defining | Cream base, basil display type, wheat accents, illustration hero            |
+| `/menu`            | One-hand ordering, zero friction      | Cream cards, basil pill CTAs, bottom sheets, sticky category nav            |
+| `/console`         | Calm clarity under pressure           | Dark `theme-console`, big status colors, 44px+ targets, thumb-reach actions |
+| `/console/kitchen` | Readable from two metres              | High-contrast `theme-kitchen`, huge type, aging escalation                  |
+| Receipts/print     | Legibility                            | Monochrome mark, plain text, tabular figures                                |
+
+## 8. v2 implementation notes (2026-10-28)
+
+The identity is unchanged; the expression is sharper.
+
+- **Display type:** **Amiri** for Arabic hero/section headings, paired with
+  Alexandria for UI/body and Fraunces for Latin accents. The full ladder is
+  `type-display` → `type-micro`.
+- **Semantic tokens:** components use `surface/paper/line/text/brand/accent`
+  rather than raw scales. The console and kitchen are the same components
+  under dark semantic themes.
+- **DishArt:** the flat one-bowl illustration is replaced by a compositional
+  system (plate shape, seeded pasta nest, sauce, toppings, garnish, steam).
+  `DishMedia` swaps in real R2 photography when a product has one; the
+  illustration is the permanent fallback.
+- **Landing:** dark editorial hero, wheat marquee, asymmetric signature grid,
+  dark craft band, paper visit section, oversized wordmark.
+- **OG/PWA:** the share card is drawn from the same art language (no emoji);
+  the PWA uses PNG + maskable icons and a branded offline page.
+- **Never:** emoji as food, stock photos with watermarks, raw hex in
+  components, or colour as the only signal.

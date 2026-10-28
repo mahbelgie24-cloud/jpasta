@@ -1,0 +1,155 @@
+# JPasta v2 — Architecture
+
+> Canonical business spec: `docs/technical-spec.md` (v2 delta in §18).
+> Design system: `docs/brand/brand.md` + `docs/DESIGN.md`.
+> Deploy runbook: `docs/DEPLOY.md`.
+
+## 1. Shape
+
+A modular monolith on **Cloudflare Workers**:
+
+```
+Browser
+  │
+  ├─ Static assets ─────────────── Cloudflare CDN (ASSETS)
+  │
+  └─ Worker: jpasta (worker.ts)
+       ├─ /api/realtime (WS) ─────► OrderFeed Durable Object
+       └─ OpenNext handler ──────► Next.js 16 App Router
+                                     ├─ Server Actions (orders, console)
+                                     ├─ RSC pages (storefront, console)
+                                     └─ Data Access Layer (lib/server)
+                                            │
+                    ┌───────────────────────┼────────────────────────┐
+                    ▼                       ▼                        ▼
+              Hyperdrive → Neon PG     R2 (media + ISR)        D1 + DO (tags/queue)
+```
+
+**Why one app:** single shop, owner-run, one deployment, one schema. No
+microservices, no multi-tenancy, no distributed transactions.
+
+## 2. Layers
+
+| Layer   | Location                           | Rule                                              |
+| ------- | ---------------------------------- | ------------------------------------------------- |
+| UI      | `app/**/page.tsx`, `components/**` | No business rules; no direct DB                   |
+| Actions | `app/actions/**`                   | Thin: auth guard → zod → domain call → revalidate |
+| Domain  | `lib/server/**`, `lib/domain/**`   | `server-only`; all money/stock/time rules         |
+| Data    | `db/schema.ts`, `db/migrations`    | Constraints are the last line of defence          |
+| Runtime | `worker.ts`, `durable-objects/**`  | Only Cloudflare-specific plumbing                 |
+
+**Guard rule:** every action that touches restricted data goes through
+`lib/server/guard.ts` or an explicit `await requireOwner()/requireStaff()`.
+An un-awaited async guard is a no-op — this was a real v1 defect.
+
+## 3. Order pipeline (the money path)
+
+```
+placeOrder(input, { actorId? })
+  1. zod parse (client sends product/option KEYS only)
+  2. sha256(stableStringify(input)) → payloadHash
+  3. BEGIN
+     a. replay by idempotencyKey; if found, assert payloadHash matches
+     b. load products + modifier groups/options from DB
+     c. recompute every line price from DB
+     d. delivery: validate zoneId (active) → fee from deliveryZones
+     e. atomic daily counter → JP-YYMMDD-NNN
+     f. insert order + items + status history (received)
+     g. deduct recipes from stock (integer hundredths; floors at 0)
+  4. COMMIT
+  5. notifyOrdersChanged() → OrderFeed DO → every console/kitchen screen
+```
+
+Invariants:
+
+- Money is integer agorot end-to-end (`lib/pricing.ts`).
+- No client price is ever trusted.
+- `idempotency_key` is UNIQUE **and** payload-bound.
+- Totals are CHECKed in Postgres: `total = subtotal + delivery_fee`.
+- Status transitions are conditional (`WHERE status = expected`) and audited.
+- Cancellation requires a reason; owner undo within 5 minutes.
+
+## 4. Realtime
+
+`OrderFeed` is one Durable Object (`idFromName("jpasta")`) with hibernatable
+WebSockets. One instance owns every console/kitchen connection regardless
+of which Worker isolate handled the write.
+
+- Handshake: `/api/realtime?token=…` (2-minute HMAC token from the
+  authenticated Next route). The custom worker intercepts the upgrade and
+  forwards it to the DO; the DO verifies the token with WebCrypto.
+- Fan-out: `notifyOrdersChanged()` POSTs `/broadcast` to the DO.
+- Client: `hooks/use-orders-feed.ts` — WebSocket first, exponential
+  reconnect, 8-second polling only while the socket is down, visibility-aware.
+  `BroadcastChannel` keeps tabs in sync and elects one tab for the chime.
+- Local Node (tests/dev): `next start` has no DO; the client falls back to
+  polling and the in-process bus handles same-process notifications.
+
+## 5. Caching
+
+`open-next.config.ts`:
+
+- **R2 incremental cache** + regional cache: ISR/SSG survives isolates.
+- **DO queue**: deduplicated time-based revalidation.
+- **D1 tag cache**: `updateTag("catalog")` / `revalidatePath("/menu")`
+  actually propagate.
+
+KV is deliberately not used (eventually consistent → stale menu after an
+owner edit is a money-visible bug).
+
+## 6. Time
+
+Cloudflare Workers run in UTC. Every business-day calculation uses
+`lib/domain/time.ts` with `Asia/Hebron` explicitly:
+
+- reports / Z-cash / best sellers,
+- order numbers,
+- opening-hours state,
+- status-page timestamps.
+
+Never use `new Date(y, m, d)` or the process timezone for business days.
+
+## 7. Security
+
+- Sessions: 32-byte opaque tokens, sha256 at rest, HttpOnly `__Host-`
+  cookie in production, 7-day absolute + 12-hour idle expiry,
+  `users.session_version` invalidates on credential/role change.
+- PIN: scrypt with per-user salt + O(1) HMAC lookup (`pin_lookup` UNIQUE)
+  - DB throttle with progressive lockout + Workers rate-limit binding.
+- RBAC: owner-only money/settings/staff/inventory/reports, enforced in the
+  action, not the nav.
+- CSP: per-request nonce + `strict-dynamic` on dynamic routes, static tier
+  with SRI. `base-uri 'none'`, `frame-ancestors 'none'`, same-origin
+  WebSocket only.
+- Idempotency payload binding prevents replay with a different cart.
+- DB CHECK constraints protect totals, quantities, stock and fees.
+
+## 8. Media
+
+- Photos live in R2 (`MEDIA`), served via `/api/media/[...key]` with
+  `immutable` caching (or a public R2 custom domain later).
+- Upload is an owner-only server action (8 MB, MIME-validated).
+- Products without a photo render the deterministic `DishArt` system —
+  never a broken image.
+
+## 9. PWA / offline
+
+- `public/sw.js` precaches the shell, serves navigations network-first with
+  an offline fallback, caches media and immutable assets, and handles Web
+  Push notifications.
+- The storefront order queue (Dexie) replays exactly once using the original
+  idempotency key.
+- Registration is production-only and non-blocking.
+
+## 10. Observability
+
+- `lib/server/log.ts` emits one-line JSON events (`order.place_failed`,
+  `order.transition_failed`, …) ready for Workers Logpush.
+- `/api/health` reports DB latency for uptime probes.
+- `wrangler observability.enabled` is on.
+
+## 11. Decisions
+
+- `docs/adr/0001-opennext.md` — why OpenNext, not vinext (for now).
+- `docs/adr/0002-realtime-durable-object.md` — why a DO, not SSE.
+- `docs/adr/0003-money-idempotency.md` — the money invariants.

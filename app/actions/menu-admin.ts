@@ -1,12 +1,15 @@
 "use server";
 
+import { revalidatePath, updateTag } from "next/cache";
 import { asc, eq } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@/lib/db";
-import { priceChanges, products } from "@/db/schema";
-import { getSessionUser } from "@/lib/server/session";
+import { categories, priceChanges, products } from "@/db/schema";
+import { requireOwner } from "@/lib/server/session";
+import { userMessageOf } from "@/lib/server/guard";
 
 /**
- * Menu manager v1 (Phase 3): availability toggles + price edits.
+ * Menu manager (Phase 3, hardened in v2).
  * Every price change writes an audit row (old → new, who, when) — spec §9.
  */
 
@@ -18,10 +21,15 @@ export type AdminProduct = {
   isAvailable: boolean;
 };
 
+const uuidSchema = z.string().uuid();
+const priceSchema = z.number().int().min(0).max(100000); // ₪0 – ₪1000
+
 async function guard() {
-  const user = await getSessionUser();
-  if (!user || user.role !== "owner") throw new Error("owner-only");
-  return user;
+  return requireOwner();
+}
+
+function fail(err: unknown, fallback: string) {
+  return { ok: false as const, error: userMessageOf(err, fallback) };
 }
 
 export async function fetchAdminProducts(): Promise<
@@ -29,10 +37,9 @@ export async function fetchAdminProducts(): Promise<
 > {
   try {
     await guard();
-  } catch {
-    return { ok: false, error: "إدارة القائمة للمالك فقط." };
+  } catch (err) {
+    return { ok: false, error: userMessageOf(err) };
   }
-  const { categories } = await import("@/db/schema");
   const rows = await db
     .select({
       id: products.id,
@@ -51,43 +58,118 @@ export async function setProductAvailability(
   id: string,
   isAvailable: boolean,
 ): Promise<{ ok: boolean; error?: string }> {
-  let user;
   try {
-    user = await guard();
-  } catch {
-    return { ok: false, error: "إدارة القائمة للمالك فقط." };
+    await guard();
+    const parsed = uuidSchema.safeParse(id);
+    if (!parsed.success) return { ok: false, error: "صنف غير صحيح." };
+    const rows = await db
+      .update(products)
+      .set({ isAvailable })
+      .where(eq(products.id, parsed.data))
+      .returning({ id: products.id });
+    if (rows.length === 0) return { ok: false, error: "الصنف غير موجود." };
+    updateTag("catalog");
+    revalidatePath("/menu");
+    return { ok: true };
+  } catch (err) {
+    return fail(err, "تعذر تحديث التوفر.");
   }
-  void user;
-  await db.update(products).set({ isAvailable }).where(eq(products.id, id));
-  return { ok: true };
+}
+
+export async function setProductImage(
+  id: string,
+  image: {
+    key: string;
+    alt?: string;
+    width?: number;
+    height?: number;
+    color?: string;
+  } | null,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    await guard();
+    const parsedId = uuidSchema.safeParse(id);
+    if (!parsedId.success) return { ok: false, error: "صنف غير صحيح." };
+
+    if (image) {
+      if (
+        !/^products\/[a-zA-Z0-9_-]+\.(?:avif|webp|jpe?g|png)$/.test(image.key)
+      ) {
+        return { ok: false, error: "مفتاح الصورة غير صحيح." };
+      }
+      if (image.alt !== undefined && image.alt.length > 140) {
+        return { ok: false, error: "وصف الصورة طويل جداً." };
+      }
+    }
+
+    const rows = await db
+      .update(products)
+      .set(
+        image
+          ? {
+              imageKey: image.key,
+              imageAlt: image.alt ?? null,
+              imageWidth: image.width ?? 1200,
+              imageHeight: image.height ?? 900,
+              imageColor: image.color ?? null,
+            }
+          : {
+              imageKey: null,
+              imageAlt: null,
+              imageWidth: null,
+              imageHeight: null,
+              imageColor: null,
+            },
+      )
+      .where(eq(products.id, parsedId.data))
+      .returning({ id: products.id });
+    if (rows.length === 0) return { ok: false, error: "الصنف غير موجود." };
+
+    updateTag("catalog");
+    revalidatePath("/menu");
+    return { ok: true };
+  } catch (err) {
+    return fail(err, "تعذر حفظ الصورة.");
+  }
 }
 
 export async function setProductPrice(
   id: string,
   newMinor: number,
 ): Promise<{ ok: boolean; error?: string }> {
-  const user = await guard().catch(() => null);
-  if (!user) return { ok: false, error: "إدارة القائمة للمالك فقط." };
-  if (!Number.isInteger(newMinor) || newMinor < 0 || newMinor > 100000) {
-    return { ok: false, error: "السعر بين 0 و 1000 ₪" };
+  try {
+    const user = await guard();
+    const parsedId = uuidSchema.safeParse(id);
+    const parsedPrice = priceSchema.safeParse(newMinor);
+    if (!parsedId.success) return { ok: false, error: "صنف غير صحيح." };
+    if (!parsedPrice.success)
+      return { ok: false, error: "السعر بين 0 و 1000 ₪" };
+
+    const [product] = await db
+      .select({ basePriceMinor: products.basePriceMinor })
+      .from(products)
+      .where(eq(products.id, parsedId.data))
+      .limit(1);
+    if (!product) return { ok: false, error: "الصنف غير موجود." };
+    if (product.basePriceMinor === parsedPrice.data) return { ok: true };
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(products)
+        .set({ basePriceMinor: parsedPrice.data })
+        .where(eq(products.id, parsedId.data));
+      await tx.insert(priceChanges).values({
+        entityType: "product",
+        entityId: parsedId.data,
+        oldMinor: product.basePriceMinor,
+        newMinor: parsedPrice.data,
+        changedBy: user.id,
+      });
+    });
+    updateTag("catalog");
+    revalidatePath("/menu");
+    return { ok: true };
+  } catch (err) {
+    return fail(err, "تعذر حفظ السعر.");
   }
-  const [product] = await db
-    .select({ basePriceMinor: products.basePriceMinor })
-    .from(products)
-    .where(eq(products.id, id))
-    .limit(1);
-  if (!product) return { ok: false, error: "الصنف غير موجود." };
-  if (product.basePriceMinor === newMinor) return { ok: true };
-  await db
-    .update(products)
-    .set({ basePriceMinor: newMinor })
-    .where(eq(products.id, id));
-  await db.insert(priceChanges).values({
-    entityType: "product",
-    entityId: id,
-    oldMinor: product.basePriceMinor,
-    newMinor,
-    changedBy: user.id,
-  });
-  return { ok: true };
 }

@@ -1,106 +1,167 @@
-import { ArrowLeft, MessageCircle } from "lucide-react";
+import Link from "next/link";
+import {
+  ArrowLeft,
+  Clock,
+  MapPin,
+  MessageCircle,
+  Sparkles,
+} from "lucide-react";
 import { buttonStyles } from "@/components/ui/button";
-import { DishIllustration } from "@/components/brand/dish-illustration";
+import { DishArt } from "@/components/brand/dish-art";
 import { LogoMark } from "@/components/brand/logo";
 import { SITE } from "@/lib/site";
 import { whatsappUrl } from "@/lib/whatsapp";
 
-/** Hero — editorial Arabic display + the tagline as a Fraunces accent. */
+/**
+ * Hero — a dark editorial plate.
+ *
+ * The page opens like a menu cover: deep basil, a hand-drawn dish, and
+ * Arabic display type (Amiri) against Alexandria body copy. The twirl ring
+ * is the only ambient motion and stops under prefers-reduced-motion.
+ */
 export function Hero() {
   return (
-    <section className="relative overflow-hidden" aria-labelledby="hero-title">
-      {/* warm backdrop wash */}
+    <section
+      className="texture-grain relative overflow-hidden bg-brand-deep text-cream-50"
+      aria-labelledby="hero-title"
+    >
+      <span className="texture-grain-layer" aria-hidden />
+      {/* warm pool of light + a cool edge */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_55%_at_78%_18%,var(--color-basil-100)_0%,transparent_65%),radial-gradient(45%_40%_at_12%_85%,var(--color-cream-200)_0%,transparent_60%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_60%_at_72%_16%,oklch(0.45_0.08_90_/_0.28)_0%,transparent_62%),radial-gradient(50%_50%_at_8%_88%,oklch(0.35_0.06_160_/_0.35)_0%,transparent_70%)]"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-l from-transparent via-wheat-300/30 to-transparent"
       />
 
-      <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 pt-12 pb-16 sm:px-6 sm:pt-16 lg:grid-cols-[1.05fr_0.95fr] lg:gap-6 lg:pt-20 lg:pb-24">
+      <div className="relative container-page grid items-center gap-12 pt-14 pb-20 sm:pt-20 lg:grid-cols-[1.02fr_0.98fr] lg:gap-8 lg:pt-24 lg:pb-28">
         <div className="animate-fade-up text-center lg:text-start">
-          <p className="inline-flex items-center gap-2 rounded-full border border-basil-200 bg-cream-50 px-4 py-1.5 text-sm font-bold text-basil-700 shadow-card">
+          <p className="inline-flex items-center gap-2 rounded-full border border-cream-50/15 bg-cream-50/5 px-4 py-1.5 text-sm font-bold text-cream-100 backdrop-blur">
             <LogoMark className="size-5" />
-            بصلصة كتير ومحبة — كل يوم
+            قلقيلية · تُعجن كل صباح
           </p>
 
-          <h1 id="hero-title" className="mt-5 type-hero text-balance text-ink">
-            باستا طازة
+          <h1
+            id="hero-title"
+            className="mt-6 type-display text-balance text-cream-50"
+          >
+            باستا طازة،
             <br />
-            <span className="text-basil-700">تُصنع كل يوم</span>
+            <span className="text-wheat-300">بصلصة كتير</span>
+            <br />
+            ومحبة.
           </h1>
 
           <p
-            className="mt-4 font-display text-xl font-semibold text-wheat-600 italic sm:text-2xl"
+            className="mt-5 font-display text-lg font-semibold text-wheat-300/90 italic sm:text-xl"
             dir="ltr"
           >
-            Fresh pasta made everyday.
+            Fresh pasta made everyday. With a lot of sauce and love.
           </p>
 
-          <p className="mx-auto mt-4 max-w-md type-body text-pretty text-ink-soft lg:mx-0">
-            عجينة تُعدّ كل صباح، صلصات بيتية على أصولها، ودجاج طازج متبّل. اطلب
-            من القائمة واستلم بسرعة — أو خلّينا نوصلها لعندك بقلقيلية.
+          <p className="mx-auto mt-5 max-w-md type-body text-pretty text-cream-100/75 lg:mx-0">
+            عجينة تُعدّ كل يوم، صلصات بيتية على أصولها، ودجاج طازج متبّل. اطلب
+            من القائمة واستلم بسرعة — أو خلّينا نوصلها لعندك داخل قلقيلية.
           </p>
 
           <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
-            <a
+            <Link
               href="/menu"
-              className={buttonStyles("primary", "lg", "w-full sm:w-auto")}
+              className={buttonStyles(
+                "primary",
+                "lg",
+                "w-full bg-wheat-300 text-basil-950 shadow-lift hover:bg-wheat-400 sm:w-auto",
+              )}
             >
               تصفّح القائمة
               <ArrowLeft className="size-5" aria-hidden />
-            </a>
+            </Link>
             <a
               href={whatsappUrl(
                 SITE.whatsapp,
-                "مرحباً JPasta 🍝 بدي أستفسر عن القائمة",
+                "مرحباً JPasta — بدي أستفسر عن القائمة",
               )}
               target="_blank"
               rel="noopener noreferrer"
-              className={buttonStyles("secondary", "lg", "w-full sm:w-auto")}
+              className={buttonStyles(
+                "secondary",
+                "lg",
+                "w-full border-cream-50/20 bg-cream-50/5 text-cream-50 hover:border-wheat-300/50 hover:bg-cream-50/10 sm:w-auto",
+              )}
             >
               <MessageCircle className="size-5" aria-hidden />
               اطلب عبر واتساب
             </a>
           </div>
 
-          <dl className="mt-9 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm lg:justify-start">
+          <dl className="mt-10 flex flex-wrap items-center justify-center gap-x-7 gap-y-3 text-sm lg:justify-start">
             <div className="flex items-center gap-2">
-              <dt className="font-bold text-ink">الاستلام:</dt>
-              <dd className="text-ink-soft">من المحل خلال ١٠–١٥ دقيقة</dd>
+              <Clock className="size-4 text-wheat-300" aria-hidden />
+              <dt className="sr-only">ساعات العمل</dt>
+              <dd className="text-cream-100/80">يومياً ١:٠٠ م — ١:٠٠ ص</dd>
             </div>
             <div className="flex items-center gap-2">
-              <dt className="font-bold text-ink">التوصيل:</dt>
-              <dd className="text-ink-soft">داخل قلقيلية — طازة لعندك</dd>
+              <MapPin className="size-4 text-wheat-300" aria-hidden />
+              <dt className="sr-only">التوصيل</dt>
+              <dd className="text-cream-100/80">توصيل داخل قلقيلية</dd>
+            </div>
+            <div className="flex items-center gap-2">
+              <Sparkles className="size-4 text-wheat-300" aria-hidden />
+              <dt className="sr-only">طازج</dt>
+              <dd className="text-cream-100/80">بدون مواد حافظة</dd>
             </div>
           </dl>
         </div>
 
-        {/* Hero illustration — brand dish composition */}
+        {/* the plate */}
         <div className="relative mx-auto w-full max-w-md lg:max-w-none">
           <div
             aria-hidden
-            className="absolute inset-x-6 top-6 -z-10 aspect-square rounded-[var(--radius-2xl)] bg-cream-100 shadow-card"
+            className="absolute inset-6 rounded-full border border-cream-50/10"
           />
           <div
             aria-hidden
-            className="absolute start-8 -top-3 size-16 rounded-full border-[6px] border-wheat-300/60"
+            className="absolute inset-0 rounded-full border border-wheat-300/15 motion-safe:animate-[twirl_28s_linear_infinite]"
           />
           <div
             aria-hidden
-            className="absolute end-4 bottom-8 size-10 rounded-full bg-basil-200/70"
+            className="absolute inset-10 rounded-full bg-[radial-gradient(circle_at_42%_32%,oklch(0.97_0.02_88)_0%,oklch(0.92_0.03_86)_55%,oklch(0.84_0.04_86)_100%)] shadow-[0_30px_80px_-30px_oklch(0_0_0_/_0.8)]"
           />
-          <div className="animate-fade-up px-4 pt-10 pb-8 [animation-delay:120ms]">
-            <DishIllustration
+          <div className="relative animate-fade-up px-3 pt-8 pb-6 [animation-delay:120ms]">
+            <DishArt
+              seed="chicken-alfredo-hero"
               sauce="alfredo"
               toppings={["chicken", "basil", "cheese", "tomato"]}
-              className="mx-auto w-full max-w-sm drop-shadow-[0_18px_28px_rgba(24,38,32,0.14)]"
+              variant="hero"
+              className="mx-auto w-full max-w-sm drop-shadow-[0_18px_30px_rgba(12,36,25,0.28)]"
             />
-            <p
-              className="mt-4 text-center font-display text-lg font-semibold text-basil-800"
-              dir="ltr"
-            >
-              Chicken Alfredo — the one everyone orders
-            </p>
           </div>
+
+          {/* floating ingredient labels */}
+          <span className="absolute start-0 top-10 inline-flex -rotate-3 items-center gap-2 rounded-full border border-cream-50/15 bg-brand-deep/80 px-3.5 py-2 text-xs font-bold text-cream-100 shadow-lift backdrop-blur">
+            <span
+              className="size-1.5 rounded-full bg-pistachio-400"
+              aria-hidden
+            />
+            ريحان طازج
+          </span>
+          <span className="absolute end-0 top-1/3 inline-flex rotate-2 items-center gap-2 rounded-full border border-cream-50/15 bg-brand-deep/80 px-3.5 py-2 text-xs font-bold text-cream-100 shadow-lift backdrop-blur">
+            <span className="size-1.5 rounded-full bg-wheat-300" aria-hidden />
+            صلصة ألفريدو
+          </span>
+          <span className="absolute end-8 bottom-8 inline-flex -rotate-2 items-center gap-2 rounded-full border border-cream-50/15 bg-brand-deep/80 px-3.5 py-2 text-xs font-bold text-cream-100 shadow-lift backdrop-blur">
+            <span className="size-1.5 rounded-full bg-tomato-500" aria-hidden />
+            دجاج مشوي
+          </span>
+
+          <p
+            className="mt-6 text-center font-display text-sm font-semibold tracking-wide text-cream-100/60"
+            dir="ltr"
+          >
+            Chicken Alfredo — the one everyone orders
+          </p>
         </div>
       </div>
     </section>

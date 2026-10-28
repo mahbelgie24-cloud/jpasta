@@ -1,95 +1,120 @@
 # JPasta — Fresh Pasta & Chicken
 
-Digital menu, ordering, and owner console for **JPasta** (Qalqilya) — fresh
-pasta made everyday, with a lot of sauce and love.
+Digital menu, first-party ordering, and an owner console for **JPasta**
+(Qalqilya) — fresh pasta made every day, with a lot of sauce and love.
 
-Full specification: [`docs/technical-spec.md`](./docs/technical-spec.md) —
-read it before touching the code. Brand system:
-[`docs/brand/brand.md`](./docs/brand/brand.md).
+**Stack:** Next.js 16 (App Router) · React 19 · TypeScript strict · Tailwind v4 ·
+Drizzle + Neon Postgres · **Cloudflare Workers** via
+`@opennextjs/cloudflare` · R2 / D1 / Durable Objects · Arabic RTL first-class.
 
-## Stack
+- Business spec: [`docs/technical-spec.md`](./docs/technical-spec.md) + §18 v2 delta
+- Architecture: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)
+- Design system: [`docs/DESIGN.md`](./docs/DESIGN.md) · brand: [`docs/brand/brand.md`](./docs/brand/brand.md)
+- Deploy runbook: [`docs/DEPLOY.md`](./docs/DEPLOY.md)
 
-Next.js 16 (App Router) · TypeScript strict · React 19 · Tailwind CSS v4 ·
-Arabic RTL first-class · production target: **Cloudflare Workers** via
-`@opennextjs/cloudflare` (Phase 1) + Neon Postgres + Drizzle.
+## What shipped in v2
+
+- **Correctness/security:** awaited owner guards everywhere, O(1) PIN login
+  with a durable throttle, payload-bound idempotency, customer-zone delivery
+  fees, conditional status transitions + audit history + owner undo,
+  `Asia/Hebron` business days, gap-free daily order numbers, DB CHECK
+  constraints.
+- **Cloudflare-native runtime:** `OrderFeed` Durable Object with hibernatable
+  WebSockets, R2 incremental cache + D1 tag cache + DO revalidation queue,
+  custom worker entry, health endpoint, structured logs.
+- **Elite UI:** “Basil Atelier” design system, Amiri/Alexandria/Fraunces
+  typography, the DishArt illustration system, dark editorial landing, live
+  menu search, real zone fees in the cart, dark console, PWA shell + offline
+  page, photo upload to R2.
+- **49 tests** (unit + integration + hardening regressions).
 
 ## Getting started
 
 ```bash
 npm install
-cp .env.example .env.local   # fill in real values, never commit this file
+cp .env.example .env.local   # fill in the values
 npm run dev
 ```
 
-## Quality gates
+Local database (dedicated container, port 54330):
 
 ```bash
-npm run format:check   # prettier
-npm run lint           # eslint (money-arithmetic rule enforced)
-npm run typecheck      # next typegen + tsc --noEmit
-npm run build          # deploy gate
+docker run -d --name jpasta-pg \
+  -e POSTGRES_USER=jpasta -e POSTGRES_PASSWORD=jpasta \
+  -e POSTGRES_DB=jpasta -p 54330:5432 postgres:17-alpine
+npm run db:migrate
+npm run db:seed
 ```
+
+Console PIN comes from `JPASTA_OWNER_PIN` in `.env.local`.
+`AUTH_PEPPER` and `REALTIME_SECRET` are required for production (32+ chars).
+
+## Scripts
+
+```bash
+npm run dev            # local Next
+npm run build          # deploy gate (Next)
+npm run build:cf       # OpenNext worker bundle
+npm run preview        # local workerd
+npm run deploy         # check-env → build → wrangler deploy
+npm run typecheck      # next typegen + tsc
+npm run lint
+npm test               # vitest (49 tests)
+npm run icons          # regenerate PWA icons from app/icon.svg
+```
+
+Quality gates:
+`npm run format:check && npm run lint && npm run typecheck && npm test && npm run build`.
 
 ## Structure
 
 ```
-app/                  Routes: / (landing), /menu (order), /privacy, /api (Phase 1)
-components/brand/     Logo + dish illustration system
-components/site/      Landing sections
-components/menu/      Digital menu: cart, item sheet, drawer (WhatsApp handoff)
-components/ui/        Primitives (button, sheet, price, stepper…)
-lib/                  pricing (money boundary), menu-data (placeholder catalog),
-                      whatsapp, site constants
-docs/                 Spec, brand guide, menu template
+app/                 routes + server actions
+  api/               health, realtime-token, media
+  console/           dark owner console (+ kitchen)
+  menu/              customer ordering
+components/
+  brand/             logo, DishArt, DishMedia
+  site/              landing sections, nav
+  menu/              cart, item sheet, product card
+  console/           board, nav, chrome
+  ui/                primitives
+db/                  schema + migrations + seed
+durable-objects/     OrderFeed
+lib/domain/          pure rules (time, qty, hash, realtime tokens)
+lib/server/          data access + guards + orders + realtime
+worker.ts            custom Cloudflare entry
 ```
 
-## Status — Phase 1 (order pipeline live)
+## Hard invariants
 
-- [x] Spec + brand identity + logo
-- [x] Design system + landing page
-- [x] Digital menu with customization + cart (placeholder catalog, DB-backed)
-- [x] **First-party order intake** — server-recomputed prices, idempotency
-      keys, sequential order numbers (JP-00001…), token-gated status page
-- [x] **Owner console** (`/console`) — PIN login, live orders board
-      (SSE push ~225ms + 5s poll fallback), status transitions with
-      server-side RBAC
-- [x] **Kitchen display** (`/console/kitchen`) — big tickets, aging chips,
-      tap-to-advance, new-order chime
-- [x] **Delivery zones admin** (`/console/settings`) — live fee editing
-- [x] **Offline queue** — failed submits replay exactly-once on reconnect
-- [x] Test suite: money-boundary unit tests + integration suite including
-      the 20-consecutive-orders DoD gate + offline-queue tests (`npm test`)
-- [x] **Reports** — day summary, Z-cash view, 7-day bars, best sellers
-      (DoD: report matches manual count exactly — integration-proven)
-- [x] **Staff accounts** — PIN uniqueness enforced, role-gated surfaces
-- [x] **Manual order entry** + **menu manager v1** (audited price changes)
-- [x] **Inventory & recipes** — automatic deduction on sale (audited moves),
-      purchase/waste/adjustment log, low-stock alerts, recipe editor
-- [x] **Hardening** — nonce CSP + strict-dynamic (browser-verified),
-      static security headers, backup script with retention
-- [ ] Next: production deploy (Cloudflare + Neon), real menu + photos,
-      Web Push, one-week parallel run (spec §15 Phase 5)
+1. Money is integer agorot; `lib/pricing.ts` is the only boundary.
+2. The client never sends a price.
+3. Every order write has an idempotency key bound to its payload.
+4. Delivery fees come from the selected zone in the DB.
+5. Authorization is server-side in every action; unawaited guards are bugs.
+6. Status changes are conditional and audited.
+7. Business days use `Asia/Hebron`, never the process timezone.
+8. Design tokens only; RTL logical properties; 44px targets; reduced motion.
 
-### Backups & security
+## Backups & security
 
 ```bash
 node scripts/backup-db.mjs   # compressed dump → backups/ (7-day retention)
 ```
 
 Cron it daily; verify a restore into a scratch DB before trusting it.
-Security posture: nonce CSP (strict-dynamic) via proxy + static hardening
-headers — see `lib/csp-nonce.ts` and next.config.
+Security posture: nonce CSP (`strict-dynamic`) via `proxy.ts`, static
+hardening headers in `next.config.ts`, and the ASVS 5.0 L2 mapping in
+[`docs/SECURITY.md`](./docs/SECURITY.md).
 
-### Local database
+## Deploying
+
+Production target: **Cloudflare Workers + Neon**. Full runbook:
+[`docs/DEPLOY.md`](./docs/DEPLOY.md). Quick reference:
 
 ```bash
-# dedicated container (port 54330 — fully isolated from any other project)
-docker run -d --name jpasta-pg -e POSTGRES_USER=jpasta -e POSTGRES_PASSWORD=jpasta \
-  -e POSTGRES_DB=jpasta -p 54330:5432 postgres:17-alpine
-npm run db:migrate && npm run db:seed   # seed aborts on an existing catalog (--force resets)
-npx vitest run                          # unit + integration (needs the seeded DB)
+npm run build:cf   # OpenNext worker bundle (no account needed)
+npm run preview    # local workerd via wrangler dev
+npm run deploy     # check-env → build → wrangler deploy
 ```
-
-Console PIN comes from `JPASTA_OWNER_PIN` in `.env.local` (seeded owner account).
-
-See spec §15 for the phased roadmap with Definition of Done.

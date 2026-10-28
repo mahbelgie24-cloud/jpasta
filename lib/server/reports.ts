@@ -2,6 +2,13 @@ import "server-only";
 import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { orderItems, orders } from "@/db/schema";
+import {
+  SHOP_TZ,
+  addDays,
+  toDayString,
+  todayInShop,
+  zonedDayRange,
+} from "@/lib/domain/time";
 
 /**
  * Reporting queries (Phase 3, spec §8.2) — all money in integer agorot,
@@ -21,25 +28,12 @@ export interface DaySummary {
   avgOrderMinor: number;
 }
 
-export function toLocalDayString(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
-export function todayLocal(): string {
-  return toLocalDayString(new Date());
-}
+/** Backwards-compatible names; the shop timezone is always Asia/Hebron. */
+export const toLocalDayString = (date: Date): string => toDayString(date);
+export const todayLocal = (): string => todayInShop();
 
 function localDayRange(dateStr: string): { start: Date; end: Date } {
-  const parts = dateStr.split("-").map((n) => Number.parseInt(n, 10));
-  const y = parts[0] ?? 1970;
-  const m = (parts[1] ?? 1) - 1;
-  const d = parts[2] ?? 1;
-  const start = new Date(y, m, d, 0, 0, 0, 0);
-  const end = new Date(y, m, d + 1, 0, 0, 0, 0);
-  return { start, end };
+  return zonedDayRange(dateStr);
 }
 
 const summarySelect = {
@@ -85,31 +79,26 @@ export async function getRecentDays(
   days: number,
   endDateStr: string,
 ): Promise<DaySummary[]> {
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-  const { start } = localDayRange(endDateStr);
-  const weekStart = new Date(start);
-  weekStart.setDate(weekStart.getDate() - (days - 1));
-  const { end } = localDayRange(endDateStr);
-  end.setDate(end.getDate() + 1);
+  const startDay = addDays(endDateStr, -(days - 1));
+  const weekStart = zonedDayRange(startDay).start;
+  const end = zonedDayRange(endDateStr).end;
 
   const rows = await db
     .select({
-      day: sql<string>`to_char(created_at AT TIME ZONE ${tz}, 'YYYY-MM-DD')`,
+      day: sql<string>`to_char(created_at AT TIME ZONE ${SHOP_TZ}, 'YYYY-MM-DD')`,
       ...summarySelect,
     })
     .from(orders)
     .where(and(gte(orders.createdAt, weekStart), lt(orders.createdAt, end)))
     // positional grouping: the tz bind parameter appears twice with
-    // different placeholders ($1/$4), which Postgres cannot match —
-    // GROUP BY 1 refers to the first select column instead.
+    // different placeholders, which Postgres cannot match — GROUP BY 1
+    // refers to the first select column instead.
     .groupBy(sql`1`);
 
   const byDay = new Map(rows.map((r) => [r.day, r]));
   const out: DaySummary[] = [];
   for (let i = days - 1; i >= 0; i -= 1) {
-    const d = new Date(start);
-    d.setDate(d.getDate() - i);
-    const key = toLocalDayString(d);
+    const key = addDays(endDateStr, -i);
     out.push(finalize(key, byDay.get(key)));
   }
   return out;

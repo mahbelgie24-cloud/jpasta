@@ -1,26 +1,35 @@
 import { describe, expect, it } from "vitest";
-import { buildCsp, generateCspNonce } from "@/lib/csp-nonce";
+import { buildCsp, buildStaticCsp, generateCspNonce } from "@/lib/csp-nonce";
 
-describe("CSP builder (Phase 5 hardening)", () => {
+describe("CSP builder (v2 hardening)", () => {
   it("embeds the per-request nonce in script-src", () => {
     const nonce = generateCspNonce();
     const csp = buildCsp(nonce);
     expect(csp).toContain(`'nonce-${nonce}'`);
+    expect(csp).toContain("'strict-dynamic'");
   });
 
   it("never allows unsafe-eval and locks framing/base down", () => {
     const csp = buildCsp(generateCspNonce());
     expect(csp).not.toContain("unsafe-eval");
     expect(csp).toContain("frame-ancestors 'none'");
-    expect(csp).toContain("base-uri 'self'");
+    expect(csp).toContain("base-uri 'none'");
     expect(csp).toContain("object-src 'none'");
+    expect(csp).toContain("form-action 'self'");
     expect(csp).toContain("upgrade-insecure-requests");
+    expect(csp).toContain("worker-src 'self' blob:");
   });
 
-  it("keeps connect-src self-only (server actions + SSE)", () => {
-    const csp = buildCsp(generateCspNonce());
-    expect(csp).toContain("connect-src 'self'");
+  it("allows only same-origin HTTP + same-origin WebSocket", () => {
+    const csp = buildCsp(generateCspNonce(), "https://jpasta.ps");
+    expect(csp).toContain("connect-src 'self' wss://jpasta.ps");
     expect(csp).not.toMatch(/connect-src[^\n;]*https?:\/\//);
+  });
+
+  it("keeps the static tier free of external hosts", () => {
+    const csp = buildStaticCsp("https://jpasta.ps");
+    expect(csp).toContain("connect-src 'self' wss://jpasta.ps");
+    expect(csp).not.toContain("unsafe-eval");
   });
 
   it("nonces differ per request", () => {

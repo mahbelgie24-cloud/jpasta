@@ -12,5 +12,9 @@ export const metadata = {
 export default async function KitchenPage() {
   const user = await getSessionUser();
   if (!user) redirect("/console/login");
-  return <KitchenBoard />;
+  return (
+    <div className="theme-kitchen min-h-dvh bg-surface">
+      <KitchenBoard />
+    </div>
+  );
 }

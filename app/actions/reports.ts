@@ -21,7 +21,9 @@ export async function fetchReport(
   dateStr?: string,
 ): Promise<{ ok: true; data: ReportData } | { ok: false; error: string }> {
   try {
-    requireOwner();
+    // Awaited on purpose: an un-awaited async guard resolves to a Promise
+    // and the catch never fires (v1 security defect).
+    await requireOwner();
   } catch {
     return { ok: false, error: "التقارير للمالك فقط." };
   }

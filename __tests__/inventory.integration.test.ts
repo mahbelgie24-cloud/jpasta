@@ -188,7 +188,12 @@ d("inventory — recipe-driven deduction", () => {
     });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      await transitionOrder(result.order.id, "cancelled");
+      await transitionOrder({
+        orderId: result.order.id,
+        next: "cancelled",
+        expected: "received",
+        reason: "اختبار",
+      });
       const moves = await db
         .select()
         .from(inventoryMoves)

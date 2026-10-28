@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
  */
 
 interface Props {
+  id?: string;
   index: string;
   eyebrow: string;
   title: string;
@@ -22,9 +23,16 @@ const arabicIndex: Record<string, string> = {
   "4": "٤",
   "5": "٥",
   "6": "٦",
+  "01": "٠١",
+  "02": "٠٢",
+  "03": "٠٣",
+  "04": "٠٤",
+  "05": "٠٥",
+  "06": "٠٦",
 };
 
 export function SectionHeading({
+  id,
   index,
   eyebrow,
   title,
@@ -68,8 +76,9 @@ export function SectionHeading({
         />
       </p>
       <h2
+        id={id}
         className={cn(
-          "mt-3 type-section text-balance",
+          "mt-3 font-display-ar type-section text-balance",
           tone === "light" ? "text-cream-50" : "text-ink",
         )}
       >

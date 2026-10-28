@@ -28,6 +28,7 @@ export function HowToOrder() {
       aria-labelledby="how-title"
     >
       <SectionHeading
+        id="how-title"
         index="3"
         eyebrow="كيف تطلب؟"
         title="ثلاث خطوات ووجبتك عندك"

@@ -11,19 +11,54 @@ export function generateCspNonce(): string {
   return crypto.randomUUID().replace(/-/g, "");
 }
 
-export function buildCsp(nonce: string): string {
-  const csp = [
+function wsOrigin(origin?: string): string {
+  if (!origin) return "wss:";
+  try {
+    const url = new URL(origin);
+    url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+    return url.origin;
+  } catch {
+    return "wss:";
+  }
+}
+
+export function buildCsp(nonce: string, origin?: string): string {
+  return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' blob: data:",
     "font-src 'self'",
     "object-src 'none'",
-    "base-uri 'self'",
+    "base-uri 'none'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    "connect-src 'self'",
+    `connect-src 'self' ${wsOrigin(origin)}`,
+    "worker-src 'self' blob:",
+    "manifest-src 'self'",
     "upgrade-insecure-requests",
   ].join("; ");
-  return csp;
+}
+
+/**
+ * Static (prerendered) routes cannot carry a per-request nonce. Their inline
+ * flight payload requires 'unsafe-inline'; emitted scripts are pinned by SRI
+ * (experimental.sri). Keep this tier as small as possible.
+ */
+export function buildStaticCsp(origin?: string): string {
+  return [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' blob: data:",
+    "font-src 'self'",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    `connect-src 'self' ${wsOrigin(origin)}`,
+    "worker-src 'self' blob:",
+    "manifest-src 'self'",
+    "upgrade-insecure-requests",
+  ].join("; ");
 }

@@ -1,0 +1,92 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "jpasta",
+  "main": "worker.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // Serve static assets from the edge; the worker handles dynamic routes.
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+  },
+  "observability": {
+    "enabled": true,
+  },
+  // Required by @opennextjs/cloudflare for internal subrequests.
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "jpasta",
+    },
+  ],
+  // R2: real dish photos + the OpenNext incremental cache.
+  "r2_buckets": [
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "jpasta-opennext-cache",
+    },
+    {
+      "binding": "MEDIA",
+      "bucket_name": "jpasta-media",
+    },
+  ],
+  // D1: OpenNext tag cache for on-demand revalidation.
+  "d1_databases": [
+    {
+      "binding": "NEXT_TAG_CACHE_D1",
+      "database_name": "jpasta-tags",
+      "database_id": "REPLACE_WITH_REAL_D1_ID",
+    },
+  ],
+  // Durable Objects: the order feed + the OpenNext revalidation queue.
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ORDER_FEED",
+        "class_name": "OrderFeed",
+      },
+      {
+        "name": "NEXT_CACHE_DO_QUEUE",
+        "class_name": "DOQueueHandler",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["OrderFeed", "DOQueueHandler"],
+    },
+  ],
+  // Native rate limiting (per-colo, approximate). The DB throttle is the
+  // global backstop for auth; order intake is additionally protected by the
+  // idempotency unique index.
+  "ratelimits": [
+    {
+      "name": "ORDER_LIMIT",
+      "namespace_id": "1001",
+      "simple": { "limit": 10, "period": 60 },
+    },
+    {
+      "name": "AUTH_LIMIT",
+      "namespace_id": "1002",
+      "simple": { "limit": 8, "period": 60 },
+    },
+  ],
+  // Neon Postgres pooling. Replace the id with:
+  //   npx wrangler hyperdrive create jpasta-pg --connection-string="<NEON_POOLED_URL>"
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "REPLACE_WITH_REAL_HYPERDRIVE_ID",
+      "localConnectionString": "postgres://jpasta:jpasta@127.0.0.1:54330/jpasta",
+    },
+  ],
+  // Cloudflare Images binding for next/image optimization.
+  "images": {
+    "binding": "IMAGES",
+  },
+  "vars": {
+    "NEXT_PUBLIC_WHATSAPP_NUMBER": "970566064976",
+    "SHOP_TIMEZONE": "Asia/Hebron",
+  },
+}

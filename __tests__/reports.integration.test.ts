@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq, sql } from "drizzle-orm";
 import { db, pool } from "@/lib/db";
-import { orders, products } from "@/db/schema";
+import { deliveryZones, orders, products } from "@/db/schema";
 import { placeOrder } from "@/lib/server/orders";
 import { transitionOrder } from "@/lib/server/orders";
 import {
@@ -27,6 +27,8 @@ const MARINARA = 1900;
 const DELIVERY_FEE = 500;
 
 d("reports — the manual-count DoD", () => {
+  let zoneId = "";
+
   beforeAll(async () => {
     const alfredo = (await db.select().from(products)).find(
       (p) => p.slug === "alfredo-classico",
@@ -35,6 +37,13 @@ d("reports — the manual-count DoD", () => {
       (p) => p.slug === "marinara",
     );
     if (!alfredo || !marinara) throw new Error("seed missing");
+    const [zone] = await db
+      .select({ id: deliveryZones.id })
+      .from(deliveryZones)
+      .where(eq(deliveryZones.isActive, true))
+      .limit(1);
+    if (!zone) throw new Error("seeded delivery zone missing");
+    zoneId = zone.id;
     await db.execute(sql`TRUNCATE order_items, orders CASCADE`);
 
     // 3 takeaway + 2 delivery + 1 cancelled = 6 orders
@@ -43,6 +52,7 @@ d("reports — the manual-count DoD", () => {
       placeOrder({
         idempotencyKey: `report-dod-${i}`,
         channel,
+        ...(channel === "delivery" ? { zoneId } : {}),
         customer: {
           name: `زبون ${i}`,
           phone: "0566064976",
@@ -70,7 +80,12 @@ d("reports — the manual-count DoD", () => {
     for (const r of results) expect(r.ok).toBe(true);
     expect(cancelled.ok).toBe(true);
     if (cancelled.ok) {
-      const res = await transitionOrder(cancelled.order.id, "cancelled");
+      const res = await transitionOrder({
+        orderId: cancelled.order.id,
+        next: "cancelled",
+        expected: "received",
+        reason: "اختبار",
+      });
       expect(res.ok).toBe(true);
     }
   });

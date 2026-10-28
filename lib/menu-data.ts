@@ -37,6 +37,14 @@ export interface ModifierGroup {
   options: ModifierOption[];
 }
 
+export interface ProductImage {
+  key: string;
+  alt: string;
+  width: number;
+  height: number;
+  color?: string;
+}
+
 export interface Product {
   id: string;
   slug: string;
@@ -50,6 +58,8 @@ export interface Product {
   heat: 0 | 1 | 2 | 3;
   badges: Badge[];
   groups: ModifierGroup[];
+  /** Real photography (R2). Absent → DishArt renders the illustration. */
+  image?: ProductImage;
 }
 
 export const CATEGORIES: Category[] = [

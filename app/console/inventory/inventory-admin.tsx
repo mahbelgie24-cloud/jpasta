@@ -71,14 +71,15 @@ export function InventoryAdmin() {
   }, [load]);
 
   const loadRecipes = useCallback(async (productId: string) => {
-    setRecipeLines(await fetchProductRecipes(productId));
+    const res = await fetchProductRecipes(productId);
+    setRecipeLines(res.ok ? res.rows : []);
   }, []);
 
   useEffect(() => {
     if (!selectedProduct) return;
     let cancelled = false;
-    void fetchProductRecipes(selectedProduct).then((lines) => {
-      if (!cancelled) setRecipeLines(lines);
+    void fetchProductRecipes(selectedProduct).then((res) => {
+      if (!cancelled) setRecipeLines(res.ok ? res.rows : []);
     });
     return () => {
       cancelled = true;

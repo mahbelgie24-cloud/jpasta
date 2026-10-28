@@ -43,6 +43,7 @@ function tone(
 }
 
 let titleFlashTimer: ReturnType<typeof setInterval> | null = null;
+let baseTitle: string | null = null;
 
 export function alertNewOrder(count: number): void {
   if (muted) return;
@@ -67,26 +68,27 @@ export function alertNewOrder(count: number): void {
   }
 
   if (typeof document !== "undefined" && !titleFlashTimer) {
-    const base = document.title;
+    baseTitle = document.title;
     let on = false;
     titleFlashTimer = setInterval(() => {
       on = !on;
-      document.title = on ? `🔔 (${count}) طلب جديد — JPasta` : base;
+      document.title = on
+        ? `(${count}) طلب جديد — JPasta`
+        : (baseTitle ?? document.title);
     }, 900);
     // stop flashing after 30s — the board itself shows the state
-    setTimeout(() => {
-      if (titleFlashTimer) {
-        clearInterval(titleFlashTimer);
-        titleFlashTimer = null;
-        document.title = base;
-      }
-    }, 30000);
+    setTimeout(() => clearTitleFlash(), 30000);
   }
 }
 
+/** Restore the title immediately (tab focused, order acknowledged, unmount). */
 export function clearTitleFlash(): void {
   if (titleFlashTimer) {
     clearInterval(titleFlashTimer);
     titleFlashTimer = null;
+  }
+  if (baseTitle && typeof document !== "undefined") {
+    document.title = baseTitle;
+    baseTitle = null;
   }
 }

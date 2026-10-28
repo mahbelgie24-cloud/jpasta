@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Bike,
@@ -16,12 +16,11 @@ import { Price } from "@/components/ui/price";
 import { Sheet } from "@/components/ui/sheet";
 import { Stepper } from "@/components/ui/stepper";
 import { useCart } from "@/components/menu/cart-context";
-import { PLACEHOLDER_DELIVERY_FEE_MINOR } from "@/lib/menu-data";
-import { addMinor, ZERO, type Minor } from "@/lib/pricing";
+import { addMinor, formatPrice, ZERO, type Minor } from "@/lib/pricing";
 import { buildOrderMessage, whatsappUrl } from "@/lib/whatsapp";
 import { SITE } from "@/lib/site";
 import { enqueueOrder, pendingCount } from "@/lib/offline/queue";
-import { placeStorefrontOrder } from "@/app/actions/orders";
+import { fetchDeliveryZones, placeStorefrontOrder } from "@/app/actions/orders";
 
 /**
  * Cart drawer — lines, delivery/pickup, customer info, and the Phase 1
@@ -53,6 +52,30 @@ export function CartDrawer({
     orderId: string;
     accessToken: string;
   } | null>(null);
+  const [zones, setZones] = useState<Array<{
+    id: string;
+    nameAr: string;
+    feeMinor: number;
+  }> | null>(null);
+  const [zoneId, setZoneId] = useState("");
+  const [zonesError, setZonesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    fetchDeliveryZones()
+      .then((list) => {
+        if (!alive) return;
+        setZones(list);
+        setZoneId((current) => current || list[0]?.id || "");
+        setZonesError(null);
+      })
+      .catch(() => {
+        if (alive) setZonesError("تعذر تحميل مناطق التوصيل — حدّث الصفحة.");
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
   // Lazy per-cart key: generated in event handlers only (never during
   // render), regenerated after a successful order so the next cart is a
   // distinct idempotency scope.
@@ -62,16 +85,28 @@ export function CartDrawer({
     return idempotencyKey.current;
   };
 
+  const selectedZone = zones?.find((z) => z.id === zoneId) ?? null;
   const deliveryFee: Minor =
-    orderType === "delivery" ? PLACEHOLDER_DELIVERY_FEE_MINOR : ZERO;
+    orderType === "delivery" ? (selectedZone?.feeMinor ?? ZERO) : ZERO;
   const total = addMinor(cart.subtotal, deliveryFee);
+
+  function resetCustomer() {
+    setName("");
+    setPhone("");
+    setAddress("");
+    setNote("");
+  }
 
   function handleClose() {
     if (placed) {
       cart.clear();
       setPlaced(null);
+      resetCustomer();
       idempotencyKey.current = null; // fresh scope for the next cart
     }
+    // A queued-offline order must never pin the drawer to its confirmation
+    // screen on every subsequent open (v1 defect).
+    setOfflineQueued(null);
     setError(null);
     onClose();
   }
@@ -94,6 +129,10 @@ export function CartDrawer({
       setError("اكتب العنوان بالتفصيل حتى يوصلك الطلب بسرعة.");
       return;
     }
+    if (orderType === "delivery" && !zoneId) {
+      setError(zonesError ?? "اختر منطقة التوصيل حتى نعرف رسم التوصيل.");
+      return;
+    }
     setError(null);
     setBusy(true);
     const payload = {
@@ -102,6 +141,7 @@ export function CartDrawer({
         orderType === "delivery"
           ? ("delivery" as const)
           : ("takeaway" as const),
+      ...(orderType === "delivery" ? { zoneId } : {}),
       customer: {
         name: name.trim(),
         phone: phone.trim(),
@@ -123,6 +163,8 @@ export function CartDrawer({
           orderId: result.order.id,
           accessToken: result.order.accessToken,
         });
+        // Don't retain customer PII in memory after a successful submit.
+        resetCustomer();
       } else {
         setError(result.error);
       }
@@ -200,7 +242,13 @@ export function CartDrawer({
           </div>
         </div>
       ) : (
-        <div className="space-y-6">
+        <form
+          className="space-y-6"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submit();
+          }}
+        >
           {/* lines */}
           <ul className="space-y-3">
             {cart.lines.map((l) => (
@@ -251,11 +299,7 @@ export function CartDrawer({
             <legend className="text-sm font-bold text-ink">
               طريقة الاستلام
             </legend>
-            <div
-              className="mt-2.5 grid grid-cols-2 gap-2"
-              role="radiogroup"
-              aria-label="طريقة الاستلام"
-            >
+            <div className="mt-2.5 grid grid-cols-2 gap-2">
               {(
                 [
                   { id: "delivery", label: "توصيل", icon: Bike },
@@ -264,25 +308,59 @@ export function CartDrawer({
               ).map((opt) => {
                 const active = orderType === opt.id;
                 return (
-                  <button
+                  <label
                     key={opt.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={active}
-                    onClick={() => setOrderType(opt.id)}
                     className={
                       active
-                        ? "flex min-h-12 items-center justify-center gap-2 rounded-md border-2 border-basil-700 bg-basil-50 text-sm font-bold text-basil-800"
-                        : "flex min-h-12 items-center justify-center gap-2 rounded-md border border-cream-300 bg-cream-100 text-sm font-bold text-ink-soft transition-colors hover:border-basil-300"
+                        ? "flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-md border-2 border-basil-700 bg-basil-50 text-sm font-bold text-basil-800 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-basil-600"
+                        : "flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-md border border-cream-300 bg-cream-100 text-sm font-bold text-ink-soft transition-colors hover:border-basil-300 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-basil-600"
                     }
                   >
+                    <input
+                      type="radio"
+                      name="order-type"
+                      value={opt.id}
+                      checked={active}
+                      onChange={() => setOrderType(opt.id)}
+                      className="sr-only"
+                    />
                     <opt.icon className="size-4" aria-hidden />
                     {opt.label}
-                  </button>
+                  </label>
                 );
               })}
             </div>
           </fieldset>
+
+          {orderType === "delivery" && (
+            <div>
+              <label htmlFor="cust-zone" className="text-sm font-bold text-ink">
+                منطقة التوصيل <span className="text-terracotta">*</span>
+              </label>
+              <select
+                id="cust-zone"
+                value={zoneId}
+                onChange={(e) => setZoneId(e.target.value)}
+                className={`mt-1.5 ${inputClass}`}
+                disabled={!zones || zones.length === 0}
+              >
+                {!zones && <option value="">جارٍ تحميل المناطق…</option>}
+                {zones && zones.length === 0 && (
+                  <option value="">لا توجد مناطق توصيل متاحة</option>
+                )}
+                {zones?.map((z) => (
+                  <option key={z.id} value={z.id}>
+                    {z.nameAr} — {formatPrice(z.feeMinor)} ₪
+                  </option>
+                ))}
+              </select>
+              {zonesError && (
+                <p className="mt-1.5 text-xs font-bold text-terracotta">
+                  {zonesError}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* customer info */}
           <div className="space-y-3">
@@ -390,7 +468,7 @@ export function CartDrawer({
             </p>
           )}
 
-          <Button size="lg" className="w-full" onClick={submit} disabled={busy}>
+          <Button type="submit" size="lg" className="w-full" disabled={busy}>
             {busy ? (
               <Loader2 className="size-5 animate-spin" aria-hidden />
             ) : (
@@ -438,7 +516,7 @@ export function CartDrawer({
           <p className="text-center text-xs text-ink-soft">
             الدفع نقداً عند الاستلام — بدون أي رسوم إضافية.
           </p>
-        </div>
+        </form>
       )}
     </Sheet>
   );

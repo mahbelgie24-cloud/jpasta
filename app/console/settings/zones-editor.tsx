@@ -30,9 +30,18 @@ export function ZonesEditor() {
     try {
       const list = await fetchZones();
       setZones(list);
-      setDrafts(
-        Object.fromEntries(list.map((z) => [z.id, formatPrice(z.feeMinor)])),
-      );
+      // Preserve unsaved edits in other rows while refreshing the list.
+      setDrafts((current) => {
+        const server = Object.fromEntries(
+          list.map((z) => [z.id, formatPrice(z.feeMinor)]),
+        );
+        const kept = Object.fromEntries(
+          Object.entries(current).filter(([id]) =>
+            list.some((zone) => zone.id === id),
+          ),
+        );
+        return { ...server, ...kept };
+      });
     } catch {
       setNotice("تعذر تحميل المناطق — حدّث الصفحة.");
     }
@@ -51,15 +60,39 @@ export function ZonesEditor() {
     const res = await updateZoneFee(zone.id, feeMinor);
     setRowBusy(null);
     setNotice(res.ok ? "✓ حُفظت الرسوم" : (res.error ?? "تعذر الحفظ"));
-    if (res.ok) await load();
+    if (res.ok) {
+      setZones(
+        (current) =>
+          current?.map((z) => (z.id === zone.id ? { ...z, feeMinor } : z)) ??
+          current,
+      );
+      setDrafts((current) => ({
+        ...current,
+        [zone.id]: formatPrice(feeMinor),
+      }));
+    }
   }
 
   async function toggle(zone: Zone) {
+    const next = !zone.isActive;
     setRowBusy(zone.id);
-    const res = await setZoneActive(zone.id, !zone.isActive);
+    setZones(
+      (current) =>
+        current?.map((z) =>
+          z.id === zone.id ? { ...z, isActive: next } : z,
+        ) ?? current,
+    );
+    const res = await setZoneActive(zone.id, next);
     setRowBusy(null);
-    if (!res.ok) setNotice(res.error ?? "تعذر التغيير");
-    if (res.ok) await load();
+    if (!res.ok) {
+      setZones(
+        (current) =>
+          current?.map((z) =>
+            z.id === zone.id ? { ...z, isActive: zone.isActive } : z,
+          ) ?? current,
+      );
+      setNotice(res.error ?? "تعذر التغيير");
+    }
   }
 
   async function create() {

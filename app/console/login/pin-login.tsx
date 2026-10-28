@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Delete, Loader2 } from "lucide-react";
+import { Delete } from "lucide-react";
+import { TwirlLoader } from "@/components/ui/twirl-loader";
 import { consoleLogin } from "@/app/actions/console";
 
 const KEYS = [
@@ -23,7 +24,7 @@ const KEYS = [
 export function PinLogin() {
   const router = useRouter();
   const [pin, setPin] = useState("");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const submittedFor = useRef<string | null>(null);
 
@@ -36,17 +37,39 @@ export function PinLogin() {
           router.push("/console");
           router.refresh();
         } else {
-          setError(true);
+          setError(res.error ?? "الرمز غير صحيح — حاول مجدداً.");
           setPin("");
           submittedFor.current = null;
-          setTimeout(() => setError(false), 1200);
+          window.setTimeout(() => setError(null), 2600);
         }
+      } catch {
+        setError("تعذر الاتصال — تحقق من الشبكة وحاول مجدداً.");
+        setPin("");
+        submittedFor.current = null;
       } finally {
         setBusy(false);
       }
     },
     [router],
   );
+
+  // A physical keyboard must work on desktop: digits, backspace, escape.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (busy) return;
+      if (/^\d$/.test(event.key)) {
+        event.preventDefault();
+        setPin((prev) => (prev + event.key).slice(0, 6));
+      } else if (event.key === "Backspace") {
+        event.preventDefault();
+        setPin((prev) => prev.slice(0, -1));
+      } else if (event.key === "Escape") {
+        setPin("");
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [busy]);
 
   // Auto-submit at 6 digits — via an effect so any typing speed (even
   // batched rapid input) triggers exactly one submit.
@@ -81,7 +104,7 @@ export function PinLogin() {
               error
                 ? "size-3.5 rounded-full bg-terracotta"
                 : i < pin.length
-                  ? "size-3.5 rounded-full bg-basil-700"
+                  ? "size-3.5 animate-pop rounded-full bg-basil-700 motion-reduce:animate-none"
                   : "size-3.5 rounded-full border-2 border-cream-400"
             }
           />
@@ -92,7 +115,7 @@ export function PinLogin() {
           role="alert"
           className="mt-3 text-center text-sm font-bold text-terracotta"
         >
-          الرمز غير صحيح — حاول مجدداً
+          {error}
         </p>
       )}
 
@@ -121,7 +144,7 @@ export function PinLogin() {
       </div>
       {busy && (
         <p className="mt-4 flex items-center justify-center gap-2 text-sm text-ink-soft">
-          <Loader2 className="size-4 animate-spin" aria-hidden />
+          <TwirlLoader className="size-5" label="جارٍ التحقق…" />
           جارٍ التحقق…
         </p>
       )}

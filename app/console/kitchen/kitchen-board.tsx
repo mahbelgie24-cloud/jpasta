@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bike, ChefHat, HandPlatter, Loader2 } from "lucide-react";
+import { Bike, ChefHat, HandPlatter } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
+import { TwirlLoader } from "@/components/ui/twirl-loader";
 import { useOrdersFeed, type FeedOrder } from "@/hooks/use-orders-feed";
 import { advanceOrder } from "@/app/actions/console";
 
@@ -109,7 +110,7 @@ function KitchenTicket({
         className="mt-6 flex min-h-16 w-full items-center justify-center gap-3 rounded-full bg-basil-700 text-2xl font-extrabold text-cream-50 shadow-card transition-colors hover:bg-basil-600 active:scale-[0.99] disabled:opacity-50"
       >
         {busy ? (
-          <Loader2 className="size-7 animate-spin" aria-hidden />
+          <TwirlLoader className="size-9" label="جارٍ التحديث…" />
         ) : (
           <ChefHat className="size-7" aria-hidden />
         )}
@@ -120,20 +121,26 @@ function KitchenTicket({
 }
 
 export function KitchenBoard() {
-  const { orders, live, refresh } = useOrdersFeed({ alertOnNew: true });
+  const { orders, connection, refresh } = useOrdersFeed({
+    alertOnNew: true,
+  });
   const [busyId, setBusyId] = useState<string | null>(null);
   const [lastActionError, setLastActionError] = useState<string | null>(null);
 
   async function move(id: string, next: "preparing" | "ready") {
+    const current = orders?.find((o) => o.id === id);
+    if (!current) return;
     setBusyId(id);
     setLastActionError(null);
     try {
-      const res = await advanceOrder(id, next);
+      const res = await advanceOrder(id, next, current.status);
       if (!res.ok) {
         setLastActionError(res.error ?? "تعذر التحديث");
       } else {
         await refresh();
       }
+    } catch {
+      setLastActionError("تعذر التحديث — تحقق من الاتصال.");
     } finally {
       setBusyId(null);
     }
@@ -150,7 +157,7 @@ export function KitchenBoard() {
           <div className="flex items-center gap-2.5">
             <LogoMark className="size-12" />
             <div>
-              <p className="font-display text-2xl font-semibold text-basil-800">
+              <p className="font-display-ar text-2xl font-semibold text-basil-800">
                 شاشة المطبخ
               </p>
               <p className="text-sm text-ink-soft">
@@ -160,15 +167,31 @@ export function KitchenBoard() {
           </div>
           <span
             className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold ${
-              live ? "bg-basil-100 text-basil-800" : "bg-bronze/15 text-bronze"
+              connection === "live"
+                ? "bg-basil-100 text-basil-800"
+                : connection === "offline"
+                  ? "bg-terracotta/10 text-terracotta"
+                  : "bg-bronze/15 text-bronze"
             }`}
             aria-live="polite"
           >
             <span
-              className={`size-2.5 rounded-full ${live ? "bg-basil-600" : "bg-bronze"}`}
+              className={`size-2.5 rounded-full ${
+                connection === "live"
+                  ? "bg-basil-600"
+                  : connection === "offline"
+                    ? "bg-terracotta"
+                    : "bg-bronze"
+              }`}
               aria-hidden
             />
-            {live ? "مباشر" : "إعادة اتصال…"}
+            {connection === "live"
+              ? "مباشر"
+              : connection === "polling"
+                ? "تحديث دوري"
+                : connection === "offline"
+                  ? "غير متصل"
+                  : "جارٍ الاتصال…"}
           </span>
         </header>
 
@@ -183,7 +206,7 @@ export function KitchenBoard() {
 
         {orders === null ? (
           <div className="flex items-center justify-center gap-3 py-24 text-ink-soft">
-            <Loader2 className="size-6 animate-spin" aria-hidden />
+            <TwirlLoader className="size-8" label="جارٍ تحميل التذاكر…" />
             جارٍ التحميل…
           </div>
         ) : tickets.length === 0 ? (

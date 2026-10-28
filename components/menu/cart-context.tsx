@@ -85,9 +85,32 @@ function reducer(state: CartLine[], action: Action): CartLine[] {
   }
 }
 
-// v2: pre-Phase-1 carts carried placeholder catalog ids (slugs, not UUIDs) —
-// bumping the key invalidates them instead of failing validation at submit.
-const STORAGE_KEY = "jpasta.cart.v2";
+// v3: v2 carts could carry placeholder slug ids or pre-zone pricing. Bumping
+// the key invalidates them instead of failing validation at submit.
+const STORAGE_KEY = "jpasta.cart.v3";
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isValidLine(value: unknown): value is CartLine {
+  if (!value || typeof value !== "object") return false;
+  const line = value as Partial<CartLine>;
+  return (
+    typeof line.key === "string" &&
+    line.key.length > 0 &&
+    typeof line.productId === "string" &&
+    UUID_RE.test(line.productId) &&
+    typeof line.nameAr === "string" &&
+    Number.isInteger(line.quantity) &&
+    (line.quantity ?? 0) > 0 &&
+    (line.quantity ?? 0) <= 20 &&
+    Number.isInteger(line.unitPriceMinor) &&
+    (line.unitPriceMinor ?? 0) >= 0 &&
+    Number.isInteger(line.lineTotalMinor) &&
+    (line.lineTotalMinor ?? 0) >= 0 &&
+    Array.isArray(line.selections)
+  );
+}
 
 interface CartApi {
   lines: CartLine[];
@@ -109,9 +132,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw) as CartLine[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          dispatch({ type: "hydrate", lines: parsed });
+        const parsed: unknown = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const valid = parsed.filter(isValidLine);
+          if (valid.length > 0) dispatch({ type: "hydrate", lines: valid });
         }
       }
     } catch {
