@@ -47,6 +47,20 @@ test.describe("menu", () => {
     await expect(cards).toHaveCount(total);
   });
 
+  test("quick-adds a dish with no options without opening a sheet", async ({
+    page,
+  }) => {
+    await page.goto("/menu");
+    const card = page.locator("#tabbouleh");
+    await card.getByRole("button", { name: "أضف", exact: true }).click();
+
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await page.getByRole("button", { name: /عرض السلة/ }).click();
+    await expect(page.getByRole("dialog", { name: "سلتك" })).toContainText(
+      "تبولة",
+    );
+  });
+
   test("checkout rejects a submission without a name", async ({ page }) => {
     await addProductToCart(page);
     await page.getByRole("button", { name: /عرض السلة/ }).click();

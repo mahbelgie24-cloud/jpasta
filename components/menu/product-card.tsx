@@ -6,6 +6,7 @@ import { DishMedia } from "@/components/brand/dish-media";
 import { ProductBadge } from "@/components/ui/badge";
 import { Price } from "@/components/ui/price";
 import { ItemSheet } from "@/components/menu/item-sheet";
+import { useCart } from "@/components/menu/cart-context";
 import type { Product } from "@/lib/menu-data";
 
 /** Heat level — icon + count (never emoji, never color alone). */
@@ -32,9 +33,27 @@ export function ProductCard({
   orderingEnabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const cart = useCart();
   const hasPriceVariation = product.groups.some((group) =>
     group.options.some((option) => option.priceMinor > 0),
   );
+  // A dish with no choices has nothing to customize — skip the empty sheet.
+  const canQuickAdd = orderingEnabled && product.groups.length === 0;
+
+  function quickAdd() {
+    cart.add({
+      // Same key shape as ItemSheet for a no-selection line, so repeated
+      // quick-adds merge instead of stacking duplicate rows.
+      key: `${product.id}:::`,
+      productId: product.id,
+      nameAr: product.nameAr,
+      detailAr: "",
+      quantity: 1,
+      unitPriceMinor: product.basePriceMinor,
+      lineTotalMinor: product.basePriceMinor,
+      selections: [],
+    });
+  }
 
   return (
     <article
@@ -81,7 +100,7 @@ export function ProductCard({
         </div>
         <button
           type="button"
-          onClick={() => setOpen(true)}
+          onClick={() => (canQuickAdd ? quickAdd() : setOpen(true))}
           className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-action px-5 text-sm font-bold text-action-text shadow-card transition-[background-color,transform] duration-150 ease-out hover:bg-action-hover active:scale-[0.96]"
         >
           <Plus className="size-4" aria-hidden />
