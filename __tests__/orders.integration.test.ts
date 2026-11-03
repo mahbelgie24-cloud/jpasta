@@ -3,7 +3,7 @@ import { testDatabaseUrl } from "@/test/db";
 import { eq, sql } from "drizzle-orm";
 import { db, pool } from "@/lib/db";
 import { deliveryZones, orderItems, orders, products } from "@/db/schema";
-import { orderInputSchema, placeOrder } from "@/lib/server/orders";
+import { orderInputSchema, placeOrder, quoteCart } from "@/lib/server/orders";
 
 /**
  * Integration suite (DoD gate, spec §15 Phase 1): 20 consecutive orders with
@@ -312,6 +312,67 @@ d("placeOrder — order pipeline", () => {
       .where(eq(orderItems.orderId, result.order.id));
     expect(items[0]?.unitPriceMinor).toBe(NUGGETS);
     expect(items[0]?.detailAr).toBe("بافلو");
+  });
+
+  it("quotes the current catalog price without writing an order", async () => {
+    const quote = await quoteCart({
+      lines: [
+        {
+          productId: fettuccineId,
+          quantity: 2,
+          selections: [{ groupKey: "extras", optionKey: "chicken" }],
+        },
+      ],
+    });
+    expect(quote.ok).toBe(true);
+    if (quote.ok) {
+      expect(quote.subtotalMinor).toBe((FETTUCCINE + CHICKEN_ADDON) * 2);
+      expect(quote.lines[0]?.available).toBe(true);
+      expect(quote.unavailableProductIds).toHaveLength(0);
+    }
+  });
+
+  it("reflects an owner price change in the quote", async () => {
+    const newPrice = FETTUCCINE + 300;
+    await db
+      .update(products)
+      .set({ basePriceMinor: newPrice })
+      .where(eq(products.id, fettuccineId));
+    try {
+      const quote = await quoteCart({
+        lines: [{ productId: fettuccineId, quantity: 1, selections: [] }],
+      });
+      expect(quote.ok).toBe(true);
+      if (quote.ok) expect(quote.lines[0]?.unitPriceMinor).toBe(newPrice);
+    } finally {
+      await db
+        .update(products)
+        .set({ basePriceMinor: FETTUCCINE })
+        .where(eq(products.id, fettuccineId));
+    }
+  });
+
+  it("marks an unavailable product instead of pricing it", async () => {
+    await db
+      .update(products)
+      .set({ isAvailable: false })
+      .where(eq(products.id, pennePestoId));
+    try {
+      const quote = await quoteCart({
+        lines: [{ productId: pennePestoId, quantity: 1, selections: [] }],
+      });
+      expect(quote.ok).toBe(true);
+      if (quote.ok) {
+        expect(quote.lines[0]?.available).toBe(false);
+        expect(quote.subtotalMinor).toBe(0);
+        expect(quote.unavailableProductIds).toContain(pennePestoId);
+      }
+    } finally {
+      await db
+        .update(products)
+        .set({ isAvailable: true })
+        .where(eq(products.id, pennePestoId));
+    }
   });
 
   it("records the chosen pasta type on the line", async () => {

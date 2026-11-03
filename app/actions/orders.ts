@@ -6,6 +6,7 @@ import {
   getActiveDeliveryZones,
   getOrderForStatus,
   placeOrder,
+  quoteCart,
   type PlaceOrderResult,
 } from "@/lib/server/orders";
 import { requireStaff } from "@/lib/server/session";
@@ -94,4 +95,13 @@ export async function fetchOrderStatus(orderId: string, token: string) {
 /** Public zone list — the cart must show the real fee before submitting. */
 export async function fetchDeliveryZones() {
   return getActiveDeliveryZones();
+}
+
+/**
+ * Re-price a persisted cart against the current catalog. Read-only and
+ * public by design (the same data the menu already renders); it never
+ * creates an order.
+ */
+export async function fetchCartQuote(lines: unknown) {
+  return quoteCart({ lines });
 }

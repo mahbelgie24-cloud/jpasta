@@ -34,6 +34,17 @@ export interface CartLine {
   unitPriceMinor: Minor;
   lineTotalMinor: Minor;
   selections: CartSelection[];
+  /** Set by the server quote when the product is no longer orderable. */
+  unavailable?: boolean;
+}
+
+export interface CartReprice {
+  key: string;
+  nameAr: string;
+  detailAr: string;
+  unitPriceMinor: Minor;
+  lineTotalMinor: Minor;
+  available: boolean;
 }
 
 type Action =
@@ -41,7 +52,8 @@ type Action =
   | { type: "setQty"; key: string; quantity: number }
   | { type: "remove"; key: string }
   | { type: "clear" }
-  | { type: "hydrate"; lines: CartLine[] };
+  | { type: "hydrate"; lines: CartLine[] }
+  | { type: "reprice"; updates: CartReprice[] };
 
 function reducer(state: CartLine[], action: Action): CartLine[] {
   switch (action.type) {
@@ -52,6 +64,7 @@ function reducer(state: CartLine[], action: Action): CartLine[] {
           l.key === action.line.key
             ? {
                 ...l,
+                unavailable: false,
                 quantity: Math.min(20, l.quantity + action.line.quantity),
                 lineTotalMinor: multiplyMinor(
                   l.unitPriceMinor,
@@ -82,6 +95,21 @@ function reducer(state: CartLine[], action: Action): CartLine[] {
       return [];
     case "hydrate":
       return action.lines;
+    case "reprice": {
+      const byKey = new Map(action.updates.map((u) => [u.key, u]));
+      return state.map((l) => {
+        const update = byKey.get(l.key);
+        if (!update) return l;
+        return {
+          ...l,
+          nameAr: update.nameAr,
+          detailAr: update.detailAr,
+          unitPriceMinor: update.unitPriceMinor,
+          lineTotalMinor: update.lineTotalMinor,
+          unavailable: !update.available,
+        };
+      });
+    }
   }
 }
 
@@ -109,7 +137,8 @@ function isValidLine(value: unknown): value is CartLine {
     (line.unitPriceMinor ?? 0) >= 0 &&
     Number.isInteger(line.lineTotalMinor) &&
     (line.lineTotalMinor ?? 0) >= 0 &&
-    Array.isArray(line.selections)
+    Array.isArray(line.selections) &&
+    (line.unavailable === undefined || typeof line.unavailable === "boolean")
   );
 }
 
@@ -121,6 +150,7 @@ interface CartApi {
   setQty: (key: string, quantity: number) => void;
   remove: (key: string) => void;
   clear: () => void;
+  reprice: (updates: CartReprice[]) => void;
 }
 
 const CartContext = createContext<CartApi | null>(null);
@@ -168,6 +198,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setQty: (key, quantity) => dispatch({ type: "setQty", key, quantity }),
       remove: (key) => dispatch({ type: "remove", key }),
       clear: () => dispatch({ type: "clear" }),
+      reprice: (updates) => dispatch({ type: "reprice", updates }),
     };
   }, [lines]);
 

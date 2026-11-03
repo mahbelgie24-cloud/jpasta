@@ -24,7 +24,11 @@ import { addMinor, formatPrice, ZERO, type Minor } from "@/lib/pricing";
 import { buildOrderMessage, whatsappUrl } from "@/lib/whatsapp";
 import { SITE } from "@/lib/site";
 import { enqueueOrder, pendingCount } from "@/lib/offline/queue";
-import { fetchDeliveryZones, placeStorefrontOrder } from "@/app/actions/orders";
+import {
+  fetchCartQuote,
+  fetchDeliveryZones,
+  placeStorefrontOrder,
+} from "@/app/actions/orders";
 import { nextIdempotencyScope, type IdempotencyScope } from "@/lib/idempotency";
 
 /**
@@ -76,6 +80,7 @@ export function CartDrawer({
   }> | null>(null);
   const [zoneId, setZoneId] = useState("");
   const [zonesError, setZonesError] = useState<string | null>(null);
+  const [priceNotice, setPriceNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -97,12 +102,80 @@ export function CartDrawer({
   // with a different payload (the server binds the key to payload_hash).
   const idempotency = useRef<IdempotencyScope | null>(null);
   const confirmationRef = useRef<HTMLHeadingElement | null>(null);
+  const linesRef = useRef(cart.lines);
+  linesRef.current = cart.lines;
+  const repriceRef = useRef(cart.reprice);
+  repriceRef.current = cart.reprice;
 
   // The form is replaced by a confirmation; move focus there so a keyboard
   // or screen-reader user is not dropped on <body>.
   useEffect(() => {
     if (placed || offlineQueued !== null) confirmationRef.current?.focus();
   }, [placed, offlineQueued]);
+
+  // A cart can outlive an owner price change. Re-price it server-side when
+  // the drawer opens and correct the displayed lines before submit.
+  useEffect(() => {
+    if (!open || placed || offlineQueued !== null) return;
+    const current = linesRef.current;
+    if (current.length === 0) return;
+    let alive = true;
+    void fetchCartQuote(
+      current.map((l) => ({
+        productId: l.productId,
+        quantity: l.quantity,
+        note: l.note || undefined,
+        selections: l.selections,
+      })),
+    )
+      .then((result) => {
+        if (!alive) return;
+        if (!result.ok) {
+          setPriceNotice(result.error);
+          return;
+        }
+        const updates = current.flatMap((line, index) => {
+          const quote = result.lines[index];
+          if (!quote) return [];
+          return [
+            {
+              key: line.key,
+              nameAr: quote.nameAr,
+              detailAr: quote.detailAr ?? "",
+              unitPriceMinor: quote.unitPriceMinor,
+              lineTotalMinor: quote.lineTotalMinor,
+              available: quote.available,
+            },
+          ];
+        });
+        const changed = updates.some((update, index) => {
+          const line = current[index];
+          return (
+            !line ||
+            update.unitPriceMinor !== line.unitPriceMinor ||
+            update.lineTotalMinor !== line.lineTotalMinor ||
+            update.nameAr !== line.nameAr
+          );
+        });
+        const unavailableCount = updates.filter((u) => !u.available).length;
+        if (changed || unavailableCount > 0) {
+          repriceRef.current(updates);
+          setPriceNotice(
+            unavailableCount > 0
+              ? "بعض الأصناف لم تعد متاحة — احذفها للمتابعة."
+              : "تحدّثت الأسعار — راجع المجموع قبل الإرسال.",
+          );
+        } else {
+          setPriceNotice(null);
+        }
+      })
+      .catch(() => {
+        // Keep the stored estimate; the server re-verifies at submit.
+      });
+    return () => {
+      alive = false;
+    };
+  }, [open, placed, offlineQueued]);
 
   const selectedZone = zones?.find((z) => z.id === zoneId) ?? null;
   const regionsReady = Boolean(zones && zones.length > 0);
@@ -111,6 +184,7 @@ export function CartDrawer({
   const total = addMinor(cart.subtotal, deliveryFee);
   const remainingToMinimum = Math.max(0, minOrderMinor - cart.subtotal);
   const belowMinimum = remainingToMinimum > 0;
+  const hasUnavailable = cart.lines.some((l) => l.unavailable);
 
   function resetCustomer() {
     setName("");
@@ -139,6 +213,10 @@ export function CartDrawer({
     const digits = phone.replace(/\D/g, "");
     if (cart.lines.length === 0) {
       setError("السلة فاضية — أضف طبقاً أولاً.");
+      return;
+    }
+    if (cart.lines.some((l) => l.unavailable)) {
+      setError("بعض الأصناف لم تعد متاحة — احذفها وأعد المحاولة.");
       return;
     }
     if (name.trim().length < 2) {
@@ -303,6 +381,11 @@ export function CartDrawer({
                       <p className="mt-1 text-xs text-bronze">
                         ملاحظة: {l.note}
                       </p>
+                    )}
+                    {l.unavailable && (
+                      <span className="mt-1.5 inline-flex rounded-full bg-terracotta/10 px-2 py-0.5 text-[11px] font-bold text-terracotta">
+                        غير متاح الآن
+                      </span>
                     )}
                   </div>
                   <button
@@ -533,6 +616,15 @@ export function CartDrawer({
             </div>
           </dl>
 
+          {priceNotice && (
+            <p
+              role="status"
+              className="rounded-md bg-warning/10 px-3 py-2 text-xs font-bold text-ink"
+            >
+              {priceNotice}
+            </p>
+          )}
+
           {belowMinimum && (
             <p
               role="status"
@@ -560,6 +652,7 @@ export function CartDrawer({
             disabled={
               busy ||
               belowMinimum ||
+              hasUnavailable ||
               (orderType === "delivery" && (!zones || zones.length === 0))
             }
           >

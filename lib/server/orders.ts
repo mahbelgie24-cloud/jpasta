@@ -135,7 +135,7 @@ export interface PlacedOrder {
 export type PlaceOrderResult =
   { ok: true; order: PlacedOrder } | { ok: false; error: string };
 
-interface ComputedLine {
+export interface ComputedLine {
   productId: string;
   nameAr: string;
   detailAr: string | null;
@@ -143,6 +143,96 @@ interface ComputedLine {
   quantity: number;
   unitPriceMinor: Minor;
   lineTotalMinor: Minor;
+}
+
+export interface CatalogLineRows {
+  products: Array<typeof products.$inferSelect>;
+  groups: Array<typeof modifierGroups.$inferSelect>;
+  options: Array<typeof modifiers.$inferSelect>;
+}
+
+/**
+ * The single server-side line pricer. `placeOrder` and `quoteCart` both use
+ * it, so the price the customer is shown and the price that is charged can
+ * never drift.
+ */
+export function computeOrderLines(
+  lines: NormalizedOrderInput["lines"],
+  rows: CatalogLineRows,
+): ComputedLine[] {
+  const prodById = new Map(rows.products.map((p) => [p.id, p]));
+  const groupsByProduct = new Map<
+    string,
+    Array<typeof modifierGroups.$inferSelect>
+  >();
+  for (const g of rows.groups) {
+    const list = groupsByProduct.get(g.productId) ?? [];
+    list.push(g);
+    groupsByProduct.set(g.productId, list);
+  }
+  const optionsByGroup = new Map<
+    string,
+    Array<typeof modifiers.$inferSelect>
+  >();
+  for (const o of rows.options) {
+    const list = optionsByGroup.get(o.groupId) ?? [];
+    list.push(o);
+    optionsByGroup.set(o.groupId, list);
+  }
+
+  return lines.map((line) => {
+    const product = prodById.get(line.productId);
+    if (!product) throw new OrderError("صنف غير معروف في السلة.");
+
+    let unit: Minor = product.basePriceMinor;
+    const details: string[] = [];
+    const groups = groupsByProduct.get(product.id) ?? [];
+
+    const selectedByGroup = new Map<string, string[]>();
+    for (const s of line.selections) {
+      const list = selectedByGroup.get(s.groupKey) ?? [];
+      list.push(s.optionKey);
+      selectedByGroup.set(s.groupKey, list);
+    }
+
+    for (const g of groups) {
+      // Dedupe keys: a malformed client must not be charged twice for the
+      // same selection.
+      const chosen = [...new Set(selectedByGroup.get(g.key) ?? [])];
+      if (g.isRequired && chosen.length === 0) {
+        throw new OrderError(`اختيار مطلوب ناقص: ${g.nameAr}`);
+      }
+      if (g.type === "single" && chosen.length > 1) {
+        throw new OrderError(`خيار واحد فقط مسموح لـ: ${g.nameAr}`);
+      }
+      if (g.maxSelections !== null && chosen.length > g.maxSelections) {
+        throw new OrderError(`الحد الأقصى ${g.maxSelections} لـ: ${g.nameAr}`);
+      }
+      for (const key of chosen) {
+        const opt = optionsByGroup.get(g.id)?.find((o) => o.key === key);
+        if (!opt) throw new OrderError(`خيار غير صالح في: ${g.nameAr}`);
+        unit = addMinor(unit, opt.priceDeltaMinor);
+        // Every chosen option reaches the kitchen ticket. Only the two
+        // "neutral" defaults stay implicit; size (if a dish ever offers it)
+        // leads the detail string.
+        const isNeutral =
+          (g.key === "heat" && opt.key === "mild") ||
+          (g.key === "doneness" && opt.key === "al-dente");
+        if (g.key === "size") details.unshift(opt.nameAr);
+        else if (!isNeutral) details.push(opt.nameAr);
+      }
+    }
+
+    return {
+      productId: product.id,
+      nameAr: product.nameAr,
+      detailAr: details.length > 0 ? details.join(" • ") : null,
+      note: line.note ?? null,
+      quantity: line.quantity,
+      unitPriceMinor: unit,
+      lineTotalMinor: multiplyMinor(unit, line.quantity),
+    };
+  });
 }
 
 function isUuid(value: string): boolean {
@@ -281,19 +371,11 @@ export async function placeOrder(
           "صنف في السلة لم يعد متوفراً — حدّث القائمة وحاول مرة أخرى.",
         );
       }
-      const prodById = new Map(prodRows.map((p) => [p.id, p]));
-
       const groupRows = await tx
         .select()
         .from(modifierGroups)
         .where(inArray(modifierGroups.productId, productIds))
         .orderBy(asc(modifierGroups.sortOrder));
-      const groupsByProduct = new Map<string, typeof groupRows>();
-      for (const g of groupRows) {
-        const list = groupsByProduct.get(g.productId) ?? [];
-        list.push(g);
-        groupsByProduct.set(g.productId, list);
-      }
 
       const optionRows = groupRows.length
         ? await tx
@@ -306,68 +388,13 @@ export async function placeOrder(
               ),
             )
         : [];
-      const optionsByGroup = new Map<string, typeof optionRows>();
-      for (const o of optionRows) {
-        const list = optionsByGroup.get(o.groupId) ?? [];
-        list.push(o);
-        optionsByGroup.set(o.groupId, list);
-      }
-
-      // (3) compute every line server-side — the client's prices are ignored
-      const computed: ComputedLine[] = input.lines.map((line) => {
-        const product = prodById.get(line.productId);
-        if (!product) throw new OrderError("صنف غير معروف في السلة.");
-
-        let unit: Minor = product.basePriceMinor;
-        const details: string[] = [];
-        const groups = groupsByProduct.get(product.id) ?? [];
-
-        const selectedByGroup = new Map<string, string[]>();
-        for (const s of line.selections) {
-          const list = selectedByGroup.get(s.groupKey) ?? [];
-          list.push(s.optionKey);
-          selectedByGroup.set(s.groupKey, list);
-        }
-
-        for (const g of groups) {
-          // Dedupe keys: a malformed client must not be charged twice for the
-          // same selection.
-          const chosen = [...new Set(selectedByGroup.get(g.key) ?? [])];
-          if (g.isRequired && chosen.length === 0) {
-            throw new OrderError(`اختيار مطلوب ناقص: ${g.nameAr}`);
-          }
-          if (g.type === "single" && chosen.length > 1) {
-            throw new OrderError(`خيار واحد فقط مسموح لـ: ${g.nameAr}`);
-          }
-          if (g.maxSelections !== null && chosen.length > g.maxSelections) {
-            throw new OrderError(
-              `الحد الأقصى ${g.maxSelections} لـ: ${g.nameAr}`,
-            );
-          }
-          for (const key of chosen) {
-            const opt = optionsByGroup.get(g.id)?.find((o) => o.key === key);
-            if (!opt) throw new OrderError(`خيار غير صالح في: ${g.nameAr}`);
-            unit = addMinor(unit, opt.priceDeltaMinor);
-            // Every chosen option reaches the kitchen ticket. Only the two
-            // "neutral" defaults stay implicit; size (if a dish ever offers
-            // it) leads the detail string.
-            const isNeutral =
-              (g.key === "heat" && opt.key === "mild") ||
-              (g.key === "doneness" && opt.key === "al-dente");
-            if (g.key === "size") details.unshift(opt.nameAr);
-            else if (!isNeutral) details.push(opt.nameAr);
-          }
-        }
-
-        return {
-          productId: product.id,
-          nameAr: product.nameAr,
-          detailAr: details.length > 0 ? details.join(" • ") : null,
-          note: line.note ?? null,
-          quantity: line.quantity,
-          unitPriceMinor: unit,
-          lineTotalMinor: multiplyMinor(unit, line.quantity),
-        };
+      // (3) compute every line server-side — the client's prices are ignored.
+      // The same function prices the cart quote, so the shown and charged
+      // totals cannot drift.
+      const computed = computeOrderLines(input.lines, {
+        products: prodRows,
+        groups: groupRows,
+        options: optionRows,
       });
 
       const subtotal: Minor = sumMinor(computed.map((l) => l.lineTotalMinor));
@@ -529,6 +556,141 @@ export async function getActiveDeliveryZones(): Promise<PublicZone[]> {
     .from(deliveryZones)
     .where(eq(deliveryZones.isActive, true))
     .orderBy(asc(deliveryZones.sortOrder), asc(deliveryZones.feeMinor));
+}
+
+// ---------- Cart quote (server-authoritative prices) ----------
+
+export const cartQuoteSchema = z.object({
+  lines: z
+    .array(
+      z.object({
+        productId: z.string().uuid(),
+        quantity: z.number().int().min(1).max(20),
+        note: z.string().trim().max(140).optional(),
+        selections: z
+          .array(
+            z.object({
+              groupKey: z.string().max(32),
+              optionKey: z.string().max(48),
+            }),
+          )
+          .max(12),
+      }),
+    )
+    .min(1)
+    .max(30),
+});
+
+export interface CartQuoteLine extends ComputedLine {
+  available: boolean;
+}
+
+export type CartQuoteResult =
+  | {
+      ok: true;
+      lines: CartQuoteLine[];
+      subtotalMinor: Minor;
+      unavailableProductIds: string[];
+    }
+  | { ok: false; error: string };
+
+/**
+ * Re-price a persisted cart against the CURRENT catalog. The drawer calls
+ * this when it opens, so a cart saved before an owner price change is
+ * corrected before the customer sees a total. Availability is reported per
+ * line; the caller blocks submit until unavailable lines are removed.
+ *
+ * This is a read path: no writes, no idempotency key, no order row.
+ */
+export async function quoteCart(raw: unknown): Promise<CartQuoteResult> {
+  const parsed = cartQuoteSchema.safeParse(raw);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "بيانات السلة غير صحيحة.",
+    };
+  }
+  const input = parsed.data;
+
+  try {
+    const productIds = [...new Set(input.lines.map((l) => l.productId))];
+    const prodRows = await db
+      .select()
+      .from(products)
+      .where(inArray(products.id, productIds));
+    const byId = new Map(prodRows.map((p) => [p.id, p]));
+    const availableRows = prodRows.filter((p) => p.isAvailable);
+    const availableIds = new Set(availableRows.map((p) => p.id));
+
+    const groupRows = availableRows.length
+      ? await db
+          .select()
+          .from(modifierGroups)
+          .where(
+            inArray(
+              modifierGroups.productId,
+              availableRows.map((p) => p.id),
+            ),
+          )
+          .orderBy(asc(modifierGroups.sortOrder))
+      : [];
+    const optionRows = groupRows.length
+      ? await db
+          .select()
+          .from(modifiers)
+          .where(
+            inArray(
+              modifiers.groupId,
+              groupRows.map((g) => g.id),
+            ),
+          )
+          .orderBy(asc(modifiers.sortOrder))
+      : [];
+
+    const priceable = input.lines.filter((l) => availableIds.has(l.productId));
+    const computed = computeOrderLines(priceable, {
+      products: availableRows,
+      groups: groupRows,
+      options: optionRows,
+    });
+
+    let cursor = 0;
+    const lines: CartQuoteLine[] = input.lines.map((line) => {
+      if (!availableIds.has(line.productId)) {
+        return {
+          productId: line.productId,
+          nameAr: byId.get(line.productId)?.nameAr ?? "صنف غير متوفر",
+          detailAr: null,
+          note: line.note ?? null,
+          quantity: line.quantity,
+          unitPriceMinor: 0,
+          lineTotalMinor: 0,
+          available: false,
+        };
+      }
+      const priced = computed[cursor];
+      cursor += 1;
+      if (!priced) throw new OrderError("تعذر تسعير السلة.");
+      return { ...priced, available: true };
+    });
+
+    return {
+      ok: true,
+      lines,
+      subtotalMinor: sumMinor(
+        lines.filter((l) => l.available).map((l) => l.lineTotalMinor),
+      ),
+      unavailableProductIds: [
+        ...new Set(lines.filter((l) => !l.available).map((l) => l.productId)),
+      ],
+    };
+  } catch (err) {
+    if (err instanceof OrderError) return { ok: false, error: err.message };
+    logEvent("error", "order.quote_failed", {
+      message: err instanceof Error ? err.message : "unknown",
+    });
+    return { ok: false, error: "تعذر تحديث السلة — حاول مرة أخرى." };
+  }
 }
 
 // ---------- Status page (token-gated capability) ----------
