@@ -228,7 +228,7 @@ export function MenuAdmin() {
               </span>
             </div>
             {!row.isAvailable && (
-              <p className="mt-2 text-xs font-bold text-bronze">
+              <p className="mt-2 text-xs font-bold text-warning">
                 مخفي عن الزبائن الآن — يظهر فور إعادة التفعيل.
               </p>
             )}

@@ -374,7 +374,7 @@ export function ManualEntry({
                     key={p.id}
                     type="button"
                     onClick={() => addLine(p)}
-                    className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-cream-300 bg-cream-100 px-3 text-xs font-bold text-ink transition-colors hover:border-basil-400"
+                    className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-cream-300 bg-cream-100 px-3 text-xs font-bold text-ink transition-colors hover:border-basil-400"
                   >
                     <Plus className="size-3 text-basil-700" aria-hidden />
                     {p.nameAr}
@@ -500,7 +500,7 @@ export function ManualEntry({
                   }
                   placeholder="ملاحظة سطر (اختياري)"
                   aria-label={`ملاحظة ${l.product.nameAr}`}
-                  className={`mt-2 min-h-10 w-full rounded-md border border-cream-200 bg-cream-100 px-3 text-xs outline-none focus:border-basil-400`}
+                  className={`mt-2 min-h-11 w-full rounded-md border border-cream-200 bg-cream-100 px-3 text-xs outline-none focus:border-basil-400`}
                   maxLength={140}
                 />
                 <div className="mt-2.5 flex items-center justify-between">

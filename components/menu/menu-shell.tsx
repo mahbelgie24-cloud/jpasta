@@ -8,7 +8,7 @@ import { ProductCard } from "@/components/menu/product-card";
 import { Price } from "@/components/ui/price";
 import { registerOfflineSync } from "@/lib/offline/sync";
 import { placeStorefrontOrder } from "@/app/actions/orders";
-import { arabicIncludes } from "@/lib/arabic";
+import { arabicCount, arabicIncludes } from "@/lib/arabic";
 import type { Category, Product } from "@/lib/menu-data";
 import type { PaymentMethod } from "@/lib/domain/payment";
 import { cn } from "@/lib/utils";
@@ -220,7 +220,14 @@ function MenuContent({
       )}
 
       <p aria-live="polite" className="sr-only">
-        {cart.count > 0 ? `${cart.count} عناصر في السلة` : ""}
+        {cart.count > 0
+          ? arabicCount(cart.count, {
+              one: "عنصر واحد في السلة",
+              two: "عنصران في السلة",
+              few: "عناصر في السلة",
+              many: "عنصراً في السلة",
+            })
+          : ""}
       </p>
 
       <CartDrawer

@@ -1,5 +1,7 @@
 "use client";
 
+import { arabicCount } from "@/lib/arabic";
+
 import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Loader2, Plus, Trash2 } from "lucide-react";
 import { Price } from "@/components/ui/price";
@@ -142,9 +144,14 @@ export function InventoryAdmin() {
         <h2 className="flex items-center gap-2 font-bold text-ink">
           المخزون
           {lowCount > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-bronze/15 px-2.5 py-1 text-xs font-bold text-bronze">
+            <span className="inline-flex items-center gap-1 rounded-full bg-bronze/15 px-2.5 py-1 text-xs font-bold text-warning">
               <AlertTriangle className="size-3.5" aria-hidden />
-              {lowCount} تحت حد الطلب
+              {arabicCount(lowCount, {
+                one: "مكوّن واحد تحت الحد",
+                two: "مكوّنان تحت الحد",
+                few: "مكوّنات تحت الحد",
+                many: "مكوّناً تحت الحد",
+              })}
             </span>
           )}
         </h2>
@@ -171,7 +178,7 @@ export function InventoryAdmin() {
                       {ing.name}
                       {ing.isLow && (
                         <AlertTriangle
-                          className="ms-1.5 inline size-4 text-bronze"
+                          className="ms-1.5 inline size-4 text-warning"
                           aria-label="تحت حد الطلب"
                         />
                       )}
@@ -186,7 +193,7 @@ export function InventoryAdmin() {
                     </p>
                   </div>
                   <p
-                    className={`text-xl font-extrabold tabular-nums ${ing.isLow ? "text-bronze" : "text-basil-800"}`}
+                    className={`text-xl font-extrabold tabular-nums ${ing.isLow ? "text-warning" : "text-basil-800"}`}
                   >
                     {ing.currentStock}
                     <span className="ms-1 text-xs font-bold text-ink-soft">
@@ -287,7 +294,7 @@ export function InventoryAdmin() {
                               }
                               placeholder="ملاحظة (المورد / السبب)"
                               aria-label="ملاحظة الحركة"
-                              className={`${inputClass} min-h-9 text-xs`}
+                              className={`${inputClass} min-h-11 text-xs`}
                               maxLength={140}
                             />
                           </div>

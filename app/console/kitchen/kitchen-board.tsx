@@ -1,5 +1,7 @@
 "use client";
 
+import { arabicCount } from "@/lib/arabic";
+
 import { useEffect, useState } from "react";
 import { Bike, ChefHat, HandPlatter } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
@@ -94,14 +96,14 @@ function KitchenTicket({
               </p>
             )}
             {it.note && (
-              <p className="mt-1 text-xl font-bold text-bronze">✎ {it.note}</p>
+              <p className="mt-1 text-xl font-bold text-warning">✎ {it.note}</p>
             )}
           </li>
         ))}
       </ul>
 
       {order.customerNote && (
-        <p className="mt-4 rounded-xl bg-bronze/10 px-4 py-3 text-xl font-bold text-bronze">
+        <p className="mt-4 rounded-xl bg-bronze/10 px-4 py-3 text-xl font-bold text-warning">
           ✎ {order.customerNote}
         </p>
       )}
@@ -164,7 +166,13 @@ export function KitchenBoard() {
                 شاشة المطبخ
               </h1>
               <p className="text-sm text-ink-soft">
-                {tickets.length} تذاكر مفتوحة
+                {arabicCount(tickets.length, {
+                  zero: "لا تذاكر مفتوحة",
+                  one: "تذكرة واحدة مفتوحة",
+                  two: "تذكرتان مفتوحتان",
+                  few: "تذاكر مفتوحة",
+                  many: "تذكرة مفتوحة",
+                })}
               </p>
             </div>
           </div>
@@ -174,7 +182,7 @@ export function KitchenBoard() {
                 ? "bg-basil-100 text-basil-800"
                 : connection === "offline"
                   ? "bg-terracotta/10 text-terracotta"
-                  : "bg-bronze/15 text-bronze"
+                  : "bg-bronze/15 text-warning"
             }`}
             aria-live="polite"
           >

@@ -142,7 +142,7 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
                 ? "bg-basil-100 text-basil-800"
                 : connection === "offline"
                   ? "bg-terracotta/10 text-terracotta"
-                  : "bg-bronze/15 text-bronze"
+                  : "bg-bronze/15 text-warning"
             }`}
             aria-live="polite"
             title={
@@ -268,7 +268,7 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
                               </span>
                             )}
                             {it.note && (
-                              <span className="block text-xs font-bold text-bronze">
+                              <span className="block text-xs font-bold text-warning">
                                 ✎ {it.note}
                               </span>
                             )}
@@ -288,7 +288,7 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
                         </a>
                         {o.address && <p>📍 {o.address}</p>}
                         {o.customerNote && (
-                          <p className="font-bold text-bronze">
+                          <p className="font-bold text-warning">
                             ✎ {o.customerNote}
                           </p>
                         )}

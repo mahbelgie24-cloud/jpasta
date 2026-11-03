@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,12 +29,17 @@ export function Sheet({
   className,
 }: SheetProps) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const titleId = useId();
 
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
     if (open && !d.open) {
       d.showModal();
+      // Native showModal focuses the first focusable control (the close
+      // button). Move focus to the title so the sheet announces its context.
+      titleRef.current?.focus();
     } else if (!open && d.open) {
       d.close();
     }
@@ -43,7 +48,7 @@ export function Sheet({
   return (
     <dialog
       ref={ref}
-      aria-label={title}
+      aria-labelledby={titleId}
       onClose={onClose}
       onClick={(e) => {
         if (e.target === ref.current) ref.current?.close();
@@ -63,7 +68,9 @@ export function Sheet({
         <span className="h-1.5 w-10 rounded-full bg-border-strong/70" />
       </div>
       <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-border-soft bg-surface/95 px-5 pt-5 pb-4 backdrop-blur">
-        <h2 className="type-title">{title}</h2>
+        <h2 id={titleId} ref={titleRef} tabIndex={-1} className="type-title">
+          {title}
+        </h2>
         <button
           type="button"
           onClick={() => ref.current?.close()}

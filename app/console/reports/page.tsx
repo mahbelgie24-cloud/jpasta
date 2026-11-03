@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import {
   ArrowLeft,
+  ArrowRight,
   Banknote,
   Bike,
   HandPlatter,
@@ -82,7 +83,7 @@ export default async function ReportsPage({
           href="/console"
           className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-basil-700 hover:text-basil-600"
         >
-          <ArrowLeft className="size-4" aria-hidden />
+          <ArrowRight className="size-4" aria-hidden />
           رجوع للوحة
         </Link>
         <h1 className="mt-4 type-section text-ink">التقارير</h1>
@@ -91,9 +92,10 @@ export default async function ReportsPage({
         <div className="mt-4 flex items-center justify-between gap-2 rounded-card bg-cream-50 p-3 shadow-card">
           <Link
             href={`/console/reports?date=${shiftDay(date, -1)}`}
-            className="inline-flex min-h-11 items-center rounded-full px-4 text-sm font-bold text-basil-700 hover:bg-basil-50"
+            className="inline-flex min-h-11 items-center gap-1 rounded-full px-4 text-sm font-bold text-basil-700 hover:bg-basil-50"
           >
-            ← اليوم السابق
+            <ArrowRight className="size-4" aria-hidden />
+            اليوم السابق
           </Link>
           <div className="text-center">
             <p className="font-bold text-ink">{dayName}</p>
@@ -101,13 +103,23 @@ export default async function ReportsPage({
               {date}
             </p>
           </div>
-          <Link
-            href={`/console/reports?date=${shiftDay(date, 1)}`}
-            aria-disabled={date >= todayLocal()}
-            className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm font-bold ${date >= todayLocal() ? "pointer-events-none text-ink-soft opacity-30" : "text-basil-700 hover:bg-basil-50"}`}
-          >
-            اليوم التالي →
-          </Link>
+          {date >= todayLocal() ? (
+            <span
+              aria-disabled="true"
+              className="inline-flex min-h-11 items-center gap-1 rounded-full px-4 text-sm font-bold text-ink-soft opacity-30"
+            >
+              اليوم التالي
+              <ArrowLeft className="size-4" aria-hidden />
+            </span>
+          ) : (
+            <Link
+              href={`/console/reports?date=${shiftDay(date, 1)}`}
+              className="inline-flex min-h-11 items-center gap-1 rounded-full px-4 text-sm font-bold text-basil-700 hover:bg-basil-50"
+            >
+              اليوم التالي
+              <ArrowLeft className="size-4" aria-hidden />
+            </Link>
+          )}
         </div>
 
         <div className="mt-2 text-end">
@@ -204,18 +216,28 @@ export default async function ReportsPage({
           <h2 className="font-bold text-ink">آخر ٧ أيام</h2>
           <ul className="mt-4 space-y-2.5">
             {week.map((d) => (
-              <li key={d.date} className="flex items-center gap-3">
+              <li
+                key={d.date}
+                className="flex items-center gap-3"
+                aria-current={d.date === date ? "date" : undefined}
+              >
                 <span className="w-16 shrink-0 text-xs font-bold text-ink-soft">
                   {DAY_NAMES[new Date(`${d.date}T12:00:00`).getDay()]}
                 </span>
                 <div className="h-6 flex-1 overflow-hidden rounded-full bg-cream-200">
                   <div
-                    className={`h-full rounded-full ${d.date === date ? "bg-basil-700" : "bg-basil-400"}`}
+                    className={`h-full rounded-full ${
+                      d.date === date
+                        ? "bg-basil-700 ring-2 ring-basil-900 ring-offset-2 ring-offset-cream-50"
+                        : "bg-basil-400"
+                    }`}
                     style={{
                       width: `${Math.round((d.revenueMinor / maxRevenue) * 100)}%`,
                     }}
                     role="img"
-                    aria-label={`${d.date}: ${d.orderCount} طلب`}
+                    aria-label={`${d.date}: ${d.orderCount} طلب${
+                      d.date === date ? " — اليوم المحدد" : ""
+                    }`}
                   />
                 </div>
                 <Price

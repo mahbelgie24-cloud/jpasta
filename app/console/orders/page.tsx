@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { arabicCount } from "@/lib/arabic";
 import { redirect } from "next/navigation";
 import {
   ArrowRight,
@@ -89,7 +90,15 @@ export default async function OrdersArchivePage({
         <div>
           <h1 className="type-section text-text-primary">أرشيف الطلبات</h1>
           <p className="mt-1 text-sm text-text-secondary">
-            {dayLabel} · {orders.length} طلب · إيراد{" "}
+            {dayLabel} ·{" "}
+            {arabicCount(orders.length, {
+              zero: "لا طلبات",
+              one: "طلب واحد",
+              two: "طلبان",
+              few: "طلبات",
+              many: "طلباً",
+            })}{" "}
+            · إيراد{" "}
             <Price minor={revenue} className="font-bold text-text-primary" />
           </p>
         </div>
@@ -168,18 +177,23 @@ export default async function OrdersArchivePage({
           <ChevronRight className="size-4" aria-hidden />
           اليوم السابق
         </Link>
-        <Link
-          href={hrefFor(addDays(date, 1), status, query)}
-          aria-disabled={atToday}
-          className={`inline-flex min-h-11 items-center gap-1 rounded-full px-3 text-sm font-bold ${
-            atToday
-              ? "pointer-events-none text-text-secondary/30"
-              : "text-text-secondary hover:bg-surface-sunken hover:text-text-primary"
-          }`}
-        >
-          اليوم التالي
-          <ChevronLeft className="size-4" aria-hidden />
-        </Link>
+        {atToday ? (
+          <span
+            aria-disabled="true"
+            className="inline-flex min-h-11 items-center gap-1 rounded-full px-3 text-sm font-bold text-text-secondary/30"
+          >
+            اليوم التالي
+            <ChevronLeft className="size-4" aria-hidden />
+          </span>
+        ) : (
+          <Link
+            href={hrefFor(addDays(date, 1), status, query)}
+            className="inline-flex min-h-11 items-center gap-1 rounded-full px-3 text-sm font-bold text-text-secondary hover:bg-surface-sunken hover:text-text-primary"
+          >
+            اليوم التالي
+            <ChevronLeft className="size-4" aria-hidden />
+          </Link>
+        )}
       </div>
 
       {orders.length === 0 ? (
