@@ -3,7 +3,7 @@
 import { arabicCount } from "@/lib/arabic";
 
 import { useEffect, useState } from "react";
-import { Bike, ChefHat, HandPlatter } from "lucide-react";
+import { Bike, ChefHat, HandPlatter, Maximize2, Minimize2 } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { TwirlLoader } from "@/components/ui/twirl-loader";
 import { useOrdersFeed, type FeedOrder } from "@/hooks/use-orders-feed";
@@ -45,7 +45,8 @@ function KitchenTicket({
 }: {
   order: FeedOrder;
   busy: boolean;
-  onAdvance: () => void;
+  /** Omitted for the "ready" lane, which waits for the pass. */
+  onAdvance?: () => void;
 }) {
   const minutes = elapsedMinutes(order.createdAt);
   const [, forceTick] = useState(0);
@@ -108,19 +109,21 @@ function KitchenTicket({
         </p>
       )}
 
-      <button
-        type="button"
-        onClick={onAdvance}
-        disabled={busy}
-        className="mt-6 flex min-h-16 w-full items-center justify-center gap-3 rounded-full bg-basil-700 text-2xl font-extrabold text-cream-50 shadow-card transition-colors hover:bg-basil-600 active:scale-[0.99] disabled:opacity-50"
-      >
-        {busy ? (
-          <TwirlLoader className="size-9" label="جارٍ التحديث…" />
-        ) : (
-          <ChefHat className="size-7" aria-hidden />
-        )}
-        {nextLabel}
-      </button>
+      {onAdvance && (
+        <button
+          type="button"
+          onClick={onAdvance}
+          disabled={busy}
+          className="mt-6 flex min-h-16 w-full items-center justify-center gap-3 rounded-full bg-basil-700 text-2xl font-extrabold text-cream-50 shadow-card transition-colors hover:bg-basil-600 active:scale-[0.99] disabled:opacity-50"
+        >
+          {busy ? (
+            <TwirlLoader className="size-9" label="جارٍ التحديث…" />
+          ) : (
+            <ChefHat className="size-7" aria-hidden />
+          )}
+          {nextLabel}
+        </button>
+      )}
     </article>
   );
 }
@@ -131,6 +134,25 @@ export function KitchenBoard() {
   });
   const [busyId, setBusyId] = useState<string | null>(null);
   const [lastActionError, setLastActionError] = useState<string | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+
+  useEffect(() => {
+    const onChange = () => setFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  async function toggleFullscreen() {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch {
+      setFullscreen(Boolean(document.fullscreenElement));
+    }
+  }
 
   async function move(id: string, next: "preparing" | "ready") {
     const current = orders?.find((o) => o.id === id);
@@ -152,13 +174,22 @@ export function KitchenBoard() {
   }
 
   const tickets = (orders ?? []).filter(
-    (o) => o.status === "received" || o.status === "preparing",
+    (o) =>
+      o.status === "received" ||
+      o.status === "preparing" ||
+      o.status === "ready",
   );
+
+  const lanes = [
+    { status: "received" as const, label: "جديدة" },
+    { status: "preparing" as const, label: "قيد التحضير" },
+    { status: "ready" as const, label: "جاهزة للتسليم" },
+  ];
 
   return (
     <div className="min-h-dvh bg-cream-100">
-      <div className="mx-auto max-w-4xl px-4 pt-5 pb-10 sm:px-6">
-        <header className="flex items-center justify-between gap-3">
+      <div className="mx-auto max-w-6xl px-4 pt-5 pb-10 sm:px-6">
+        <header className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <LogoMark className="size-12" />
             <div>
@@ -176,34 +207,49 @@ export function KitchenBoard() {
               </p>
             </div>
           </div>
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold ${
-              connection === "live"
-                ? "bg-basil-100 text-basil-800"
-                : connection === "offline"
-                  ? "bg-terracotta/10 text-terracotta"
-                  : "bg-bronze/15 text-warning"
-            }`}
-            aria-live="polite"
-          >
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void toggleFullscreen()}
+              aria-pressed={fullscreen}
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-cream-300 px-3 text-sm font-bold text-ink-soft hover:bg-cream-200"
+            >
+              {fullscreen ? (
+                <Minimize2 className="size-4" aria-hidden />
+              ) : (
+                <Maximize2 className="size-4" aria-hidden />
+              )}
+              {fullscreen ? "إنهاء ملء الشاشة" : "ملء الشاشة"}
+            </button>
             <span
-              className={`size-2.5 rounded-full ${
+              className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold ${
                 connection === "live"
-                  ? "bg-basil-600"
+                  ? "bg-basil-100 text-basil-800"
                   : connection === "offline"
-                    ? "bg-terracotta"
-                    : "bg-bronze"
+                    ? "bg-terracotta/10 text-terracotta"
+                    : "bg-bronze/15 text-warning"
               }`}
-              aria-hidden
-            />
-            {connection === "live"
-              ? "مباشر"
-              : connection === "polling"
-                ? "تحديث دوري"
-                : connection === "offline"
-                  ? "غير متصل"
-                  : "جارٍ الاتصال…"}
-          </span>
+              aria-live="polite"
+            >
+              <span
+                className={`size-2.5 rounded-full ${
+                  connection === "live"
+                    ? "bg-basil-600"
+                    : connection === "offline"
+                      ? "bg-terracotta"
+                      : "bg-bronze"
+                }`}
+                aria-hidden
+              />
+              {connection === "live"
+                ? "مباشر"
+                : connection === "polling"
+                  ? "تحديث دوري"
+                  : connection === "offline"
+                    ? "غير متصل"
+                    : "جارٍ الاتصال…"}
+            </span>
+          </div>
         </header>
 
         {lastActionError && (
@@ -226,20 +272,55 @@ export function KitchenBoard() {
             <p className="mt-2 text-xl text-ink-soft">استمتع بالهدوء 🍃</p>
           </div>
         ) : (
-          <div className="mt-6 space-y-5">
-            {tickets.map((o) => (
-              <KitchenTicket
-                key={o.id}
-                order={o}
-                busy={busyId === o.id}
-                onAdvance={() =>
-                  void move(
-                    o.id,
-                    o.status === "received" ? "preparing" : "ready",
-                  )
-                }
-              />
-            ))}
+          <div className="mt-6 grid gap-4 lg:grid-cols-3">
+            {lanes.map((lane) => {
+              const laneTickets = tickets.filter(
+                (o) => o.status === lane.status,
+              );
+              return (
+                <section
+                  key={lane.status}
+                  aria-labelledby={`lane-${lane.status}`}
+                  className="rounded-card border border-cream-200 bg-cream-50/40 p-3"
+                >
+                  <h2
+                    id={`lane-${lane.status}`}
+                    className="flex items-center justify-between px-1 pb-2 font-display-ar text-xl font-bold text-basil-800"
+                  >
+                    {lane.label}
+                    <span className="rounded-full bg-basil-100 px-2.5 py-0.5 text-sm font-bold text-basil-800 tabular-nums">
+                      {laneTickets.length}
+                    </span>
+                  </h2>
+                  <div className="space-y-4">
+                    {laneTickets.length === 0 ? (
+                      <p className="py-6 text-center text-sm text-ink-soft">
+                        لا تذاكر
+                      </p>
+                    ) : (
+                      laneTickets.map((o) => (
+                        <KitchenTicket
+                          key={o.id}
+                          order={o}
+                          busy={busyId === o.id}
+                          onAdvance={
+                            lane.status === "ready"
+                              ? undefined
+                              : () =>
+                                  void move(
+                                    o.id,
+                                    lane.status === "received"
+                                      ? "preparing"
+                                      : "ready",
+                                  )
+                          }
+                        />
+                      ))
+                    )}
+                  </div>
+                </section>
+              );
+            })}
           </div>
         )}
       </div>
