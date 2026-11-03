@@ -38,6 +38,32 @@ export async function signRealtimeToken(
   return `${body}.${signature}`;
 }
 
+/**
+ * Server-to-Durable-Object broadcast authorization. The DO's `/broadcast`
+ * route is only reachable through the binding today, but a future route,
+ * binding, or refactor must not turn it into an unauthenticated fan-out
+ * primitive. Constant-time comparison; missing secret = deny.
+ */
+export function isAuthorizedBroadcast(
+  authorizationHeader: string | null,
+  secret: string | undefined,
+): boolean {
+  if (!secret) return false;
+  return timingSafeEqualText(authorizationHeader ?? "", `Bearer ${secret}`);
+}
+
+/** The broadcast timestamp is echoed to clients — keep it plausible. */
+export function isFreshBroadcastTimestamp(
+  at: unknown,
+  now = Date.now(),
+  windowMs = 5 * 60_000,
+): boolean {
+  return (
+    at === undefined ||
+    (typeof at === "number" && Number.isFinite(at) && Math.abs(now - at) <= windowMs)
+  );
+}
+
 export async function verifyRealtimeToken(
   token: string,
   secret: string,

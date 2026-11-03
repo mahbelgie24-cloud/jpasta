@@ -1,15 +1,19 @@
 import "server-only";
 import { bus, ORDERS_CHANGED } from "./bus";
+import { logEvent } from "./log";
 
 /**
  * Realtime fan-out contract.
  *
  * Production: Cloudflare Durable Object (OrderFeed) — one instance per shop,
- * reachable from every isolate, with hibernatable WebSockets.
+ * reachable from every isolate, with hibernatable WebSockets. The broadcast
+ * route is authenticated with REALTIME_SECRET; a missing/short secret never
+ * degrades into an unauthenticated fan-out.
  * Local Node: the in-process event bus (single process, so it is exact).
  *
  * Call sites only ever use notifyOrdersChanged(), after the DB transaction
- * has committed.
+ * has committed. It must never throw: a committed sale must not be reported
+ * as failed because a notification transport hiccuped.
  */
 
 interface DurableObjectStubLike {
@@ -23,22 +27,43 @@ interface DurableObjectNamespaceLike {
 
 export async function notifyOrdersChanged(): Promise<void> {
   const at = Date.now();
+  let reachedWorkers = false;
+
   try {
     const { getCloudflareContext } = await import("@opennextjs/cloudflare");
     const env = getCloudflareContext().env as {
       ORDER_FEED?: DurableObjectNamespaceLike;
+      REALTIME_SECRET?: string;
     };
     if (env.ORDER_FEED) {
+      reachedWorkers = true;
+      const secret = env.REALTIME_SECRET;
+      if (!secret) {
+        logEvent("error", "realtime.broadcast_no_secret");
+        return;
+      }
       const stub = env.ORDER_FEED.get(env.ORDER_FEED.idFromName("jpasta"));
-      await stub.fetch("https://order-feed/broadcast", {
+      const response = await stub.fetch("https://order-feed/broadcast", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${secret}`,
+        },
         body: JSON.stringify({ at }),
       });
+      if (!response.ok) {
+        logEvent("warn", "realtime.broadcast_rejected", {
+          status: response.status,
+        });
+      }
       return;
     }
-  } catch {
-    // Node runtime (next dev / next start / vitest) — fall through to the bus.
+  } catch (err) {
+    logEvent("warn", "realtime.broadcast_error", {
+      message: err instanceof Error ? err.message : "unknown",
+    });
   }
-  bus.emit(ORDERS_CHANGED, at);
+
+  // Node runtime (next dev / next start / vitest) — no DO binding.
+  if (!reachedWorkers) bus.emit(ORDERS_CHANGED, at);
 }

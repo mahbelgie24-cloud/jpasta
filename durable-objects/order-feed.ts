@@ -1,5 +1,9 @@
 import { DurableObject } from "cloudflare:workers";
-import { verifyRealtimeToken } from "../lib/domain/realtime-token";
+import {
+  isAuthorizedBroadcast,
+  isFreshBroadcastTimestamp,
+  verifyRealtimeToken,
+} from "../lib/domain/realtime-token";
 
 /**
  * OrderFeed — the single realtime hub for the shop.
@@ -24,7 +28,20 @@ export class OrderFeed extends DurableObject<CloudflareEnv> {
     const url = new URL(request.url);
 
     if (request.method === "POST" && url.pathname === "/broadcast") {
+      // Internal fan-out is a privileged operation: authenticate it with
+      // the same secret that signs WebSocket tokens, constant-time.
+      if (
+        !isAuthorizedBroadcast(
+          request.headers.get("authorization"),
+          this.env.REALTIME_SECRET,
+        )
+      ) {
+        return new Response("unauthorized", { status: 401 });
+      }
       const body = (await request.json().catch(() => ({}))) as BroadcastBody;
+      if (!isFreshBroadcastTimestamp(body.at)) {
+        return new Response("invalid timestamp", { status: 400 });
+      }
       this.version += 1;
       const payload = JSON.stringify({
         type: "orders-changed",
@@ -88,6 +105,22 @@ export class OrderFeed extends DurableObject<CloudflareEnv> {
   ): Promise<void> {
     try {
       ws.close(code, reason);
+    } catch {
+      // already closed
+    }
+  }
+
+  async webSocketError(ws: WebSocket, error: unknown): Promise<void> {
+    console.error(
+      JSON.stringify({
+        ts: new Date().toISOString(),
+        level: "warn",
+        event: "realtime.socket_error",
+        message: error instanceof Error ? error.message : "unknown",
+      }),
+    );
+    try {
+      ws.close(1011, "socket-error");
     } catch {
       // already closed
     }
