@@ -129,19 +129,29 @@ export function parseShopSettings(
   };
 }
 
+/**
+ * The settings table is the owner's kill switch and money floor. A read
+ * failure must never silently fall back to "ordering enabled, minimum 0" on
+ * the money path — that is the opposite of failing safe.
+ */
+export class ShopSettingsUnavailableError extends Error {
+  constructor(cause?: unknown) {
+    super("shop-settings-unavailable");
+    this.name = "ShopSettingsUnavailableError";
+    this.cause = cause;
+  }
+}
+
 export async function readShopSettings(): Promise<ShopSettings> {
   try {
     const rows = await db.select().from(settings);
     return parseShopSettings(rows);
   } catch (err) {
-    // DB-degraded mode: the storefront keeps running on the seeded defaults.
-    // Log it — silent fallbacks hide an outage from the owner until the
-    // minimum order or the ordering switch stops matching what they saved.
     const { logEvent } = await import("./log");
-    logEvent("warn", "settings.read_failed", {
+    logEvent("error", "settings.read_failed", {
       message: err instanceof Error ? err.message : "unknown",
     });
-    return SHOP_SETTINGS_DEFAULTS;
+    throw new ShopSettingsUnavailableError(err);
   }
 }
 
@@ -152,11 +162,21 @@ function readShopSettingsCached(): Promise<ShopSettings> {
   })();
 }
 
-/** Request-deduped, tag-cached read for pages and server components. */
+/**
+ * Request-deduped, tag-cached read for pages and server components.
+ * Display surfaces may degrade to defaults (a shop name is not a money
+ * rule); the money path calls `readShopSettings()` and fails closed.
+ */
 export const getShopSettings = cache(async (): Promise<ShopSettings> => {
   try {
     return await readShopSettingsCached();
   } catch {
-    return await readShopSettings();
+    try {
+      return await readShopSettings();
+    } catch {
+      const { logEvent } = await import("./log");
+      logEvent("warn", "settings.display_fallback");
+      return SHOP_SETTINGS_DEFAULTS;
+    }
   }
 });

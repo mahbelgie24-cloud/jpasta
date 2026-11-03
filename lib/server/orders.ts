@@ -22,7 +22,10 @@ import {
 } from "@/lib/pricing";
 import { notifyOrdersChanged } from "@/lib/server/order-feed";
 import { decryptPii, encryptPii } from "@/lib/server/pii";
-import { readShopSettings } from "@/lib/server/settings";
+import {
+  readShopSettings,
+  type ShopSettings,
+} from "@/lib/server/settings";
 import { deductForOrder } from "@/lib/server/inventory";
 import { sha256Hex, stableStringify } from "@/lib/domain/hash";
 import { todayInShop, zonedDayRange } from "@/lib/domain/time";
@@ -215,7 +218,17 @@ export async function placeOrder(
   // Owner-configured minimum, read fresh (not the tag cache) so a raised
   // minimum takes effect immediately — and OUTSIDE the transaction so it
   // can never starve the pool it shares with the order transaction.
-  const shop = await readShopSettings();
+  // If the switch cannot be read, the order is refused: silently defaulting
+  // to "ordering enabled, minimum 0" would defeat the owner's kill switch.
+  let shop: ShopSettings;
+  try {
+    shop = await readShopSettings();
+  } catch {
+    return {
+      ok: false,
+      error: "الخدمة غير متاحة مؤقتاً — حاول بعد قليل.",
+    };
+  }
 
   // The owner's master switch is a MONEY-PATH rule, not a UI hint: server
   // actions are public RPC endpoints, so a paused shop must reject storefront
