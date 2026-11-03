@@ -40,6 +40,23 @@ test.describe("console auth", () => {
   });
 });
 
+test.describe("console command palette", () => {
+  test("navigates by keyboard", async ({ page }) => {
+    await loginAsOwner(page);
+    await page.goto("/console");
+    // Wait for hydration: the shortcut listener mounts in an effect.
+    await page.getByRole("button", { name: /بحث سريع/ }).waitFor();
+
+    await page.keyboard.press("Control+k");
+    await expect(
+      page.getByRole("dialog", { name: "لوحة الأوامر" }),
+    ).toBeVisible();
+    await page.getByRole("combobox", { name: "بحث الأوامر" }).fill("المطبخ");
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/\/console\/kitchen$/);
+  });
+});
+
 test.describe("console settings", () => {
   // Deliberately changes only cosmetic values: journeys in other parallel
   // workers depend on the ordering flag and the minimum order, so those are
