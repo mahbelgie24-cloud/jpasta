@@ -103,9 +103,13 @@ export function CartDrawer({
   const idempotency = useRef<IdempotencyScope | null>(null);
   const confirmationRef = useRef<HTMLHeadingElement | null>(null);
   const linesRef = useRef(cart.lines);
-  linesRef.current = cart.lines;
   const repriceRef = useRef(cart.reprice);
-  repriceRef.current = cart.reprice;
+
+  // Keep the quote effect dependency-free without writing refs during render.
+  useEffect(() => {
+    linesRef.current = cart.lines;
+    repriceRef.current = cart.reprice;
+  }, [cart.lines, cart.reprice]);
 
   // The form is replaced by a confirmation; move focus there so a keyboard
   // or screen-reader user is not dropped on <body>.

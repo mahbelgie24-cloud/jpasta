@@ -151,18 +151,22 @@ export function CommandPalette({ role }: { role: "owner" | "staff" }) {
   }, [commands, query]);
 
   useEffect(() => {
+    const openPalette = () => {
+      setQuery("");
+      setActive(0);
+      setOpen(true);
+    };
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        setOpen(true);
+        openPalette();
       }
     };
-    const onOpen = () => setOpen(true);
     window.addEventListener("keydown", onKey);
-    window.addEventListener("jpasta:command-palette", onOpen);
+    window.addEventListener("jpasta:command-palette", openPalette);
     return () => {
       window.removeEventListener("keydown", onKey);
-      window.removeEventListener("jpasta:command-palette", onOpen);
+      window.removeEventListener("jpasta:command-palette", openPalette);
     };
   }, []);
 
@@ -171,17 +175,11 @@ export function CommandPalette({ role }: { role: "owner" | "staff" }) {
     if (!dialog) return;
     if (open && !dialog.open) {
       dialog.showModal();
-      setQuery("");
-      setActive(0);
       requestAnimationFrame(() => inputRef.current?.focus());
     } else if (!open && dialog.open) {
       dialog.close();
     }
   }, [open]);
-
-  useEffect(() => {
-    setActive(0);
-  }, [query]);
 
   function run(index: number) {
     const command = filtered[index];
@@ -203,7 +201,10 @@ export function CommandPalette({ role }: { role: "owner" | "staff" }) {
         <input
           ref={inputRef}
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setActive(0);
+          }}
           onKeyDown={(event) => {
             if (event.key === "ArrowDown") {
               event.preventDefault();
