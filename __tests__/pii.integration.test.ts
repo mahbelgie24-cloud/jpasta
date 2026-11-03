@@ -2,7 +2,12 @@ import { afterAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, pool } from "@/lib/db";
 import { deliveryZones, orders, products } from "@/db/schema";
-import { decryptPii, encryptPii, isEncryptedPii } from "@/lib/server/pii";
+import {
+  decryptPii,
+  encryptPii,
+  isEncryptedPii,
+  PII_UNAVAILABLE,
+} from "@/lib/server/pii";
 import { placeOrder } from "@/lib/server/orders";
 import { getConsoleOrders } from "@/lib/server/orders";
 
@@ -28,7 +33,7 @@ describe("pii primitives", () => {
     expect(await decryptPii(cipher)).toBe("0599123456");
     expect(await decryptPii("legacy plain row")).toBe("legacy plain row");
     expect(await decryptPii(null)).toBe("");
-    expect(await decryptPii("enc:v1:garbage:garbage")).toBe(""); // tamper-safe
+    expect(await decryptPii("enc:v1:garbage:garbage")).toBe(PII_UNAVAILABLE);
   });
 });
 

@@ -33,12 +33,15 @@ export async function getServerEnv(): Promise<ServerEnv> {
   return merged as ServerEnv;
 }
 
-export async function requireSecret(name: keyof ServerEnv): Promise<string> {
+export async function requireSecret(
+  name: keyof ServerEnv,
+  minLength = 16,
+): Promise<string> {
   const env = await getServerEnv();
   const value = env[name];
-  if (!value || value.length < 16) {
+  if (!value || value.length < minLength) {
     throw new Error(
-      `Missing or too-short secret ${String(name)} — set it with \`wrangler secret put\` or in .env.local`,
+      `Missing or too-short secret ${String(name)} (min ${minLength}) — set it with \`wrangler secret put\` or in .env.local`,
     );
   }
   return value;

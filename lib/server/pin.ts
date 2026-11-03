@@ -152,6 +152,11 @@ export async function pinLookup(pin: string): Promise<string> {
     // Local dev / tests only — never reaches production.
     return hmacSha256Hex(pin, "jpasta-dev-pepper");
   }
+  if (process.env.NODE_ENV === "production" && pepper.length < 32) {
+    // A short pepper is a forgeable lookup key: pin_lookup is readable in
+    // the database, so the pepper is the only thing protecting the mapping.
+    throw new Error("AUTH_PEPPER must be at least 32 characters in production");
+  }
   return hmacSha256Hex(pin, pepper);
 }
 

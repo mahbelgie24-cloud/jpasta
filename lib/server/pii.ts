@@ -19,6 +19,17 @@ import { logEvent } from "./log";
 
 const PREFIX = "enc:v1:";
 
+/**
+ * Visible placeholder when ciphertext cannot be read (missing/rotated key,
+ * malformed envelope, auth-tag failure). Returning "" silently would make a
+ * key incident look like a customer who never gave a name.
+ */
+export const PII_UNAVAILABLE = "[تعذر فك التشفير]";
+
+function isProduction(): boolean {
+  return process.env.NODE_ENV === "production";
+}
+
 let cachedKey: CryptoKey | null | undefined;
 
 async function piiKey(): Promise<CryptoKey | null> {
@@ -74,11 +85,22 @@ function fromB64Url(value: string): Uint8Array<ArrayBuffer> | null {
   }
 }
 
-/** Encrypt a PII value; passthrough when no key is configured. */
+/**
+ * Encrypt a PII value. Local/dev may passthrough when no key is configured;
+ * production MUST fail closed — a deploy without PII_ENCRYPTION_KEY would
+ * otherwise store customer names, phones and addresses in cleartext.
+ */
 export async function encryptPii(plain: string): Promise<string> {
   if (!plain) return plain;
   const key = await piiKey();
-  if (!key) return plain;
+  if (!key) {
+    if (isProduction()) {
+      throw new Error(
+        "PII_ENCRYPTION_KEY is required in production — refusing to store plaintext PII",
+      );
+    }
+    return plain;
+  }
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ct = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv },
@@ -95,16 +117,16 @@ export async function decryptPii(stored: string | null): Promise<string> {
   const key = await piiKey();
   if (!key) {
     // Ciphertext without a key cannot be displayed — say so instead of
-    // leaking hex soup into the UI.
+    // leaking hex soup into the UI or pretending the field was empty.
     logEvent("error", "pii.decrypt_no_key");
-    return "";
+    return PII_UNAVAILABLE;
   }
   const [ivPart = "", ctPart = ""] = stored.slice(PREFIX.length).split(":");
   const iv = fromB64Url(ivPart);
   const ct = fromB64Url(ctPart);
   if (!iv || !ct) {
     logEvent("error", "pii.decrypt_malformed");
-    return "";
+    return PII_UNAVAILABLE;
   }
   try {
     const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct);
@@ -112,7 +134,7 @@ export async function decryptPii(stored: string | null): Promise<string> {
   } catch {
     // Auth failure = tampered or wrong key. Never surface ciphertext as data.
     logEvent("error", "pii.decrypt_failed");
-    return "";
+    return PII_UNAVAILABLE;
   }
 }
 
