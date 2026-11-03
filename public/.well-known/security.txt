@@ -1,0 +1,6 @@
+# JPasta — security contact (RFC 9116)
+Contact: https://wa.me/970566064976
+Expires: 2027-12-31T00:00:00.000Z
+Preferred-Languages: ar, en
+Canonical: https://jpasta.ps/.well-known/security.txt
+Policy: https://jpasta.ps/privacy

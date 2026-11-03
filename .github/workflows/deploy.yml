@@ -28,6 +28,7 @@ jobs:
       PII_ENCRYPTION_KEY: ${{ secrets.PII_ENCRYPTION_KEY }}
       NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
       NEXT_PUBLIC_WHATSAPP_NUMBER: ${{ secrets.NEXT_PUBLIC_WHATSAPP_NUMBER }}
+      NEXT_PUBLIC_COMMIT_SHA: ${{ github.sha }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
@@ -81,7 +82,7 @@ jobs:
         run: |
           set -euo pipefail
           BASE="${{ secrets.NEXT_PUBLIC_SITE_URL }}"
-          for path in / /menu /robots.txt; do
+          for path in / /menu /robots.txt /.well-known/security.txt; do
             status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$BASE$path")
             echo "$path -> $status"
             test "$status" = "200"
