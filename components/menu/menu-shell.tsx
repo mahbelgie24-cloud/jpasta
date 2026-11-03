@@ -20,9 +20,12 @@ import { cn } from "@/lib/utils";
  */
 
 function itemCountLabel(count: number): string {
-  if (count === 1) return "صنف واحد";
-  if (count === 2) return "صنفان";
-  return `${count} أصناف`;
+  return arabicCount(count, {
+    one: "صنف واحد",
+    two: "صنفان",
+    few: "أصناف",
+    many: "صنفاً",
+  });
 }
 
 function MenuContent({
@@ -30,11 +33,15 @@ function MenuContent({
   products: allProducts,
   orderingEnabled,
   paymentMethods,
+  minOrderMinor,
+  deliveryEtaMinutes,
 }: {
   categories: Category[];
   products: Product[];
   orderingEnabled: boolean;
   paymentMethods?: PaymentMethod[];
+  minOrderMinor: number;
+  deliveryEtaMinutes: number;
 }) {
   const cart = useCart();
   const [cartOpen, setCartOpen] = useState(false);
@@ -234,6 +241,8 @@ function MenuContent({
         open={cartOpen}
         onClose={() => setCartOpen(false)}
         paymentMethods={paymentMethods}
+        minOrderMinor={minOrderMinor}
+        deliveryEtaMinutes={deliveryEtaMinutes}
       />
     </>
   );
@@ -244,11 +253,15 @@ export function MenuShell({
   products,
   orderingEnabled = true,
   paymentMethods,
+  minOrderMinor = 0,
+  deliveryEtaMinutes = 25,
 }: {
   categories: Category[];
   products: Product[];
   orderingEnabled?: boolean;
   paymentMethods?: PaymentMethod[];
+  minOrderMinor?: number;
+  deliveryEtaMinutes?: number;
 }) {
   return (
     <CartProvider>
@@ -257,6 +270,8 @@ export function MenuShell({
         products={products}
         orderingEnabled={orderingEnabled}
         paymentMethods={paymentMethods}
+        minOrderMinor={minOrderMinor}
+        deliveryEtaMinutes={deliveryEtaMinutes}
       />
     </CartProvider>
   );

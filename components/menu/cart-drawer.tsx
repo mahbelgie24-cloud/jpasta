@@ -40,11 +40,17 @@ export function CartDrawer({
   open,
   onClose,
   paymentMethods,
+  minOrderMinor = 0,
+  deliveryEtaMinutes = 25,
 }: {
   open: boolean;
   onClose: () => void;
   /** Owner-configured accepted methods (settings); defaults to cash. */
   paymentMethods?: PaymentMethod[];
+  /** Owner-configured minimum subtotal in agorot (0 = no minimum). */
+  minOrderMinor?: number;
+  /** Owner-configured delivery estimate, shown next to the zone. */
+  deliveryEtaMinutes?: number;
 }) {
   const cart = useCart();
   const methods: PaymentMethod[] =
@@ -99,9 +105,12 @@ export function CartDrawer({
   }, [placed, offlineQueued]);
 
   const selectedZone = zones?.find((z) => z.id === zoneId) ?? null;
+  const regionsReady = Boolean(zones && zones.length > 0);
   const deliveryFee: Minor =
     orderType === "delivery" ? (selectedZone?.feeMinor ?? ZERO) : ZERO;
   const total = addMinor(cart.subtotal, deliveryFee);
+  const remainingToMinimum = Math.max(0, minOrderMinor - cart.subtotal);
+  const belowMinimum = remainingToMinimum > 0;
 
   function resetCustomer() {
     setName("");
@@ -385,6 +394,11 @@ export function CartDrawer({
                   {zonesError}
                 </p>
               )}
+              {!zonesError && regionsReady && deliveryEtaMinutes > 0 && (
+                <p className="mt-1.5 text-xs text-ink-soft">
+                  التوصيل خلال ~{deliveryEtaMinutes} دقيقة داخل قلقيلية.
+                </p>
+              )}
             </div>
           )}
 
@@ -519,6 +533,17 @@ export function CartDrawer({
             </div>
           </dl>
 
+          {belowMinimum && (
+            <p
+              role="status"
+              className="rounded-md bg-warning/10 px-3 py-2 text-xs font-bold text-ink"
+            >
+              باقي <Price minor={remainingToMinimum} /> للوصول للحد الأدنى (
+              <Price minor={minOrderMinor} />
+              ).
+            </p>
+          )}
+
           {error && (
             <p
               role="alert"
@@ -534,6 +559,7 @@ export function CartDrawer({
             className="w-full"
             disabled={
               busy ||
+              belowMinimum ||
               (orderType === "delivery" && (!zones || zones.length === 0))
             }
           >

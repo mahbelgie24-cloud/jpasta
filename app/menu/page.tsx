@@ -96,6 +96,8 @@ export default async function MenuPage() {
           products={products}
           orderingEnabled={orderingEnabled}
           paymentMethods={shop.paymentMethods}
+          minOrderMinor={shop.minOrderMinor}
+          deliveryEtaMinutes={shop.deliveryEtaMinutes}
         />
       </main>
       <Footer />
