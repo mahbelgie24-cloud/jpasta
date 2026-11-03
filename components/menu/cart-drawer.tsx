@@ -25,6 +25,7 @@ import { buildOrderMessage, whatsappUrl } from "@/lib/whatsapp";
 import { SITE } from "@/lib/site";
 import { enqueueOrder, pendingCount } from "@/lib/offline/queue";
 import { fetchDeliveryZones, placeStorefrontOrder } from "@/app/actions/orders";
+import { nextIdempotencyScope, type IdempotencyScope } from "@/lib/idempotency";
 
 /**
  * Cart drawer — lines, delivery/pickup, customer info, and the Phase 1
@@ -86,14 +87,9 @@ export function CartDrawer({
       alive = false;
     };
   }, []);
-  // Lazy per-cart key: generated in event handlers only (never during
-  // render), regenerated after a successful order so the next cart is a
-  // distinct idempotency scope.
-  const idempotencyKey = useRef<string | null>(null);
-  const nextIdempotencyKey = () => {
-    idempotencyKey.current ??= crypto.randomUUID();
-    return idempotencyKey.current;
-  };
+  // A retried submit must reuse its key; an edited cart must not reuse it
+  // with a different payload (the server binds the key to payload_hash).
+  const idempotency = useRef<IdempotencyScope | null>(null);
 
   const selectedZone = zones?.find((z) => z.id === zoneId) ?? null;
   const deliveryFee: Minor =
@@ -112,8 +108,10 @@ export function CartDrawer({
       cart.clear();
       setPlaced(null);
       resetCustomer();
-      idempotencyKey.current = null; // fresh scope for the next cart
     }
+    // A queued offline payload carries its own key; the next cart is a new
+    // idempotency scope either way.
+    idempotency.current = null;
     // A queued-offline order must never pin the drawer to its confirmation
     // screen on every subsequent open (v1 defect).
     setOfflineQueued(null);
@@ -146,7 +144,6 @@ export function CartDrawer({
     setError(null);
     setBusy(true);
     const payload = {
-      idempotencyKey: nextIdempotencyKey(),
       channel:
         orderType === "delivery"
           ? ("delivery" as const)
@@ -168,9 +165,16 @@ export function CartDrawer({
         selections: l.selections,
       })),
     };
+    const scope = nextIdempotencyScope(
+      idempotency.current,
+      JSON.stringify(payload),
+    );
+    idempotency.current = scope;
+    const request = { ...payload, idempotencyKey: scope.key };
     try {
-      const result = await placeStorefrontOrder(payload);
+      const result = await placeStorefrontOrder(request);
       if (result.ok) {
+        idempotency.current = null;
         setPlaced({
           orderNumber: result.order.orderNumber,
           orderId: result.order.id,
@@ -185,7 +189,7 @@ export function CartDrawer({
       // network failure — queue the payload; the replay carries the SAME
       // idempotencyKey, so syncing later can never duplicate the sale
       // (lib/offline/queue.ts — spec §13 NFR).
-      await enqueueOrder(payload);
+      await enqueueOrder(request);
       const count = await pendingCount();
       setOfflineQueued(count);
     } finally {
@@ -515,7 +519,15 @@ export function CartDrawer({
             </p>
           )}
 
-          <Button type="submit" size="lg" className="w-full" disabled={busy}>
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            disabled={
+              busy ||
+              (orderType === "delivery" && (!zones || zones.length === 0))
+            }
+          >
             {busy ? (
               <Loader2 className="size-5 animate-spin" aria-hidden />
             ) : (

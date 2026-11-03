@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -21,6 +21,7 @@ import {
 } from "@/lib/pricing";
 import { fetchDeliveryZones, placeConsoleOrder } from "@/app/actions/orders";
 import { arabicIncludes } from "@/lib/arabic";
+import { nextIdempotencyScope, type IdempotencyScope } from "@/lib/idempotency";
 
 /**
  * Manual order entry (Phase 3) — phone/walk-in orders through the SAME
@@ -138,6 +139,9 @@ export function ManualEntry({
     feeMinor: number;
   }> | null>(null);
   const [zoneId, setZoneId] = useState("");
+  // A retried submit must reuse its key; editing the order must not reuse it
+  // with a different payload (the server binds the key to the payload hash).
+  const idempotency = useRef<IdempotencyScope | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -270,11 +274,15 @@ export function ManualEntry({
     if (incomplete.length > 0) {
       return setError(`أكمل الاختيار المطلوب: ${incomplete[0]}.`);
     }
+    if (orderType === "delivery" && (!zones || zones.length === 0)) {
+      return setError(
+        "لا توجد مناطق توصيل متاحة الآن — اختر الاستلام أو حاول لاحقاً.",
+      );
+    }
     setError(null);
     setBusy(true);
     try {
-      const result = await placeConsoleOrder({
-        idempotencyKey: crypto.randomUUID(),
+      const payload = {
         channel: orderType,
         ...(orderType === "delivery" ? { zoneId } : {}),
         customer: {
@@ -289,8 +297,18 @@ export function ManualEntry({
           note: l.note.trim() || undefined,
           selections: l.selections,
         })),
+      };
+      const scope = nextIdempotencyScope(
+        idempotency.current,
+        JSON.stringify(payload),
+      );
+      idempotency.current = scope;
+      const result = await placeConsoleOrder({
+        idempotencyKey: scope.key,
+        ...payload,
       });
       if (result.ok) {
+        idempotency.current = null;
         setPlaced({
           orderNumber: result.order.orderNumber,
           orderId: result.order.id,
@@ -662,7 +680,15 @@ export function ManualEntry({
               {error}
             </p>
           )}
-          <Button size="lg" className="w-full" onClick={submit} disabled={busy}>
+          <Button
+            size="lg"
+            className="w-full"
+            onClick={submit}
+            disabled={
+              busy ||
+              (orderType === "delivery" && (!zones || zones.length === 0))
+            }
+          >
             {busy ? (
               <Loader2 className="size-5 animate-spin" aria-hidden />
             ) : (
