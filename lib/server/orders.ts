@@ -943,8 +943,10 @@ export interface ArchiveOrder {
   status: OrderStatus;
   channel: "takeaway" | "delivery" | "dine_in";
   source: "storefront" | "console" | "whatsapp";
+  paymentMethod: "cash" | "card_terminal" | "cash_on_delivery";
   customerName: string;
   customerPhone: string;
+  address: string | null;
   subtotalMinor: Minor;
   deliveryFeeMinor: Minor;
   totalMinor: Minor;
@@ -1015,6 +1017,7 @@ export async function getOrdersForDay(
   for (const order of rows) {
     const customerName = await decryptPii(order.customerName);
     const customerPhone = await decryptPii(order.customerPhone);
+    const address = order.address ? await decryptPii(order.address) : null;
     const items = itemsByOrder.get(order.id) ?? [];
 
     if (
@@ -1036,8 +1039,10 @@ export async function getOrdersForDay(
       status: order.status,
       channel: order.channel,
       source: order.source,
+      paymentMethod: order.paymentMethod,
       customerName,
       customerPhone,
+      address,
       subtotalMinor: order.subtotalMinor,
       deliveryFeeMinor: order.deliveryFeeMinor,
       totalMinor: order.totalMinor,

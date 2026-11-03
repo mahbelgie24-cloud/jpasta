@@ -128,6 +128,17 @@ export function formatTimeInShop(date: Date | string, tz = SHOP_TZ): string {
   }).format(d);
 }
 
+/** 24-hour HH:mm in the shop timezone — exports, not UI copy. */
+export function formatTimeInShop24(date: Date | string, tz = SHOP_TZ): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: tz,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
+}
+
 export function formatDateInShop(date: Date | string, tz = SHOP_TZ): string {
   const d = typeof date === "string" ? new Date(date) : date;
   return new Intl.DateTimeFormat("ar-PS", {

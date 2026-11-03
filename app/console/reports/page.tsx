@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Banknote,
   Bike,
+  Download,
   HandPlatter,
   History,
   Receipt,
@@ -122,7 +123,7 @@ export default async function ReportsPage({
           )}
         </div>
 
-        <div className="mt-2 text-end">
+        <div className="mt-2 flex flex-wrap items-center justify-end gap-x-4 gap-y-1">
           <Link
             href={`/console/orders?date=${date}`}
             className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-basil-700 hover:text-basil-600"
@@ -130,6 +131,19 @@ export default async function ReportsPage({
             <History className="size-4" aria-hidden />
             عرض طلبات هذا اليوم
           </Link>
+          <a
+            href={`/console/reports/export?date=${date}&kind=orders`}
+            className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-basil-700 hover:text-basil-600"
+          >
+            <Download className="size-4" aria-hidden />
+            تصدير الطلبات CSV
+          </a>
+          <a
+            href={`/console/reports/export?date=${date}&kind=z`}
+            className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-basil-700 hover:text-basil-600"
+          >
+            <Download className="size-4" aria-hidden />Z CSV
+          </a>
         </div>
 
         {/* summary cards */}

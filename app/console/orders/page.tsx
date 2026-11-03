@@ -6,6 +6,7 @@ import {
   ArrowRight,
   ChevronLeft,
   ChevronRight,
+  Download,
   Search,
   ShoppingBag,
 } from "lucide-react";
@@ -102,12 +103,21 @@ export default async function OrdersArchivePage({
             <Price minor={revenue} className="font-bold text-text-primary" />
           </p>
         </div>
-        <Link
-          href={hrefFor(today, status, query)}
-          className="inline-flex min-h-11 items-center rounded-full border border-border-strong bg-surface-raised px-4 text-sm font-bold text-text-secondary hover:text-text-primary"
-        >
-          اليوم
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href={`/console/reports/export?date=${date}&kind=orders&pii=1`}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border-strong bg-surface-raised px-4 text-sm font-bold text-text-secondary hover:text-text-primary"
+          >
+            <Download className="size-4" aria-hidden />
+            تصدير CSV
+          </a>
+          <Link
+            href={hrefFor(today, status, query)}
+            className="inline-flex min-h-11 items-center rounded-full border border-border-strong bg-surface-raised px-4 text-sm font-bold text-text-secondary hover:text-text-primary"
+          >
+            اليوم
+          </Link>
+        </div>
       </div>
 
       {/* Filters — a plain GET form: server-rendered, keyboard-friendly. */}

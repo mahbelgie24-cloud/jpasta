@@ -168,6 +168,35 @@ test.describe("console board", () => {
     );
     await expect(page.getByText(order.orderNumber)).toBeVisible();
   });
+
+  test("exports the day as PII-free CSV, with PII only on request", async ({
+    page,
+  }) => {
+    const order = await placePickupOrder(page, {
+      name: "زائر التصدير",
+      phone: "0599000666",
+    });
+    await loginAsOwner(page);
+
+    const orders = await page.request.get(
+      "/console/reports/export?kind=orders",
+    );
+    expect(orders.status()).toBe(200);
+    expect(orders.headers()["content-type"]).toContain("text/csv");
+    const body = await orders.text();
+    expect(body).toContain("order_number");
+    expect(body).toContain(order.orderNumber);
+    expect(body).not.toContain("0599000666");
+
+    const withPii = await page.request.get(
+      "/console/reports/export?kind=orders&pii=1",
+    );
+    expect(await withPii.text()).toContain("0599000666");
+
+    const z = await page.request.get("/console/reports/export?kind=z");
+    expect(z.status()).toBe(200);
+    expect(await z.text()).toContain("cash_ils");
+  });
 });
 
 test.describe("manual order entry", () => {
