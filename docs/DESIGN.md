@@ -38,12 +38,12 @@ Two layers in `@theme`:
 
 ## 3. Typography
 
-| Role                          | Family                      | Weights             |
-| ----------------------------- | --------------------------- | ------------------- |
-| Arabic display (hero/section) | **Amiri**                   | 400/700             |
-| UI + body                     | **Alexandria**              | 400/500/600/700/800 |
-| Latin display accents         | **Fraunces**                | 600/700             |
-| Numerals                      | Alexandria + `tabular-nums` | —                   |
+| Role                          | Family                      | Weights                         |
+| ----------------------------- | --------------------------- | ------------------------------- |
+| Arabic display (hero/section) | **Amiri**                   | 400/700                         |
+| UI + body                     | **Alexandria**              | 400/500/600/700/800             |
+| Latin display accents         | **Fraunces**                | 600/700 — not the logo wordmark |
+| Numerals                      | Alexandria + `tabular-nums` | —                               |
 
 Fluid ladder (only these sizes on brand surfaces):
 
@@ -85,7 +85,8 @@ Arabic never gets letter-spacing. Latin display accents may.
 ## 7. Pages
 
 - **/** — dark editorial hero, wheat marquee, asymmetric signature grid,
-  dark craft band, paper visit section, oversized wordmark footer.
+  dark craft band, paper visit section, horizontal plaque in the header and
+  roundel in the footer.
 - **/menu** — live open state, forgiving Arabic search, sticky category
   rail, large dish cards, native-form item sheet, 3-step cart with real zone
   fees.
@@ -119,6 +120,16 @@ Arabic never gets letter-spacing. Latin display accents may.
 
 ## 10. Review checklist
 
+Automated gates cover the mechanical parts — see `docs/DESIGN-REVIEW.md` for
+the full evidence table: `npm run test:e2e` runs axe (serious/critical =
+fail), keyboard-only journeys (skip link, dialog focus return), a
+reduced-motion collapse gate, and pixel-compares 375/768/1440 baselines for
+stable surfaces plus 375 baselines for the item sheet / cart drawer / order
+status (`e2e/visual.spec.ts-snapshots/`). Physical directional classes are
+banned by lint.
+
+- [ ] Header uses the horizontal plaque; footer/status/console/icons use the
+      roundel; no retyped wordmark; minimum sizes and clear space respected.
 - [ ] 375 / 768 / 1440 screenshots reviewed.
 - [ ] RTL logical properties only (`ms/me/ps/pe/start/end`).
 - [ ] Keyboard-only pass (tab, arrows, Esc, Enter).

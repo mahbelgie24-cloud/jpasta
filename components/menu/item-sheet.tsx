@@ -11,11 +11,12 @@ import { addMinor, multiplyMinor, type Minor } from "@/lib/pricing";
 import type { ModifierGroup, Product } from "@/lib/menu-data";
 
 /**
- * Item customization sheet — pasta-accurate groups (size / heat / doneness /
- * extras). Native radio/checkbox inputs give correct keyboard behaviour and
- * form semantics; the visual pills are labels. Multi-group caps are enforced
- * HERE as well as on the server, so a valid-looking cart never fails at
- * checkout.
+ * Item customization sheet — per-product modifier groups (sauce / pasta type
+ * / paid extras). Required groups start unanswered and block the add-to-cart
+ * action until the customer chooses. Native radio/checkbox inputs give correct
+ * keyboard behaviour and form semantics; the visual pills are labels.
+ * Multi-group caps are enforced HERE as well as on the server, so a
+ * valid-looking cart never fails at checkout.
  */
 
 interface Selection {
@@ -28,6 +29,9 @@ function buildSelection(product: Product): Selection {
   const multi: Record<string, Set<string>> = {};
   for (const g of product.groups) {
     if (g.type === "single") {
+      // A required choice must be made by the customer — never sleep-walk
+      // into the first option. Optional single groups keep a default.
+      if (g.required) continue;
       const first = g.options[0];
       if (first) singles[g.id] = first.id;
     } else {
@@ -97,6 +101,13 @@ export function ItemSheet({
   const total = multiplyMinor(unitPriceMinor, quantity);
   const trimmedNote = note.trim();
 
+  const missingRequired = product.groups.filter((group) => {
+    if (!group.required) return false;
+    if (group.type === "single") return !selection.singles[group.id];
+    return (selection.multi[group.id]?.size ?? 0) === 0;
+  });
+  const canAdd = orderingEnabled && missingRequired.length === 0;
+
   function toggleMulti(group: ModifierGroup, optionId: string) {
     setSelection((current) => {
       const next = { ...current.multi };
@@ -118,6 +129,7 @@ export function ItemSheet({
   }
 
   function add() {
+    if (!canAdd) return;
     const singlesPart = Object.entries(selection.singles)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([groupKey, optionKey]) => `${groupKey}=${optionKey}`)
@@ -163,23 +175,36 @@ export function ItemSheet({
       onClose={onClose}
       title={product.nameAr}
       footer={
-        <div className="flex items-center justify-between gap-3">
-          <Stepper value={quantity} onChange={setQuantity} label="الكمية" />
-          <Button
-            type="submit"
-            form={`item-form-${product.id}`}
-            size="lg"
-            className="flex-1"
-            disabled={!orderingEnabled}
-          >
-            {orderingEnabled ? (
-              <>
-                أضف للسلة · <Price minor={total} />
-              </>
-            ) : (
-              "الطلب غير متاح مؤقتاً"
-            )}
-          </Button>
+        <div className="space-y-2">
+          {orderingEnabled && missingRequired.length > 0 && (
+            <p
+              role="status"
+              aria-live="polite"
+              className="text-center text-xs font-bold text-terracotta"
+            >
+              اختر {missingRequired.map((g) => g.nameAr).join(" و")} لإتمام
+              الإضافة
+            </p>
+          )}
+          <div className="flex items-center justify-between gap-3">
+            <Stepper value={quantity} onChange={setQuantity} label="الكمية" />
+            <Button
+              type="submit"
+              form={`item-form-${product.id}`}
+              size="lg"
+              className="flex-1"
+              disabled={!canAdd}
+            >
+              {orderingEnabled ? (
+                <span className="flex flex-col items-center leading-tight">
+                  <span>أضف للسلة</span>
+                  <Price minor={total} className="text-sm" />
+                </span>
+              ) : (
+                "الطلب غير متاح مؤقتاً"
+              )}
+            </Button>
+          </div>
         </div>
       }
     >
@@ -193,7 +218,7 @@ export function ItemSheet({
       >
         <div className="flex items-start gap-4">
           <div className="w-32 shrink-0 overflow-hidden rounded-xl bg-cream-100">
-            <DishMedia product={product} className="w-full" />
+            <DishMedia product={product} decorative className="w-full" />
           </div>
           <p className="pt-1 text-sm leading-relaxed text-ink-soft">
             {product.descAr}
@@ -206,21 +231,46 @@ export function ItemSheet({
             const atMax =
               group.maxSelections !== undefined &&
               chosen.size >= group.maxSelections;
+            const unanswered =
+              group.required &&
+              (group.type === "single"
+                ? !selection.singles[group.id]
+                : chosen.size === 0);
+            const hintId = `group-hint-${product.id}-${group.id}`;
             return (
-              <fieldset key={group.id}>
+              <fieldset
+                key={group.id}
+                aria-describedby={unanswered ? hintId : undefined}
+              >
                 <legend className="flex items-center gap-2 text-sm font-bold text-ink">
                   {group.nameAr}
                   {group.required && (
-                    <span className="text-terracotta" aria-hidden>
-                      *
-                    </span>
+                    <>
+                      <span className="text-terracotta" aria-hidden>
+                        *
+                      </span>
+                      <span className="text-[11px] font-bold text-terracotta">
+                        مطلوب
+                      </span>
+                    </>
                   )}
-                  {group.type === "multi" && group.maxSelections && (
-                    <span className="text-xs font-normal text-ink-soft">
-                      (حتى {group.maxSelections})
-                    </span>
-                  )}
+                  {group.type === "multi" &&
+                    group.maxSelections !== undefined &&
+                    group.maxSelections > 1 && (
+                      <span className="text-xs font-normal text-ink-soft">
+                        (حتى {group.maxSelections})
+                      </span>
+                    )}
                 </legend>
+
+                {unanswered && (
+                  <p
+                    id={hintId}
+                    className="mt-1 text-xs font-bold text-terracotta"
+                  >
+                    اختر خياراً واحداً للمتابعة
+                  </p>
+                )}
 
                 <div className="mt-2.5 flex flex-wrap gap-2">
                   {group.options.map((opt) => {

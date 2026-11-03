@@ -4,12 +4,16 @@ import { Logo } from "@/components/brand/logo";
 import { buttonStyles } from "@/components/ui/button";
 import { SITE } from "@/lib/site";
 import { whatsappUrl } from "@/lib/whatsapp";
+import { getShopSettings } from "@/lib/server/settings";
 
 /** Footer — CTA band, brand lockup, contact, legal, oversized wordmark. */
-export function Footer() {
+export async function Footer() {
+  const shop = await getShopSettings();
+  const phone = shop.shopPhone || SITE.phoneDisplay;
   return (
-    <footer className="texture-grain relative overflow-hidden bg-brand-deep text-cream-100">
-      <span className="texture-grain-layer" aria-hidden />
+    <footer className="relative overflow-hidden bg-brand-deep text-cream-100">
+      {/* No SVG grain layer: a feTurbulence texture on a full-width band is
+          expensive to rasterise on mobile for an almost invisible effect. */}
 
       {/* CTA band */}
       <div className="relative border-b border-cream-50/10">
@@ -25,6 +29,7 @@ export function Footer() {
           <div className="flex flex-col gap-3 sm:flex-row">
             <Link
               href="/menu"
+              prefetch={false}
               className={buttonStyles(
                 "primary",
                 "lg",
@@ -35,7 +40,7 @@ export function Footer() {
               <ArrowLeft className="size-5" aria-hidden />
             </Link>
             <a
-              href={whatsappUrl(SITE.whatsapp, "مرحباً JPasta — بدي أطلب")}
+              href={whatsappUrl(shop.whatsapp, "مرحباً JPasta — بدي أطلب")}
               target="_blank"
               rel="noopener noreferrer"
               className={buttonStyles("outline-light", "lg")}
@@ -49,7 +54,7 @@ export function Footer() {
 
       <div className="relative container-page grid gap-10 py-14 md:grid-cols-[1.2fr_1fr_1fr]">
         <div>
-          <Logo tone="light" size="md" />
+          <Logo size="xl" />
           <p
             className="mt-4 max-w-xs font-display text-base font-semibold text-wheat-300/90 italic"
             dir="ltr"
@@ -57,8 +62,8 @@ export function Footer() {
             “{SITE.tagline}”
           </p>
           <p className="mt-3 max-w-xs text-sm leading-relaxed text-cream-100/65">
-            باستا طازة تُصنع يومياً في قلقيلية — صلصات بيتية ودجاج طازج، بصلصة
-            كتير ومحبة.
+            باستا طازة تُطبخ عند الطلب في قلقيلية — صلصات بيتية تُحضّر طازجة كل
+            يوم ودجاج طازج، بصلصة كتير ومحبة.
           </p>
         </div>
 
@@ -75,6 +80,7 @@ export function Footer() {
               <li key={l.href}>
                 <Link
                   href={l.href}
+                  prefetch={false}
                   className="inline-flex min-h-11 items-center text-cream-100/75 transition-colors hover:text-cream-50"
                 >
                   {l.label}
@@ -99,7 +105,7 @@ export function Footer() {
                 className="mt-0.5 size-4 shrink-0 text-wheat-400"
                 aria-hidden
               />
-              <span>{SITE.hoursLabel}</span>
+              <span>{shop.hoursLabel}</span>
             </li>
             <li className="flex items-start gap-2.5">
               <Phone
@@ -107,26 +113,15 @@ export function Footer() {
                 aria-hidden
               />
               <a
-                href={`tel:${SITE.phoneIntl}`}
+                href={`tel:${phone}`}
                 dir="ltr"
                 className="font-bold tabular-nums transition-colors hover:text-cream-50"
               >
-                {SITE.phoneDisplay}
+                {phone}
               </a>
             </li>
           </ul>
         </div>
-      </div>
-
-      {/* oversized wordmark */}
-      <div className="relative overflow-hidden border-t border-cream-50/10 select-none">
-        <p
-          aria-hidden
-          className="container-page -mb-4 truncate pt-8 font-display text-[clamp(4rem,16vw,13rem)] leading-none font-bold tracking-tight text-cream-50/[0.06] sm:-mb-8"
-          dir="ltr"
-        >
-          JPasta
-        </p>
       </div>
 
       <div className="relative border-t border-cream-50/10">

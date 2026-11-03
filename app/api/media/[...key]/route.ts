@@ -40,6 +40,10 @@ export async function GET(
     headers: {
       "content-type":
         object.httpMetadata?.contentType ?? "application/octet-stream",
+      // Defence in depth: even if an object's stored metadata is wrong, the
+      // browser must not re-interpret the bytes as HTML/JS from our origin.
+      "x-content-type-options": "nosniff",
+      "content-disposition": "inline",
       "cache-control": "public, max-age=31536000, immutable",
       ...(object.httpEtag ? { etag: object.httpEtag } : {}),
     },

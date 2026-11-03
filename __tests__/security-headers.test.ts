@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildCsp, buildStaticCsp, generateCspNonce } from "@/lib/csp-nonce";
+import { serializeJsonLd } from "@/lib/json-ld";
 
 describe("CSP builder (v2 hardening)", () => {
   it("embeds the per-request nonce in script-src", () => {
@@ -34,5 +35,16 @@ describe("CSP builder (v2 hardening)", () => {
 
   it("nonces differ per request", () => {
     expect(generateCspNonce()).not.toBe(generateCspNonce());
+  });
+});
+
+describe("JSON-LD serialization (stored-XSS hardening)", () => {
+  it("cannot break out of the script element", () => {
+    const payload = { name: "</script><img src=x onerror=alert(1)>" };
+    const out = serializeJsonLd(payload);
+    expect(out).not.toContain("</script>");
+    expect(out).toContain("\\u003c/script\\u003e");
+    // Still valid JSON with the original value.
+    expect(JSON.parse(out)).toEqual(payload);
   });
 });

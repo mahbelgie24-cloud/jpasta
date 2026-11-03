@@ -30,46 +30,46 @@ export default async function NewOrderPage() {
     .where(eq(products.isAvailable, true))
     .orderBy(asc(categories.sortOrder), asc(products.sortOrder));
 
-  const groupRows = await db.select().from(modifierGroups);
+  const groupRows = await db
+    .select()
+    .from(modifierGroups)
+    .orderBy(asc(modifierGroups.sortOrder));
   const optionRows = await db
     .select()
     .from(modifiers)
     .orderBy(asc(modifiers.sortOrder));
 
-  const catalog: ManualProduct[] = rows.map((p) => {
-    const sizeGroup = groupRows.find(
-      (g) => g.productId === p.id && g.key === "size",
-    );
-    const sizeOptions = sizeGroup
-      ? optionRows
-          .filter((o) => o.groupId === sizeGroup.id)
-          .map((o) => ({
-            key: o.key,
-            nameAr: o.nameAr,
-            deltaMinor: o.priceDeltaMinor,
-          }))
-      : [];
-    const extrasGroup = groupRows.find(
-      (g) => g.productId === p.id && g.key === "extras",
-    );
-    const extras = extrasGroup
-      ? optionRows
-          .filter((o) => o.groupId === extrasGroup.id)
-          .map((o) => ({
-            key: o.key,
-            nameAr: o.nameAr,
-            deltaMinor: o.priceDeltaMinor,
-          }))
-      : [];
-    return {
-      id: p.id,
-      nameAr: p.nameAr,
-      basePriceMinor: p.basePriceMinor,
-      categoryNameAr: p.categoryAr,
-      sizeOptions,
-      extras,
-    };
-  });
+  const groupsByProduct = new Map<string, typeof groupRows>();
+  for (const group of groupRows) {
+    const list = groupsByProduct.get(group.productId) ?? [];
+    list.push(group);
+    groupsByProduct.set(group.productId, list);
+  }
+  const optionsByGroup = new Map<string, typeof optionRows>();
+  for (const option of optionRows) {
+    const list = optionsByGroup.get(option.groupId) ?? [];
+    list.push(option);
+    optionsByGroup.set(option.groupId, list);
+  }
+
+  const catalog: ManualProduct[] = rows.map((p) => ({
+    id: p.id,
+    nameAr: p.nameAr,
+    basePriceMinor: p.basePriceMinor,
+    categoryNameAr: p.categoryAr,
+    groups: (groupsByProduct.get(p.id) ?? []).map((group) => ({
+      key: group.key,
+      nameAr: group.nameAr,
+      type: group.type,
+      required: group.isRequired,
+      maxSelections: group.maxSelections ?? undefined,
+      options: (optionsByGroup.get(group.id) ?? []).map((option) => ({
+        key: option.key,
+        nameAr: option.nameAr,
+        deltaMinor: option.priceDeltaMinor,
+      })),
+    })),
+  }));
 
   return <ManualEntry products={catalog} ownerName={user.name} />;
 }

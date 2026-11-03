@@ -24,7 +24,8 @@ const variants: Record<ButtonVariant, string> = {
 };
 
 const sizes: Record<ButtonSize, string> = {
-  sm: "min-h-10 px-4 text-sm",
+  // Every size stays at/above the project's 44px touch-target bar.
+  sm: "min-h-11 px-4 text-sm",
   md: "min-h-11 px-6",
   lg: "min-h-13 px-8 text-lg",
 };

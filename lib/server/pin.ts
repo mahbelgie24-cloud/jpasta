@@ -1,33 +1,59 @@
 import {
-  randomBytes,
-  scryptSync,
-  timingSafeEqual,
-  createHash,
-} from "node:crypto";
-import { hmacSha256Hex } from "@/lib/domain/hash";
+  hmacSha256Hex,
+  sha256Hex,
+  timingSafeEqualText,
+} from "@/lib/domain/hash";
 import { getServerEnv } from "./env";
 
 /**
  * PIN credential primitives (spec §8.5).
  *
- * v2 uses PBKDF2-HMAC-SHA256 via WebCrypto: fully supported on Workers and
- * Node, and fast enough for a 6-digit PIN when combined with the login
- * throttle. Legacy v1 hashes ("scrypt:…") are still verified so existing
- * users can sign in; they are upgraded on the next PIN reset/provision.
+ * Everything on the hot path is WebCrypto-only so the same code runs on the
+ * Workers runtime and Node without relying on Node built-ins:
+ *
+ *   hashPin     PBKDF2-HMAC-SHA256, 210k iterations, per-user random salt
+ *   verifyPin   constant-time hex comparison (no Buffer)
+ *   hashToken   SHA-256 of the opaque session cookie
+ *   newSession 32 random bytes, base64url (crypto.getRandomValues)
  *
  * Format: "pbkdf2:<iterations>:<saltHex>:<hashHex>"
- *         "scrypt:<N>:<saltHex>:<hashHex>" (legacy)
+ *         "scrypt:<N>:<saltHex>:<hashHex>" (legacy, Node-only upgrade path)
+ *
+ * The legacy scrypt verifier is imported lazily: workerd does not implement
+ * `scryptSync`, and a top-level named import of a missing export can fail at
+ * module instantiation. On Workers the dynamic import is caught and the
+ * legacy branch fails closed; the owner is re-provisioned to PBKDF2 by the
+ * seed (`npm run db:seed -- --provision`).
  */
 
 const PBKDF2_ITERATIONS = 210_000;
 const KEYLEN = 32;
+const SALT_BYTES = 16;
 
 function toHex(bytes: Uint8Array): string {
   return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+function fromHex(hex: string): Uint8Array<ArrayBuffer> | null {
+  if (!/^[0-9a-fA-F]+$/.test(hex) || hex.length % 2 !== 0) return null;
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i += 1) {
+    out[i] = Number.parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  }
+  return out;
+}
+
+function toBase64Url(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
 export async function hashPin(pin: string): Promise<string> {
-  const salt = randomBytes(16);
+  const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES));
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(pin),
@@ -45,7 +71,7 @@ export async function hashPin(pin: string): Promise<string> {
     key,
     KEYLEN * 8,
   );
-  return `pbkdf2:${PBKDF2_ITERATIONS}:${salt.toString("hex")}:${toHex(
+  return `pbkdf2:${PBKDF2_ITERATIONS}:${toHex(salt)}:${toHex(
     new Uint8Array(bits),
   )}`;
 }
@@ -56,13 +82,14 @@ export async function verifyPin(pin: string, stored: string): Promise<boolean> {
 
   if (scheme === "pbkdf2") {
     const iterations = Number.parseInt(parts[1] ?? "0", 10);
-    const salt = Buffer.from(parts[2] ?? "", "hex");
-    const expected = Buffer.from(parts[3] ?? "", "hex");
+    const salt = fromHex(parts[2] ?? "");
+    const expectedHex = parts[3] ?? "";
     if (
       !Number.isFinite(iterations) ||
       iterations < 1000 ||
-      salt.length === 0 ||
-      expected.length !== KEYLEN
+      !salt ||
+      !fromHex(expectedHex) ||
+      expectedHex.length !== KEYLEN * 2
     ) {
       return false;
     }
@@ -78,21 +105,28 @@ export async function verifyPin(pin: string, stored: string): Promise<boolean> {
       key,
       KEYLEN * 8,
     );
-    return timingSafeEqual(Buffer.from(new Uint8Array(bits)), expected);
+    return timingSafeEqualText(toHex(new Uint8Array(bits)), expectedHex);
   }
 
   if (scheme === "scrypt") {
-    // Legacy v1 hash. scryptSync is available on Node; on runtimes without
-    // it we fail closed (the owner is re-provisioned to PBKDF2 by the seed).
+    // Legacy v1 hash — Node only. Import lazily so the Workers bundle never
+    // evaluates a missing named export at instantiation time.
     const cost = Number.parseInt(parts[1] ?? "0", 10);
-    const salt = Buffer.from(parts[2] ?? "", "hex");
-    const expected = Buffer.from(parts[3] ?? "", "hex");
-    if (!Number.isFinite(cost) || salt.length === 0 || expected.length !== 64) {
+    const salt = fromHex(parts[2] ?? "");
+    const expectedHex = parts[3] ?? "";
+    if (
+      !Number.isFinite(cost) ||
+      cost < 1024 ||
+      !salt ||
+      !fromHex(expectedHex) ||
+      expectedHex.length !== 128
+    ) {
       return false;
     }
     try {
+      const { scryptSync } = await import("node:crypto");
       const actual = scryptSync(pin, salt, 64, { N: cost });
-      return timingSafeEqual(actual, expected);
+      return timingSafeEqualText(toHex(new Uint8Array(actual)), expectedHex);
     } catch {
       return false;
     }
@@ -126,10 +160,10 @@ export function isLegacyLookup(value: string): boolean {
 }
 
 /** Session tokens are stored hashed; a DB leak cannot mint sessions. */
-export function hashToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
+export async function hashToken(token: string): Promise<string> {
+  return sha256Hex(token);
 }
 
 export function newSessionToken(): string {
-  return randomBytes(32).toString("base64url");
+  return toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
 }

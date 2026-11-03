@@ -31,6 +31,7 @@ jobs:
       JPASTA_OWNER_PIN: "135790"
       AUTH_PEPPER: ci-pepper-not-a-production-secret
       REALTIME_SECRET: ci-realtime-not-a-production-secret
+      PII_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       NEXT_PUBLIC_SITE_URL: https://jpasta.example
       NEXT_PUBLIC_WHATSAPP_NUMBER: "970566064976"
       NODE_ENV: test
@@ -73,3 +74,128 @@ jobs:
 
       - name: Wrangler dry-run
         run: npx wrangler deploy --dry-run --outdir=.wrangler/ci
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: jpasta
+          POSTGRES_PASSWORD: jpasta
+          POSTGRES_DB: jpasta
+        ports: ["54330:5432"]
+        options: >-
+          --health-cmd "pg_isready -U jpasta"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://jpasta:jpasta@127.0.0.1:54330/jpasta
+      JPASTA_OWNER_PIN: "135790"
+      AUTH_PEPPER: ci-pepper-not-a-production-secret
+      REALTIME_SECRET: ci-realtime-not-a-production-secret
+      PII_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      NEXT_PUBLIC_SITE_URL: https://jpasta.example
+      NEXT_PUBLIC_WHATSAPP_NUMBER: "970566064976"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Migrate + seed
+        run: |
+          npm run db:migrate
+          npm run db:seed
+
+      - name: Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build
+        run: npm run build
+
+      # `webServer` boots `next start -p 3220`; reuseExistingServer is off in CI.
+      # The visual baselines in e2e/visual.spec.ts-snapshots/ must be committed.
+      - name: Journeys + axe + visual
+        run: npx playwright test
+
+      - name: Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: jpasta
+          POSTGRES_PASSWORD: jpasta
+          POSTGRES_DB: jpasta
+        ports: ["54330:5432"]
+        options: >-
+          --health-cmd "pg_isready -U jpasta"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://jpasta:jpasta@127.0.0.1:54330/jpasta
+      JPASTA_OWNER_PIN: "135790"
+      AUTH_PEPPER: ci-pepper-not-a-production-secret
+      REALTIME_SECRET: ci-realtime-not-a-production-secret
+      PII_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      NEXT_PUBLIC_SITE_URL: https://jpasta.example
+      NEXT_PUBLIC_WHATSAPP_NUMBER: "970566064976"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Migrate + seed
+        run: |
+          npm run db:migrate
+          npm run db:seed
+
+      - name: Build
+        run: npm run build
+
+      # Two honest budgets:
+      #  - mobile (default Lighthouse profile) hard gates: LCP < 4.5s,
+      #    CLS < 0.05, JS < 300KB, fonts < 250KB. The performance score and
+      #    TBT are warnings — the mobile lab score is React-hydration-bound.
+      #  - desktop proves the code itself is lean: perf ≥ 0.95, LCP < 1.5s,
+      #    CLS < 0.02, TBT < 200ms.
+      # Chrome is preinstalled on GitHub runners; locally set CHROME_PATH.
+      - name: Lighthouse mobile budgets
+        run: npm run test:lighthouse
+
+      - name: Lighthouse desktop budgets
+        run: npm run test:lighthouse:desktop
+
+      - name: Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci/
+          retention-days: 7

@@ -1,5 +1,5 @@
 /* JPasta service worker — app shell, offline ordering, push-ready. */
-const VERSION = "jpasta-v2";
+const VERSION = "jpasta-v3";
 const SHELL = `${VERSION}-shell`;
 const MEDIA = `${VERSION}-media`;
 
@@ -10,6 +10,7 @@ const PRECACHE = [
   "/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
+  "/icons/icon-monochrome-512.png",
 ];
 
 self.addEventListener("install", (event) => {
@@ -114,7 +115,7 @@ self.addEventListener("push", (event) => {
     self.registration.showNotification(payload.title || "JPasta", {
       body: payload.body || "طلب جديد وصل",
       icon: "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
+      badge: "/icons/icon-monochrome-512.png",
       dir: "rtl",
       lang: "ar",
       vibrate: [120, 60, 120],

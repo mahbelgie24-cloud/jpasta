@@ -24,13 +24,15 @@ export default function GlobalError({
       >
         <main style={{ maxWidth: 420 }}>
           <div
+            aria-hidden
             style={{
               width: 64,
               height: 64,
               margin: "0 auto",
-              borderRadius: 18,
-              background: "#235C3E",
-              color: "#FDFBF7",
+              borderRadius: "50%",
+              border: "3px solid #EBE1BD",
+              background: "#296034",
+              color: "#EBE1BD",
               display: "grid",
               placeItems: "center",
               fontWeight: 800,

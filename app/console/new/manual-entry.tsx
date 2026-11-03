@@ -25,35 +25,88 @@ import { arabicIncludes } from "@/lib/arabic";
 /**
  * Manual order entry (Phase 3) — phone/walk-in orders through the SAME
  * server pipeline as the storefront: server-recomputed prices, idempotent.
- * Sized for one-hand phone use; sizes default to regular, extras optional.
+ * Sized for one-hand phone use; required groups must be chosen before submit.
  */
+
+export interface ManualOption {
+  key: string;
+  nameAr: string;
+  deltaMinor: number;
+}
+
+export interface ManualGroup {
+  key: string;
+  nameAr: string;
+  type: "single" | "multi";
+  required: boolean;
+  maxSelections?: number;
+  options: ManualOption[];
+}
 
 export interface ManualProduct {
   id: string;
   nameAr: string;
   basePriceMinor: number;
   categoryNameAr: string;
-  sizeOptions: Array<{ key: string; nameAr: string; deltaMinor: number }>;
-  extras: Array<{ key: string; nameAr: string; deltaMinor: number }>;
+  groups: ManualGroup[];
+}
+
+interface LineSelection {
+  groupKey: string;
+  optionKey: string;
 }
 
 interface Line {
   key: string;
   product: ManualProduct;
   quantity: number;
-  sizeKey: string;
-  extraKeys: Set<string>;
+  selections: LineSelection[];
   note: string;
 }
 
+function findGroup(product: ManualProduct, groupKey: string) {
+  return product.groups.find((group) => group.key === groupKey);
+}
+
 function unitPrice(line: Line): Minor {
-  const size = line.product.sizeOptions.find((s) => s.key === line.sizeKey);
-  let unit = addMinor(line.product.basePriceMinor, size?.deltaMinor ?? 0);
-  for (const key of line.extraKeys) {
-    const extra = line.product.extras.find((x) => x.key === key);
-    if (extra) unit = addMinor(unit, extra.deltaMinor);
+  let unit = line.product.basePriceMinor;
+  for (const selection of line.selections) {
+    const group = findGroup(line.product, selection.groupKey);
+    const option = group?.options.find((o) => o.key === selection.optionKey);
+    if (option) unit = addMinor(unit, option.deltaMinor);
   }
   return unit;
+}
+
+/** Optional single groups keep their first option, like the storefront sheet. */
+function defaultSelections(product: ManualProduct): LineSelection[] {
+  const selections: LineSelection[] = [];
+  for (const group of product.groups) {
+    if (group.type === "single" && !group.required) {
+      const first = group.options[0];
+      if (first) {
+        selections.push({ groupKey: group.key, optionKey: first.key });
+      }
+    }
+  }
+  return selections;
+}
+
+function selectionSignature(selections: LineSelection[]): string {
+  return selections
+    .map((s) => `${s.groupKey}=${s.optionKey}`)
+    .sort()
+    .join("|");
+}
+
+function missingRequiredGroups(
+  product: ManualProduct,
+  selections: LineSelection[],
+): ManualGroup[] {
+  return product.groups.filter((group) => {
+    if (!group.required) return false;
+    return !selections.some((s) => s.groupKey === group.key);
+  });
 }
 
 export function ManualEntry({
@@ -122,16 +175,19 @@ export function ManualEntry({
 
   function addLine(product: ManualProduct) {
     setLines((prev) => {
+      const initial = defaultSelections(product);
+      const signature = selectionSignature(initial);
       const existing = prev.find(
         (l) =>
           l.product.id === product.id &&
-          l.sizeKey === (product.sizeOptions[0]?.key ?? "regular") &&
-          l.extraKeys.size === 0 &&
+          selectionSignature(l.selections) === signature &&
           !l.note,
       );
       if (existing) {
         return prev.map((l) =>
-          l === existing ? { ...l, quantity: Math.min(50, l.quantity + 1) } : l,
+          l.key === existing.key
+            ? { ...l, quantity: Math.min(20, l.quantity + 1) }
+            : l,
         );
       }
       return [
@@ -140,12 +196,53 @@ export function ManualEntry({
           key: `${product.id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
           product,
           quantity: 1,
-          sizeKey: product.sizeOptions[0]?.key ?? "regular",
-          extraKeys: new Set<string>(),
+          selections: initial,
           note: "",
         },
       ];
     });
+  }
+
+  function selectSingle(line: Line, group: ManualGroup, optionKey: string) {
+    setLines((prev) =>
+      prev.map((row) => {
+        if (row.key !== line.key) return row;
+        const others = row.selections.filter((s) => s.groupKey !== group.key);
+        return {
+          ...row,
+          selections: [...others, { groupKey: group.key, optionKey }],
+        };
+      }),
+    );
+  }
+
+  function toggleMulti(line: Line, group: ManualGroup, optionKey: string) {
+    setLines((prev) =>
+      prev.map((row) => {
+        if (row.key !== line.key) return row;
+        const active = row.selections.some(
+          (s) => s.groupKey === group.key && s.optionKey === optionKey,
+        );
+        if (active) {
+          return {
+            ...row,
+            selections: row.selections.filter(
+              (s) => !(s.groupKey === group.key && s.optionKey === optionKey),
+            ),
+          };
+        }
+        const count = row.selections.filter(
+          (s) => s.groupKey === group.key,
+        ).length;
+        if (group.maxSelections !== undefined && count >= group.maxSelections) {
+          return row;
+        }
+        return {
+          ...row,
+          selections: [...row.selections, { groupKey: group.key, optionKey }],
+        };
+      }),
+    );
   }
 
   const subtotal = sumMinor(
@@ -165,6 +262,14 @@ export function ManualEntry({
       return setError("عنوان التوصيل مطلوب.");
     if (orderType === "delivery" && !zoneId)
       return setError("اختر منطقة التوصيل.");
+    const incomplete = lines.flatMap((line) =>
+      missingRequiredGroups(line.product, line.selections).map(
+        (group) => `«${group.nameAr}» في «${line.product.nameAr}»`,
+      ),
+    );
+    if (incomplete.length > 0) {
+      return setError(`أكمل الاختيار المطلوب: ${incomplete[0]}.`);
+    }
     setError(null);
     setBusy(true);
     try {
@@ -182,13 +287,7 @@ export function ManualEntry({
           productId: l.product.id,
           quantity: l.quantity,
           note: l.note.trim() || undefined,
-          selections: [
-            { groupKey: "size", optionKey: l.sizeKey },
-            ...[...l.extraKeys].map((k) => ({
-              groupKey: "extras",
-              optionKey: k,
-            })),
-          ],
+          selections: l.selections,
         })),
       });
       if (result.ok) {
@@ -263,9 +362,7 @@ export function ManualEntry({
                   >
                     <Plus className="size-3 text-basil-700" aria-hidden />
                     {p.nameAr}
-                    <span dir="ltr" className="text-ink-soft tabular-nums">
-                      {p.basePriceMinor / 100}₪
-                    </span>
+                    <Price minor={p.basePriceMinor} className="text-ink-soft" />
                   </button>
                 ))}
               </div>
@@ -292,83 +389,96 @@ export function ManualEntry({
                       setLines((prev) => prev.filter((x) => x !== l))
                     }
                     aria-label={`حذف ${l.product.nameAr}`}
-                    className="flex size-9 items-center justify-center rounded-full text-ink-soft hover:bg-terracotta/10 hover:text-terracotta"
+                    className="flex size-11 items-center justify-center rounded-full text-ink-soft hover:bg-terracotta/10 hover:text-terracotta"
                   >
                     <Trash2 className="size-4" aria-hidden />
                   </button>
                 </div>
-                {l.product.sizeOptions.length > 1 && (
-                  <div
-                    className="mt-2 flex flex-wrap gap-1.5"
-                    role="radiogroup"
-                    aria-label="الحجم"
-                  >
-                    {l.product.sizeOptions.map((s) => {
-                      const active = l.sizeKey === s.key;
-                      return (
-                        <button
-                          key={s.key}
-                          type="button"
-                          role="radio"
-                          aria-checked={active}
-                          onClick={() =>
-                            setLines((prev) =>
-                              prev.map((x) =>
-                                x === l ? { ...x, sizeKey: s.key } : x,
-                              ),
-                            )
-                          }
-                          className={
-                            active
-                              ? "inline-flex min-h-9 items-center rounded-full border-2 border-basil-700 bg-basil-50 px-3 text-xs font-bold text-basil-800"
-                              : "inline-flex min-h-9 items-center rounded-full border border-cream-300 bg-cream-100 px-3 text-xs font-bold text-ink-soft"
-                          }
-                        >
-                          {s.nameAr}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-                {l.product.extras.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {l.product.extras.map((x) => {
-                      const active = l.extraKeys.has(x.key);
-                      return (
-                        <button
-                          key={x.key}
-                          type="button"
-                          aria-pressed={active}
-                          onClick={() =>
-                            setLines((prev) =>
-                              prev.map((row) => {
-                                if (row !== l) return row;
-                                const next = new Set(row.extraKeys);
-                                if (next.has(x.key)) next.delete(x.key);
-                                else next.add(x.key);
-                                return { ...row, extraKeys: next };
-                              }),
-                            )
-                          }
-                          className={
-                            active
-                              ? "inline-flex min-h-9 items-center rounded-full border-2 border-basil-700 bg-basil-50 px-3 text-xs font-bold text-basil-800"
-                              : "inline-flex min-h-9 items-center rounded-full border border-cream-300 bg-cream-100 px-3 text-xs font-bold text-ink-soft"
-                          }
-                        >
-                          {x.nameAr}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                {l.product.groups.map((group) => {
+                  const chosen = l.selections.filter(
+                    (s) => s.groupKey === group.key,
+                  );
+                  const unanswered = group.required && chosen.length === 0;
+                  const atMax =
+                    group.type === "multi" &&
+                    group.maxSelections !== undefined &&
+                    chosen.length >= group.maxSelections;
+                  return (
+                    <div key={group.key} className="mt-2">
+                      <p className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-ink-soft">
+                        {group.nameAr}
+                        {group.required && (
+                          <span className="text-terracotta">مطلوب</span>
+                        )}
+                        {group.type === "multi" &&
+                          group.maxSelections !== undefined &&
+                          group.maxSelections > 1 && (
+                            <span className="font-normal">
+                              (حتى {group.maxSelections})
+                            </span>
+                          )}
+                      </p>
+                      <div
+                        className="mt-1.5 flex flex-wrap gap-1.5"
+                        role={group.type === "single" ? "radiogroup" : "group"}
+                        aria-label={`${group.nameAr} — ${l.product.nameAr}`}
+                      >
+                        {group.options.map((option) => {
+                          const active = chosen.some(
+                            (s) => s.optionKey === option.key,
+                          );
+                          const disabled = atMax && !active;
+                          return (
+                            <button
+                              key={option.key}
+                              type="button"
+                              role={
+                                group.type === "single" ? "radio" : undefined
+                              }
+                              aria-checked={
+                                group.type === "single" ? active : undefined
+                              }
+                              aria-pressed={
+                                group.type === "multi" ? active : undefined
+                              }
+                              disabled={disabled}
+                              onClick={() =>
+                                group.type === "single"
+                                  ? selectSingle(l, group, option.key)
+                                  : toggleMulti(l, group, option.key)
+                              }
+                              className={
+                                active
+                                  ? "inline-flex min-h-11 items-center gap-1.5 rounded-full border-2 border-basil-700 bg-basil-50 px-3 text-xs font-bold text-basil-800 disabled:opacity-45"
+                                  : "inline-flex min-h-11 items-center gap-1.5 rounded-full border border-cream-300 bg-cream-100 px-3 text-xs font-bold text-ink-soft disabled:cursor-not-allowed disabled:opacity-45"
+                              }
+                            >
+                              {option.nameAr}
+                              {option.deltaMinor > 0 && (
+                                <Price
+                                  minor={option.deltaMinor}
+                                  className="text-[11px]"
+                                />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {unanswered && (
+                        <p className="mt-1 text-[11px] font-bold text-terracotta">
+                          اختر خياراً للمتابعة
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
                 <input
                   type="text"
                   value={l.note}
                   onChange={(e) =>
                     setLines((prev) =>
                       prev.map((x) =>
-                        x === l ? { ...x, note: e.target.value } : x,
+                        x.key === l.key ? { ...x, note: e.target.value } : x,
                       ),
                     )
                   }
@@ -388,14 +498,14 @@ export function ManualEntry({
                       onClick={() =>
                         setLines((prev) =>
                           prev.map((x) =>
-                            x === l
+                            x.key === l.key
                               ? { ...x, quantity: Math.max(1, x.quantity - 1) }
                               : x,
                           ),
                         )
                       }
                       aria-label="إنقاص"
-                      className="flex size-9 items-center justify-center rounded-full hover:bg-cream-200"
+                      className="flex size-11 items-center justify-center rounded-full hover:bg-cream-200"
                     >
                       <Minus className="size-3.5" aria-hidden />
                     </button>
@@ -407,14 +517,14 @@ export function ManualEntry({
                       onClick={() =>
                         setLines((prev) =>
                           prev.map((x) =>
-                            x === l
-                              ? { ...x, quantity: Math.min(50, x.quantity + 1) }
+                            x.key === l.key
+                              ? { ...x, quantity: Math.min(20, x.quantity + 1) }
                               : x,
                           ),
                         )
                       }
                       aria-label="زيادة"
-                      className="flex size-9 items-center justify-center rounded-full hover:bg-cream-200"
+                      className="flex size-11 items-center justify-center rounded-full hover:bg-cream-200"
                     >
                       <Plus className="size-3.5" aria-hidden />
                     </button>

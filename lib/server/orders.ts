@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   deliveryZones,
@@ -11,12 +11,22 @@ import {
   orderStatusHistory,
   orders,
   products,
+  users,
 } from "@/db/schema";
-import { addMinor, multiplyMinor, sumMinor, type Minor } from "@/lib/pricing";
+import {
+  addMinor,
+  multiplyMinor,
+  sumMinor,
+  formatPrice,
+  type Minor,
+} from "@/lib/pricing";
 import { notifyOrdersChanged } from "@/lib/server/order-feed";
+import { decryptPii, encryptPii } from "@/lib/server/pii";
+import { readShopSettings } from "@/lib/server/settings";
 import { deductForOrder } from "@/lib/server/inventory";
 import { sha256Hex, stableStringify } from "@/lib/domain/hash";
-import { todayInShop } from "@/lib/domain/time";
+import { todayInShop, zonedDayRange } from "@/lib/domain/time";
+import { arabicIncludes } from "@/lib/arabic";
 import { logEvent } from "@/lib/server/log";
 
 /**
@@ -49,10 +59,17 @@ export const orderInputSchema = z
     zoneId: z.string().uuid().optional(),
     customer: z.object({
       name: z.string().trim().min(2, "الاسم مطلوب").max(60),
+      // Shape check + a real digit count: "---------" must never pass.
       phone: z
         .string()
         .trim()
-        .regex(/^[0-9+\-\s]{9,15}$/, "رقم الهاتف غير صحيح"),
+        .min(9)
+        .max(20)
+        .regex(/^[0-9+\-()\s]+$/, "رقم الهاتف غير صحيح")
+        .refine(
+          (value) => value.replace(/\D/g, "").length >= 9,
+          "رقم الهاتف غير صحيح",
+        ),
       address: z.string().trim().max(140),
     }),
     note: z.string().trim().max(200).optional(),
@@ -180,6 +197,29 @@ export async function placeOrder(
   }
   const input = parsed.data;
   const payloadHash = await payloadHashOf(input);
+  // Owner-configured minimum, read fresh (not the tag cache) so a raised
+  // minimum takes effect immediately — and OUTSIDE the transaction so it
+  // can never starve the pool it shares with the order transaction.
+  const shop = await readShopSettings();
+
+  // The owner's master switch is a MONEY-PATH rule, not a UI hint: server
+  // actions are public RPC endpoints, so a paused shop must reject storefront
+  // intake even if a client bypasses the menu's view-only state. Manual
+  // console entry stays available (the owner is taking the order by phone).
+  if (input.source === "storefront" && !shop.orderingEnabled) {
+    return {
+      ok: false,
+      error: "الطلب المباشر غير متاح مؤقتاً — راسلنا على واتساب.",
+    };
+  }
+  // Same reasoning for the accepted payment methods: the checkout picker is
+  // a convenience, this is the enforcement.
+  if (
+    input.source === "storefront" &&
+    !shop.paymentMethods.includes(input.paymentMethod)
+  ) {
+    return { ok: false, error: "طريقة الدفع غير متاحة حالياً — اختر غيرها." };
+  }
 
   try {
     const result = await db.transaction(async (tx) => {
@@ -265,7 +305,9 @@ export async function placeOrder(
         }
 
         for (const g of groups) {
-          const chosen = selectedByGroup.get(g.key) ?? [];
+          // Dedupe keys: a malformed client must not be charged twice for the
+          // same selection.
+          const chosen = [...new Set(selectedByGroup.get(g.key) ?? [])];
           if (g.isRequired && chosen.length === 0) {
             throw new OrderError(`اختيار مطلوب ناقص: ${g.nameAr}`);
           }
@@ -281,12 +323,14 @@ export async function placeOrder(
             const opt = optionsByGroup.get(g.id)?.find((o) => o.key === key);
             if (!opt) throw new OrderError(`خيار غير صالح في: ${g.nameAr}`);
             unit = addMinor(unit, opt.priceDeltaMinor);
+            // Every chosen option reaches the kitchen ticket. Only the two
+            // "neutral" defaults stay implicit; size (if a dish ever offers
+            // it) leads the detail string.
+            const isNeutral =
+              (g.key === "heat" && opt.key === "mild") ||
+              (g.key === "doneness" && opt.key === "al-dente");
             if (g.key === "size") details.unshift(opt.nameAr);
-            else if (g.key === "heat" && opt.key !== "mild")
-              details.push(opt.nameAr);
-            else if (g.key === "doneness" && opt.key !== "al-dente")
-              details.push(opt.nameAr);
-            else if (g.key === "extras") details.push(opt.nameAr);
+            else if (!isNeutral) details.push(opt.nameAr);
           }
         }
 
@@ -302,6 +346,16 @@ export async function placeOrder(
       });
 
       const subtotal: Minor = sumMinor(computed.map((l) => l.lineTotalMinor));
+
+      // Minimum order is owner-configured (settings). The value is read
+      // BEFORE the transaction opens (see below) — querying the shared pool
+      // from inside an open transaction deadlocks under concurrency: every
+      // held client would wait for a free one.
+      if (subtotal < shop.minOrderMinor) {
+        throw new OrderError(
+          `الحد الأدنى للطلب ${formatPrice(shop.minOrderMinor)} ₪ — أضف صنفاً آخر.`,
+        );
+      }
 
       // (4) delivery fee from the CUSTOMER'S zone — never from the client
       let fee: Minor = 0;
@@ -348,15 +402,20 @@ export async function placeOrder(
           payloadHash,
           channel: input.channel,
           source: input.source,
-          customerName: input.customer.name,
-          customerPhone: input.customer.phone,
-          address: input.channel === "delivery" ? input.customer.address : null,
+          // PII encrypted at rest (spec §13) when PII_ENCRYPTION_KEY is set;
+          // CPU-only WebCrypto — no pool access inside the transaction.
+          customerName: await encryptPii(input.customer.name),
+          customerPhone: await encryptPii(input.customer.phone),
+          address:
+            input.channel === "delivery"
+              ? await encryptPii(input.customer.address)
+              : null,
           zoneId,
           paymentMethod: input.paymentMethod,
           subtotalMinor: subtotal,
           deliveryFeeMinor: fee,
           totalMinor: total,
-          customerNote: input.note ?? null,
+          customerNote: input.note ? await encryptPii(input.note) : null,
         })
         .returning({
           id: orders.id,
@@ -521,7 +580,10 @@ export async function getConsoleOrders() {
     .select()
     .from(orders)
     .where(inArray(orders.status, ["received", "preparing", "ready"]))
-    .orderBy(asc(orders.createdAt));
+    .orderBy(asc(orders.createdAt))
+    // Bound the board query: a long shift must never pull an unbounded row
+    // set (each row decrypts four PII fields).
+    .limit(200);
   const ids = rows.map((r) => r.id);
   const items = ids.length
     ? await db.select().from(orderItems).where(inArray(orderItems.orderId, ids))
@@ -532,7 +594,20 @@ export async function getConsoleOrders() {
     list.push(it);
     itemsByOrder.set(it.orderId, list);
   }
-  return rows.map((o) => ({ ...o, items: itemsByOrder.get(o.id) ?? [] }));
+  // PII is encrypted at rest (spec §13) — the board is the only surface
+  // that shows customer fields, so this is the single decryption point.
+  return Promise.all(
+    rows.map(async (o) => ({
+      ...o,
+      customerName: await decryptPii(o.customerName),
+      customerPhone: await decryptPii(o.customerPhone),
+      address: o.address ? await decryptPii(o.address) : o.address,
+      customerNote: o.customerNote
+        ? await decryptPii(o.customerNote)
+        : o.customerNote,
+      items: itemsByOrder.get(o.id) ?? [],
+    })),
+  );
 }
 
 export interface TransitionResult {
@@ -634,7 +709,13 @@ export async function undoLastTransition(input: {
     await db.transaction(async (tx) => {
       const [updated] = await tx
         .update(orders)
-        .set({ status: previousStatus, updatedAt: new Date() })
+        .set({
+          status: previousStatus,
+          updatedAt: new Date(),
+          // Reverting out of a cancellation must not leave a stale reason on
+          // a live order (the status page/board would show a cancelled note).
+          cancelledReason: null,
+        })
         .where(
           and(eq(orders.id, input.orderId), eq(orders.status, currentStatus)),
         )
@@ -667,11 +748,229 @@ export async function undoLastTransition(input: {
   return { ok: true };
 }
 
+// ---------- Order archive (console history + receipt) ----------
+
+export interface ArchiveOrder {
+  id: string;
+  orderNumber: string;
+  status: OrderStatus;
+  channel: "takeaway" | "delivery" | "dine_in";
+  source: "storefront" | "console" | "whatsapp";
+  customerName: string;
+  customerPhone: string;
+  subtotalMinor: Minor;
+  deliveryFeeMinor: Minor;
+  totalMinor: Minor;
+  itemCount: number;
+  itemsSummary: string[];
+  cancelledReason: string | null;
+  createdAt: Date;
+}
+
+/**
+ * One local business day of orders, newest first, with PII decrypted for the
+ * authenticated console. The search runs after decryption because customer
+ * fields are ciphertext at rest — a single shop's day is small, and this
+ * avoids introducing a reversible blind index for phone numbers.
+ */
+export async function getOrdersForDay(
+  dateStr: string,
+  options: { status?: OrderStatus | "all"; query?: string } = {},
+): Promise<ArchiveOrder[]> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return [];
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const probe = new Date(Date.UTC(year ?? 0, (month ?? 0) - 1, day ?? 0));
+  if (
+    !year ||
+    !month ||
+    !day ||
+    probe.getUTCFullYear() !== year ||
+    probe.getUTCMonth() !== month - 1 ||
+    probe.getUTCDate() !== day
+  ) {
+    return [];
+  }
+  const { start, end } = zonedDayRange(dateStr);
+  const filters = [gte(orders.createdAt, start), lt(orders.createdAt, end)];
+  if (options.status && options.status !== "all") {
+    filters.push(eq(orders.status, options.status));
+  }
+
+  const rows = await db
+    .select()
+    .from(orders)
+    .where(and(...filters))
+    .orderBy(desc(orders.createdAt))
+    .limit(200);
+
+  const ids = rows.map((r) => r.id);
+  const itemRows = ids.length
+    ? await db
+        .select({
+          orderId: orderItems.orderId,
+          nameAr: orderItems.nameAr,
+          quantity: orderItems.quantity,
+        })
+        .from(orderItems)
+        .where(inArray(orderItems.orderId, ids))
+    : [];
+  const itemsByOrder = new Map<string, typeof itemRows>();
+  for (const item of itemRows) {
+    const list = itemsByOrder.get(item.orderId) ?? [];
+    list.push(item);
+    itemsByOrder.set(item.orderId, list);
+  }
+
+  const query = options.query?.trim() ?? "";
+  const digits = query.replace(/\D/g, "");
+  const results: ArchiveOrder[] = [];
+
+  for (const order of rows) {
+    const customerName = await decryptPii(order.customerName);
+    const customerPhone = await decryptPii(order.customerPhone);
+    const items = itemsByOrder.get(order.id) ?? [];
+
+    if (
+      query &&
+      !(
+        arabicIncludes(order.orderNumber, query) ||
+        arabicIncludes(customerName, query) ||
+        (digits.length >= 3 &&
+          customerPhone.replace(/\D/g, "").includes(digits)) ||
+        items.some((item) => arabicIncludes(item.nameAr, query))
+      )
+    ) {
+      continue;
+    }
+
+    results.push({
+      id: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      channel: order.channel,
+      source: order.source,
+      customerName,
+      customerPhone,
+      subtotalMinor: order.subtotalMinor,
+      deliveryFeeMinor: order.deliveryFeeMinor,
+      totalMinor: order.totalMinor,
+      itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
+      itemsSummary: items
+        .slice(0, 3)
+        .map((item) => `${item.quantity}× ${item.nameAr}`),
+      cancelledReason: order.cancelledReason,
+      createdAt: order.createdAt,
+    });
+  }
+
+  return results;
+}
+
+export interface OrderDetailView extends ArchiveOrder {
+  address: string | null;
+  customerNote: string | null;
+  zoneNameAr: string | null;
+  paymentMethod: "cash" | "card_terminal" | "cash_on_delivery";
+  updatedAt: Date;
+  items: Array<{
+    id: string;
+    nameAr: string;
+    detailAr: string | null;
+    note: string | null;
+    quantity: number;
+    unitPriceMinor: Minor;
+    lineTotalMinor: Minor;
+  }>;
+  history: Array<{
+    id: string;
+    fromStatus: OrderStatus | null;
+    toStatus: OrderStatus;
+    reason: string | null;
+    actorName: string | null;
+    createdAt: Date;
+  }>;
+}
+
+export async function getOrderDetail(
+  orderId: string,
+): Promise<OrderDetailView | null> {
+  if (!isUuid(orderId)) return null;
+  const [row] = await db
+    .select({ order: orders, zoneNameAr: deliveryZones.nameAr })
+    .from(orders)
+    .leftJoin(deliveryZones, eq(deliveryZones.id, orders.zoneId))
+    .where(eq(orders.id, orderId))
+    .limit(1);
+  if (!row) return null;
+
+  const order = row.order;
+  const [items, history] = await Promise.all([
+    db
+      .select()
+      .from(orderItems)
+      .where(eq(orderItems.orderId, order.id))
+      .orderBy(asc(orderItems.nameAr)),
+    getOrderHistory(order.id),
+  ]);
+
+  return {
+    id: order.id,
+    orderNumber: order.orderNumber,
+    status: order.status,
+    channel: order.channel,
+    source: order.source,
+    customerName: await decryptPii(order.customerName),
+    customerPhone: await decryptPii(order.customerPhone),
+    address: order.address ? await decryptPii(order.address) : null,
+    customerNote: order.customerNote
+      ? await decryptPii(order.customerNote)
+      : null,
+    zoneNameAr: row.zoneNameAr,
+    paymentMethod: order.paymentMethod,
+    subtotalMinor: order.subtotalMinor,
+    deliveryFeeMinor: order.deliveryFeeMinor,
+    totalMinor: order.totalMinor,
+    itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
+    itemsSummary: items
+      .slice(0, 3)
+      .map((item) => `${item.quantity}× ${item.nameAr}`),
+    cancelledReason: order.cancelledReason,
+    createdAt: order.createdAt,
+    updatedAt: order.updatedAt,
+    items: items.map((item) => ({
+      id: item.id,
+      nameAr: item.nameAr,
+      detailAr: item.detailAr,
+      note: item.note,
+      quantity: item.quantity,
+      unitPriceMinor: item.unitPriceMinor,
+      lineTotalMinor: item.lineTotalMinor,
+    })),
+    history: history.map((entry) => ({
+      id: entry.id,
+      fromStatus: entry.fromStatus,
+      toStatus: entry.toStatus,
+      reason: entry.reason,
+      actorName: entry.actorName,
+      createdAt: entry.createdAt,
+    })),
+  };
+}
+
 export async function getOrderHistory(orderId: string) {
   if (!isUuid(orderId)) return [];
   return db
-    .select()
+    .select({
+      id: orderStatusHistory.id,
+      orderId: orderStatusHistory.orderId,
+      fromStatus: orderStatusHistory.fromStatus,
+      toStatus: orderStatusHistory.toStatus,
+      reason: orderStatusHistory.reason,
+      createdAt: orderStatusHistory.createdAt,
+      actorName: users.name,
+    })
     .from(orderStatusHistory)
+    .leftJoin(users, eq(users.id, orderStatusHistory.actorId))
     .where(eq(orderStatusHistory.orderId, orderId))
     .orderBy(asc(orderStatusHistory.createdAt));
 }

@@ -23,9 +23,13 @@ function wsOrigin(origin?: string): string {
 }
 
 export function buildCsp(nonce: string, origin?: string): string {
+  // React needs eval() for its development debugging features; production
+  // never does. Keep the relaxation strictly scoped to `next dev`.
+  const devEval =
+    process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${devEval}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' blob: data:",
     "font-src 'self'",
@@ -46,9 +50,11 @@ export function buildCsp(nonce: string, origin?: string): string {
  * (experimental.sri). Keep this tier as small as possible.
  */
 export function buildStaticCsp(origin?: string): string {
+  const devEval =
+    process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
   return [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline'",
+    `script-src 'self' 'unsafe-inline'${devEval}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' blob: data:",
     "font-src 'self'",

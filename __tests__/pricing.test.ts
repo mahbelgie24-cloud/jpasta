@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatPrice,
   toMinorUnits,
+  tryToMinorUnits,
   multiplyMinor,
   sumMinor,
 } from "@/lib/pricing";
@@ -44,5 +45,22 @@ describe("pricing — the money boundary", () => {
     for (const value of [0, 5, 250, 1999, 123456]) {
       expect(toMinorUnits(formatPrice(value))).toBe(value);
     }
+  });
+});
+
+describe("strict money parsing (owner-entered values)", () => {
+  it("accepts a clean amount, including the Arabic decimal separator", () => {
+    expect(tryToMinorUnits("24.50")).toBe(2450);
+    expect(tryToMinorUnits("0")).toBe(0);
+    expect(tryToMinorUnits("12\u066B5")).toBe(1250);
+  });
+
+  it("returns null instead of silently coercing garbage to zero", () => {
+    expect(tryToMinorUnits("")).toBeNull();
+    expect(tryToMinorUnits("abc")).toBeNull();
+    expect(tryToMinorUnits("12abc")).toBeNull();
+    expect(tryToMinorUnits("1.999")).toBeNull();
+    expect(tryToMinorUnits("-5")).toBeNull();
+    expect(tryToMinorUnits("12,50")).toBeNull();
   });
 });

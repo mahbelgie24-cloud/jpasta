@@ -52,6 +52,13 @@ interface DishArtProps {
   className?: string;
   /** Hide steam for dense grids and print. */
   steam?: boolean;
+  /**
+   * True when adjacent text already names the dish (cards, sheet titles).
+   * Prevents screen readers from hearing the same generic image label for
+   * every dish on the menu.
+   */
+  decorative?: boolean;
+  ariaLabel?: string;
 }
 
 function Topping({
@@ -184,6 +191,8 @@ export function DishArt({
   variant = "card",
   className,
   steam = true,
+  decorative = false,
+  ariaLabel,
 }: DishArtProps) {
   const h = hashSeed(seed);
   const plate = PLATE_SHAPES[h % PLATE_SHAPES.length] ?? PLATE_SHAPES[0];
@@ -217,8 +226,11 @@ export function DishArt({
   return (
     <svg
       viewBox="0 0 400 300"
-      role="img"
-      aria-label="رسم توضيحي لطبق باستا"
+      role={decorative ? undefined : "img"}
+      aria-label={
+        decorative ? undefined : (ariaLabel ?? "رسم توضيحي لطبق باستا")
+      }
+      aria-hidden={decorative || undefined}
       className={className}
     >
       <defs>
@@ -243,18 +255,6 @@ export function DishArt({
         <clipPath id={`${uid}-clip`}>
           <ellipse cx="200" cy="154" rx={plate.rx} ry={plate.ry} />
         </clipPath>
-        <filter id={`${uid}-grain`} x="0" y="0" width="100%" height="100%">
-          <feTurbulence
-            type="fractalNoise"
-            baseFrequency="0.9"
-            numOctaves="2"
-            stitchTiles="stitch"
-          />
-          <feColorMatrix type="saturate" values="0" />
-          <feComponentTransfer>
-            <feFuncA type="linear" slope="0.06" />
-          </feComponentTransfer>
-        </filter>
       </defs>
 
       {/* ambient glow */}
@@ -378,16 +378,10 @@ export function DishArt({
         </g>
       )}
 
-      {/* grain */}
-      <rect
-        x="0"
-        y="0"
-        width="400"
-        height="300"
-        filter={`url(#${uid}-grain)`}
-        opacity={dark ? 0.5 : 0.28}
-        pointerEvents="none"
-      />
+      {/* Steam is the only ambient effect. The old SVG grain overlay used
+          feTurbulence, which the browser re-rasterises for every dish (five
+          on the landing) and cost seconds of main-thread render time on a
+          throttled phone. A flat grain-free illustration paints instantly. */}
     </svg>
   );
 }

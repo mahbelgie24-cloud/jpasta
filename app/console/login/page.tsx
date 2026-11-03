@@ -16,7 +16,7 @@ export default async function ConsoleLoginPage() {
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center px-4">
-      <LogoMark className="size-16" />
+      <LogoMark className="size-20" />
       <h1 className="mt-5 type-section text-ink">كونسول JPasta</h1>
       <p className="mt-2 text-sm text-ink-soft">أدخل رمز الدخول الخاص بك</p>
       <PinLogin />

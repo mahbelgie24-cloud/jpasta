@@ -29,6 +29,9 @@ function elapsedMinutes(createdAt: string): number {
 
 function chipClass(minutes: number): string {
   if (minutes >= 10) return "bg-terracotta text-cream-50";
+  // Bronze/cream is 3.3:1. The chip is rendered at 20px bold (>= 14pt bold
+  // = WCAG large text), where 3:1 is the AA requirement — the 18px version
+  // was just under the large-text threshold and failed.
   if (minutes >= 5) return "bg-bronze text-cream-50";
   return "bg-basil-100 text-basil-800";
 }
@@ -61,7 +64,7 @@ function KitchenTicket({
         </p>
         <div className="flex flex-col items-end gap-2">
           <span
-            className={`rounded-full px-4 py-1.5 text-lg font-bold tabular-nums ${chipClass(minutes)}`}
+            className={`rounded-full px-4 py-1.5 text-xl font-bold tabular-nums ${chipClass(minutes)}`}
           >
             {minutes === 0 ? "الآن" : `قبل ${minutes} د`}
           </span>

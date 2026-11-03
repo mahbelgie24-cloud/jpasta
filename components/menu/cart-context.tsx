@@ -85,9 +85,10 @@ function reducer(state: CartLine[], action: Action): CartLine[] {
   }
 }
 
-// v3: v2 carts could carry placeholder slug ids or pre-zone pricing. Bumping
-// the key invalidates them instead of failing validation at submit.
-const STORAGE_KEY = "jpasta.cart.v3";
+// v4: the catalog was replaced wholesale — old product ids/prices no longer
+// exist in the database. Bumping the key clears stale carts instead of
+// failing validation at submit.
+const STORAGE_KEY = "jpasta.cart.v4";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

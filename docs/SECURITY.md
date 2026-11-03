@@ -17,22 +17,22 @@
 
 ## 2. ASVS 5.0 L2 mapping (implementation)
 
-| ASVS area               | Control in JPasta                                                                                                              |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| V1 Encoding / injection | Drizzle parameterized SQL; React escaping; no `dangerouslySetInnerHTML` except typed JSON-LD                                   |
-| V2 Validation           | zod at every action boundary; DB CHECK constraints; UUID validation                                                            |
-| V3 Session              | opaque 32-byte tokens, sha256 at rest, 7-day absolute, 12-hour idle, `__Host-` cookie, version invalidation                    |
-| V4 Access control       | `requireOwner`/`requireStaff` in every restricted action and page; tested matrix                                               |
-| V5 File handling        | owner-only upload, MIME allowlist, 8 MB cap, generated R2 key                                                                  |
-| V6 Authentication       | 6-digit PIN, PBKDF2-HMAC-SHA256 210k (WebCrypto; legacy scrypt verified), HMAC lookup, progressive lockout, Workers rate limit |
-| V7 Error/logging        | generic user errors, structured JSON events without PII/secrets                                                                |
-| V8 Data protection      | TLS/HSTS, no secrets in client bundles, PII minimal, DB backups encrypted at rest by provider                                  |
-| V9 Communication        | HTTPS only, HSTS preload, same-origin CSP, COOP/CORP                                                                           |
-| V10 Malicious code      | SRI on scripts, nonce CSP, no eval, dependency lockfile                                                                        |
-| V11 Business logic      | idempotency, conditional transitions, zone-bound fees, stock floor                                                             |
-| V12 Files/resources     | R2, no local filesystem, size limits                                                                                           |
-| V13 API                 | server actions + route handlers, origin checks, rate limits, no CORS widening                                                  |
-| V14 Config              | security headers, CSP, no powered-by, observability, secrets via Wrangler                                                      |
+| ASVS area               | Control in JPasta                                                                                                                                                           |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| V1 Encoding / injection | Drizzle parameterized SQL; React escaping; no `dangerouslySetInnerHTML` except typed JSON-LD                                                                                |
+| V2 Validation           | zod at every action boundary; DB CHECK constraints; UUID validation                                                                                                         |
+| V3 Session              | opaque 32-byte tokens, sha256 at rest, 7-day absolute, 12-hour idle, `__Host-` cookie, version invalidation                                                                 |
+| V4 Access control       | `requireOwner`/`requireStaff` in every restricted action and page; tested matrix                                                                                            |
+| V5 File handling        | owner-only upload, MIME allowlist, 8 MB cap, generated R2 key                                                                                                               |
+| V6 Authentication       | 6-digit PIN, PBKDF2-HMAC-SHA256 210k (WebCrypto; legacy scrypt verified), HMAC lookup, progressive lockout, Workers rate limit                                              |
+| V7 Error/logging        | generic user errors, structured JSON events without PII/secrets                                                                                                             |
+| V8 Data protection      | TLS/HSTS, no secrets in client bundles, **customer name/phone/address/note AES-256-GCM at rest** (`PII_ENCRYPTION_KEY`, spec §13), DB backups encrypted at rest by provider |
+| V9 Communication        | HTTPS only, HSTS preload, same-origin CSP, COOP/CORP                                                                                                                        |
+| V10 Malicious code      | SRI on scripts, nonce CSP, no eval, dependency lockfile                                                                                                                     |
+| V11 Business logic      | idempotency, conditional transitions, zone-bound fees, stock floor                                                                                                          |
+| V12 Files/resources     | R2, no local filesystem, size limits                                                                                                                                        |
+| V13 API                 | server actions + route handlers, origin checks, rate limits, no CORS widening                                                                                               |
+| V14 Config              | security headers, CSP, no powered-by, observability, secrets via Wrangler                                                                                                   |
 
 ## 3. Headers
 
@@ -59,8 +59,10 @@
 ## 5. Known gaps (tracked)
 
 - No MFA/WebAuthn (PIN-only is a deliberate business constraint).
-- No field-level encryption for phone/address at rest (provider encryption
-  only); revisit if regulation requires it.
+- ~~No field-level encryption for phone/address at rest~~ **implemented
+  (2026-10-28)**: `lib/server/pii.ts` encrypts name/phone/address/note with
+  AES-256-GCM (WebCrypto, key-gated by `PII_ENCRYPTION_KEY`, legacy rows
+  pass through; the console board is the single decryption point).
 - No WAF custom rules/turnstile on order intake yet; the rate limit +
   idempotency + server validation are the current controls.
 - No Sentry/APM; structured Workers logs + `/api/health` are the current

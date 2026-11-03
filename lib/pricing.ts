@@ -37,6 +37,21 @@ export function toMinorUnits(major: string): Minor {
   return negative ? -value : value;
 }
 
+/**
+ * Strict money parsing for values entered by a human (owner console forms).
+ *
+ * Returns `null` instead of silently coercing garbage: `toMinorUnits("12abc")`
+ * yields 1200, which is acceptable for trusted static catalog data but
+ * dangerous for a price/minimum/fee field. Empty input is rejected too — the
+ * form must not turn a typo into a zero-priced product.
+ */
+export function tryToMinorUnits(major: string): Minor | null {
+  // Accept the Arabic decimal separator (٫) as the decimal point.
+  const trimmed = major.trim().replace(/\u066B/g, ".");
+  if (!/^\d{1,7}(?:\.\d{1,2})?$/.test(trimmed)) return null;
+  return toMinorUnits(trimmed);
+}
+
 /** 2250 → "22.50" */
 export function formatPrice(minor: Minor): string {
   const negative = minor < 0;

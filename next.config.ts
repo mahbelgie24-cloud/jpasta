@@ -35,6 +35,8 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Keep the evaluation canvas clean in `next dev`; production never shows it.
+  devIndicators: false,
   // Production deploys target Cloudflare Workers via @opennextjs/cloudflare
   // (Phase 5). Standard `next build`/`next start` stays the local baseline.
   images: {
@@ -45,17 +47,29 @@ const nextConfig: NextConfig = {
   // against supply-chain tampering.
   experimental: {
     sri: { algorithm: "sha256" },
+    // Guarantee per-icon tree-shaking for the icon package used across the
+    // storefront and console (the landing's client payload is dominated by
+    // framework code, so avoid shipping unused icon modules on top).
+    optimizePackageImports: ["lucide-react"],
   },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },
       {
         source: "/console/:path*",
-        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+          // Never leak a console/status URL (with its capability token) in a
+          // Referer to any third party.
+          { key: "Referrer-Policy", value: "no-referrer" },
+        ],
       },
       {
         source: "/order/:path*",
-        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+        ],
       },
       {
         source: "/sw.js",

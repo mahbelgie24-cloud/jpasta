@@ -6,6 +6,7 @@ import {
   Boxes,
   ChefHat,
   ClipboardList,
+  History,
   LayoutGrid,
   PieChart,
   Settings,
@@ -21,6 +22,7 @@ import { cn } from "@/lib/utils";
 
 const OWNER_LINKS = [
   { href: "/console", label: "الطلبات", icon: LayoutGrid },
+  { href: "/console/orders", label: "الأرشيف", icon: History },
   { href: "/console/kitchen", label: "المطبخ", icon: ChefHat },
   { href: "/console/new", label: "طلب يدوي", icon: ClipboardList },
   { href: "/console/menu", label: "القائمة", icon: UtensilsCrossed },
@@ -31,7 +33,9 @@ const OWNER_LINKS = [
 ];
 
 const STAFF_LINKS = OWNER_LINKS.filter((l) =>
-  ["/console", "/console/kitchen", "/console/new"].includes(l.href),
+  ["/console", "/console/orders", "/console/kitchen", "/console/new"].includes(
+    l.href,
+  ),
 );
 
 export function ConsoleNav({ role }: { role: "owner" | "staff" }) {

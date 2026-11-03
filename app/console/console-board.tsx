@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Bike,
   ChefHat,
@@ -67,6 +68,7 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
           ? "غير متصل"
           : "جارٍ الاتصال…";
   const [armedCancel, setArmedCancel] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [sound, setSound] = useState<boolean | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -74,21 +76,25 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
   async function move(
     orderId: string,
     next: "preparing" | "ready" | "completed" | "cancelled",
+    reason?: string,
   ) {
     const current = orders?.find((o) => o.id === orderId);
     if (!current) return;
-    let reason: string | undefined;
-    if (next === "cancelled") {
-      const entered = window.prompt("سبب إلغاء الطلب؟");
-      if (!entered || entered.trim().length < 2) return;
-      reason = entered.trim();
+    if (next === "cancelled" && (reason?.trim().length ?? 0) < 2) {
+      setActionError("سبب الإلغاء مطلوب.");
+      return;
     }
     setBusyId(orderId);
     setActionError(null);
     try {
       // The expected status makes the update conditional: a second device
       // that already advanced the order gets a conflict, not a resurrection.
-      const result = await advanceOrder(orderId, next, current.status, reason);
+      const result = await advanceOrder(
+        orderId,
+        next,
+        current.status,
+        reason?.trim(),
+      );
       if (!result.ok) setActionError(result.error ?? "تعذر تحديث الطلب.");
       await refresh();
     } catch {
@@ -96,6 +102,7 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
     } finally {
       setBusyId(null);
       setArmedCancel(null);
+      setCancelReason("");
     }
   }
 
@@ -219,12 +226,13 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
                       className="rounded-xl border border-cream-200 bg-cream-100 p-4"
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <p
-                          className="font-display text-xl font-bold text-basil-800"
+                        <Link
+                          href={`/console/orders/${o.id}`}
+                          className="font-display text-xl font-bold text-basil-800 hover:text-basil-600"
                           dir="ltr"
                         >
                           {o.orderNumber}
-                        </p>
+                        </Link>
                         <div className="flex flex-col items-end gap-1">
                           <span className="inline-flex items-center gap-1 rounded-full bg-cream-200 px-2 py-0.5 text-[11px] font-bold text-ink-soft">
                             {o.channel === "delivery" ? (
@@ -295,11 +303,12 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
                           {o.status !== "ready" && (
                             <button
                               type="button"
-                              onClick={() =>
-                                armedCancel === o.id
-                                  ? move(o.id, "cancelled")
-                                  : setArmedCancel(o.id)
-                              }
+                              onClick={() => {
+                                const sameRow = armedCancel === o.id;
+                                setArmedCancel(sameRow ? null : o.id);
+                                setCancelReason("");
+                                setActionError(null);
+                              }}
                               disabled={busyId === o.id}
                               className={
                                 armedCancel === o.id
@@ -307,14 +316,7 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
                                   : "inline-flex min-h-11 items-center gap-1 rounded-full px-3 text-xs font-bold text-ink-soft hover:bg-terracotta/10 hover:text-terracotta"
                               }
                             >
-                              {armedCancel === o.id ? (
-                                <>
-                                  <X className="size-3.5" aria-hidden />
-                                  تأكيد الإلغاء؟
-                                </>
-                              ) : (
-                                "إلغاء"
-                              )}
+                              إلغاء
                             </button>
                           )}
                           <button
@@ -334,6 +336,53 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
                           </button>
                         </div>
                       </div>
+
+                      {armedCancel === o.id && (
+                        <div className="mt-3 rounded-xl border border-terracotta/30 bg-terracotta/5 p-3">
+                          <label
+                            htmlFor={`cancel-reason-${o.id}`}
+                            className="text-xs font-bold text-ink"
+                          >
+                            سبب الإلغاء (مطلوب)
+                          </label>
+                          <input
+                            id={`cancel-reason-${o.id}`}
+                            type="text"
+                            value={cancelReason}
+                            onChange={(e) => setCancelReason(e.target.value)}
+                            maxLength={140}
+                            autoFocus
+                            placeholder="مثال: الزبون غيّر رأيه"
+                            className="mt-1.5 min-h-11 w-full rounded-md border border-cream-300 bg-cream-50 px-3 text-sm outline-none focus:border-basil-500"
+                          />
+                          <div className="mt-2 flex gap-2">
+                            <button
+                              type="button"
+                              disabled={
+                                busyId === o.id ||
+                                cancelReason.trim().length < 2
+                              }
+                              onClick={() =>
+                                void move(o.id, "cancelled", cancelReason)
+                              }
+                              className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-terracotta px-4 text-sm font-bold text-cream-50 disabled:opacity-50"
+                            >
+                              <X className="size-4" aria-hidden />
+                              تأكيد الإلغاء
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setArmedCancel(null);
+                                setCancelReason("");
+                              }}
+                              className="inline-flex min-h-11 items-center justify-center rounded-full border border-cream-300 px-4 text-sm font-bold text-ink-soft"
+                            >
+                              تراجع
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </article>
                   ))}
                 </div>

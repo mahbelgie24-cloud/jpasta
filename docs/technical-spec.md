@@ -14,18 +14,18 @@
 
 ## 1. Business Profile
 
-| Field                | Value                                                                                  |
-| -------------------- | -------------------------------------------------------------------------------------- |
-| **Brand name**       | JPasta — جي باستا                                                                      |
-| **Secondary line**   | Fresh Pasta & Chicken                                                                  |
-| **Tagline**          | "Fresh pasta made everyday. With a lot of Sauce and love"                              |
-| **Concept**          | Fresh daily-made pasta with house sauces and fresh chicken — casual, appetizing, young |
-| **Phone / WhatsApp** | 0566064976 (+970 56 606 4976)                                                          |
-| **Address**          | بجانب مدرسة أبو علي اياد — قلقيلية، فلسطين                                             |
-| **Hours**            | Daily 1:00 PM – 1:00 AM (crosses midnight — every time computation must handle this)   |
-| **Service channels** | Takeaway (primary), Delivery (primary), Dine-in (2 tables only)                        |
-| **Audience**         | City residents and visitors, all ages, skewing young — mobile-first, social-native     |
-| **Currency**         | ₪ ILS (agorot minor units)                                                             |
+| Field                | Value                                                                                                        |
+| -------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Brand name**       | JPasta — جي باستا                                                                                            |
+| **Secondary line**   | Fresh Pasta & Chicken                                                                                        |
+| **Tagline**          | "Fresh pasta, cooked to order. With a lot of sauce and love."                                                |
+| **Concept**          | Fresh pasta cooked to order with house sauces made fresh daily and fresh chicken — casual, appetizing, young |
+| **Phone / WhatsApp** | 0566064976 (+970 56 606 4976)                                                                                |
+| **Address**          | بجانب مدرسة أبو علي اياد — قلقيلية، فلسطين                                                                   |
+| **Hours**            | Daily 1:00 PM – 1:00 AM (crosses midnight — every time computation must handle this)                         |
+| **Service channels** | Takeaway (primary), Delivery (primary), Dine-in (2 tables only)                                              |
+| **Audience**         | City residents and visitors, all ages, skewing young — mobile-first, social-native                           |
+| **Currency**         | ₪ ILS (agorot minor units)                                                                                   |
 
 **Operating reality (owner-confirmed):** there is **no existing POS system**. The
 owner will run the business **from his mobile phone**. Every staff-facing
@@ -70,8 +70,9 @@ ever happens, it will be a planned migration, not an embedded abstraction.
 - Takeaway/delivery/dine-in channels with delivery fee and zone rules that
   the owner can configure himself — no code deploy for operational changes.
 - Daily reporting the owner actually opens: orders, revenue, best sellers.
-- Inventory & recipes (Phase 4): fresh pasta is produced daily; ingredient
-  tracking protects both cost control and "fresh" claims.
+- Inventory & recipes (Phase 4): fresh pasta is sourced fresh and cooked to
+  order (not produced in-house), and house sauces are prepared fresh daily;
+  ingredient tracking protects both cost control and "fresh" claims.
 
 **Explicit Non-Goals (v1)**
 
@@ -262,18 +263,20 @@ Ayasofia auditable.)
 
 The modifier model mirrors how pasta is actually ordered, per-product:
 
-| Modifier group | Type          | Options (typical)                                             |
-| -------------- | ------------- | ------------------------------------------------------------- |
-| **Size**       | Single        | فردي Regular / كبير Large (+Δ price)                          |
-| **Sauce**      | Single        | where a dish offers a choice (e.g. pink / alfredo / marinara) |
-| **Extras**     | Multi, priced | دجاج مشوي، فطر، بارميزان إضافي، خبز ثوم، صلصة إضافية          |
-| **Heat level** | Single, +0    | بدون حار / وسط / حار 🔥                                       |
-| **Doneness**   | Single, +0    | al dente / مطبوخ أكثر (default al dente; kitchen note)        |
+| Modifier group      | Type                 | Current menu use                                          |
+| ------------------- | -------------------- | --------------------------------------------------------- |
+| **Sauce**           | Single, **required** | ناجتس الدجاج: باربيكيو / سويت تشيلي / بافلو / صوص تيرياكي |
+| **Pasta type**      | Single, +0, optional | كرانشي تشيز باستا: فيتوتشيني (default) / بيني             |
+| **Extras**          | Multi, priced, max 1 | إضافة دجاج +10 ₪ على أطباق الباستا العشرة                 |
+| **Size**            | Single               | only where a dish offers it (not on the current menu)     |
+| **Heat / Doneness** | Single, +0           | only where a dish needs them (not on the current menu)    |
 
-Desserts/drinks define only the groups they need. The builder enforces
-required groups client-side **and** server-side (Phase 1); multi-group caps
-(`max_selections`) are validated on the server. Line notes (free text) are
-length-capped.
+Required groups are enforced client-side **and** server-side; the item sheet
+does not preselect a required group, so the customer must actively choose it.
+Multi-group caps (`max_selections`) are validated on the server. Every chosen
+option is appended to `order_items.detail_ar`, so the kitchen ticket, receipt,
+status page and WhatsApp text all show the sauce, pasta type and paid add-on.
+Line notes (free text) are length-capped.
 
 ---
 
@@ -298,11 +301,11 @@ label ("تم") — color alone never encodes state (WCAG 1.4.1).
 
 ### 11.2 Typography
 
-| Use                      | Family                     | Notes                                                                                     |
-| ------------------------ | -------------------------- | ----------------------------------------------------------------------------------------- |
-| Arabic display & body    | **Alexandria** (variable)  | Geometric Arabic with excellent weights; headings ExtraBold, body Regular 1.7 line-height |
-| Latin display (wordmark) | **Fraunces** (variable)    | Premium food-brand serif; the "JPasta" wordmark, large Latin accents                      |
-| Prices / numerals        | Alexandria, `tabular-nums` | Accuracy over flair in numeric data                                                       |
+| Use                   | Family                     | Notes                                                                                        |
+| --------------------- | -------------------------- | -------------------------------------------------------------------------------------------- |
+| Arabic display & body | **Alexandria** (variable)  | Geometric Arabic with excellent weights; headings ExtraBold, body Regular 1.7 line-height    |
+| Latin display accents | **Fraunces** (variable)    | Premium food-brand serif for large Latin accents; the logo wordmark is part of the SVG asset |
+| Prices / numerals     | Alexandria, `tabular-nums` | Accuracy over flair in numeric data                                                          |
 
 ### 11.3 Shape, Elevation, Motion
 
@@ -315,12 +318,27 @@ label ("تم") — color alone never encodes state (WCAG 1.4.1).
 
 ### 11.4 Logo
 
-The mark: a **twirled fork lifting a pasta nest** (spiral), with a basil-leaf
-accent — drawn as rounded strokes on a green rounded-square badge. Lockup:
-mark + "JPasta" (Fraunces) + "FRESH PASTA & CHICKEN" letterspaced caps.
-Variants: full-color (cream/basil), monochrome cream (on dark), monochrome
-basil (print). Files: `app/icon.svg`, `public/brand/`. Clear space = cap
-height of "J"; minimum mark size 32px. **Receipts use the monochrome mark.**
+The identity is the supplied **JPasta roundel**: a deep-green circular field,
+a cream outer ring and a second thin inner ring, the outlined `JPASTA`
+wordmark, and `Fresh Pasta & Chicken` beneath it. The wordmark, rings and
+field are one asset — never retype or redraw them in component code.
+
+- Files: `public/brand/logo.svg` (full), `logo-mark.svg` (compact, no
+  secondary line), `logo-mono.svg` (single-colour print),
+  `logo-horizontal.svg` (wide rounded header plaque), `logo-512.png`
+  (OG/social), `app/icon.svg` + `app/favicon.ico` (browser), `public/icons/*`
+  (PWA/Apple, generated by `npm run icons`).
+- Rendering: `components/brand/logo.tsx` (`Logo` full/mark, `LogoMark`
+  compact/mono, `HeaderLogo` horizontal plaque) references the SVG files
+  through `next/image`.
+- Clear space = height of the wordmark's `J` for the roundel, one quarter of
+  the height for the horizontal plaque. Minimums: full roundel 96px, compact
+  mark 32px, horizontal plaque 40px high, print 12mm (mono 8mm).
+- Colours are locked per asset: roundel green `#296034` / cream `#EBE1BD`;
+  horizontal plaque green `#134021` / cream `#ECE0B8`.
+- **The horizontal plaque is header-only**; the roundel remains primary on the
+  footer, status page, console, receipts and app icons.
+- **Receipts use the monochrome line art**, never the colour roundel.
 
 ### 11.5 Imagery & Illustration
 
@@ -349,8 +367,8 @@ highest-priority deliverable.** Enforced as gates, not intentions:
 5. **Arabic typography quality:** correct shaping everywhere, RTL logical
    properties (`ms/me/ps/pe/start/end`), Arabic-Indic numerals only where
    culturally expected (prices stay Latin digits for menu-board consistency).
-6. **Delight within restraint:** spring entrances, the twirl mark as loading
-   indicator, generous whitespace — no decoration that costs clarity.
+6. **Delight within restraint:** spring entrances, the pasta-nest loader,
+   generous whitespace — no decoration that costs clarity.
 
 ---
 
@@ -548,5 +566,15 @@ system, dark `theme-console`/`theme-kitchen`, PWA shell. Details in
 - Z report matches a manual count at 00:30 local.
 - 20 consecutive production orders with exact totals.
 - axe clean on `/`, `/menu`, `/console`, `/console/kitchen`.
-- Lighthouse ≥ 95 on `/` and `/menu` (mobile).
+- Lighthouse gates (two, explicitly labelled):
+  - **mobile hard gates**: LCP < 4.5 s, CLS < 0.05, JS < 300 KB,
+    fonts < 250 KB on `/` and `/menu`; performance score and TBT are
+    warnings (React-bound simulator).
+  - **desktop code budget**: performance ≥ 0.95, LCP < 1.5 s, CLS < 0.02,
+    TBT < 200 ms.
+- **v2.1 correction (2026-11-02):** the 98/100 figure shipped with v2 was
+  measured with Lighthouse's **desktop** preset and was therefore not a
+  mobile result. A controlled real-throttled mobile probe now measures
+  FCP ≈ 1.7 s / LCP ≈ 2.1 s / CLS 0. The remaining mobile lab gap is the
+  React App Router runtime (~74 KB React DOM), not the application code.
 - One-week parallel run before cutover.

@@ -4,18 +4,18 @@ import { SectionHeading } from "@/components/ui/section-heading";
 const FEATURES = [
   {
     icon: Wheat,
-    title: "باستا تُصنع يومياً",
-    body: "عجينة طازة كل صباح — لا مجمدات، لا جاهزات. الفرق بتحسه من أول عضة.",
+    title: "باستا طازة مختارة بعناية",
+    body: "نختار باستا طازة بعناية ونطبخها عند الطلب — القوام والطعم بيفرقوا.",
   },
   {
     icon: ChefHat,
-    title: "صلصات بيتية",
-    body: "وصفات مطبوخة على نار هادئة بنفس الطريقة اللي بتنزل عليها بالبيت — بس أحلى.",
+    title: "صلصات بيتية تُحضّر يومياً",
+    body: "وصفات تُحضّر طازجة كل يوم، وتُطبخ على نار هادئة بنفس الطريقة اللي بتنزل عليها بالبيت — بس أحلى.",
   },
   {
     icon: Drumstick,
     title: "دجاج طازج متبّل",
-    body: "نستقبل الدجاج طازج ونتبّله بنفس اليوم بتتبيلتنا السرية.",
+    body: "نستقبل الدجاج طازجاً ونتبّله بتتبيلتنا السرية — النتيجة بتبان من أول قضمة.",
   },
   {
     icon: Bike,
@@ -28,10 +28,9 @@ const FEATURES = [
 export function Features() {
   return (
     <section
-      className="texture-grain relative overflow-hidden bg-brand-deep py-20 text-cream-50 lg:py-28"
+      className="relative overflow-hidden bg-brand-deep py-20 text-cream-50 lg:py-28"
       aria-labelledby="why-title"
     >
-      <span className="texture-grain-layer" aria-hidden />
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_85%_10%,oklch(0.45_0.08_90_/_0.18)_0%,transparent_60%)]"
@@ -43,8 +42,8 @@ export function Features() {
             id="why-title"
             index="02"
             eyebrow="ليش JPasta؟"
-            title="طازة مش شعار — نظام يومي كامل"
-            sub="من العجين للصوص للتتبيلة: كل شي بصير اليوم، محلياً، وبكميات صغيرة متكررة."
+            title="طازة مش شعار — كل تفصيلة إلها معيار"
+            sub="من اختيار الباستا لصلصات تُحضّر يومياً للتتبيلة: تفاصيل صغيرة بتفرق، وكل طبق بيتطبخ عند الطلب."
             align="start"
             tone="light"
           />
@@ -52,7 +51,7 @@ export function Features() {
             className="mt-8 font-display text-2xl leading-snug text-wheat-300/90 italic"
             dir="ltr"
           >
-            “No freezers. No shortcuts. Just today.”
+            “Fresh pasta. Daily sauce. Cooked to order.”
           </p>
         </div>
 
@@ -89,7 +88,7 @@ export function Features() {
         </div>
         <div>
           <p className="font-display text-4xl font-bold text-wheat-300">4</p>
-          <p className="mt-1 text-xs text-cream-100/60">صلصات بيتية</p>
+          <p className="mt-1 text-xs text-cream-100/60">صلصات تُحضّر يومياً</p>
         </div>
         <div>
           <p className="font-display text-4xl font-bold text-wheat-300">1:00</p>

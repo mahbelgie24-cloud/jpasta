@@ -1,10 +1,12 @@
 /**
- * Placeholder catalog (Phase 0) — beautiful, realistic content for the
- * owner review. Replaced by the real menu via the admin UI or the JSON
- * ingest (spec §8.4). Prices are integer minor units (agorot).
+ * Catalog source of truth — seeded into the database and used as the
+ * DB-degraded placeholder. Prices are integer minor units (agorot).
  *
- * The modifier model is pasta-accurate (spec §10): size, optional heat,
- * optional doneness, and priced extras — per product, never global.
+ * Modifier model (spec §10): groups are defined per product, never global.
+ * The current menu uses:
+ *   - sauce : mandatory single choice on chicken nuggets
+ *   - pasta : optional single choice on crunchy cheese pasta (default fettuccine)
+ *   - extras: optional paid chicken add-on on pasta dishes
  */
 import { toMinorUnits } from "./pricing";
 
@@ -57,6 +59,8 @@ export interface Product {
   toppings: ToppingKind[];
   heat: 0 | 1 | 2 | 3;
   badges: Badge[];
+  /** Curated homepage feature — independent of the bestseller badge. */
+  featured?: boolean;
   groups: ModifierGroup[];
   /** Real photography (R2). Absent → DishArt renders the illustration. */
   image?: ProductImage;
@@ -64,390 +68,245 @@ export interface Product {
 
 export const CATEGORIES: Category[] = [
   {
-    slug: "classics",
-    nameAr: "الكلاسيك الإيطالي",
-    nameEn: "Italian Classics",
-    blurbAr: "وصفات إيطالية أصلية على باستا طازة",
+    slug: "pasta",
+    nameAr: "الباستا",
+    nameEn: "Pasta",
+    blurbAr: "باستا طازة بصلصات بيتية",
   },
   {
-    slug: "chicken",
-    nameAr: "سبشل الدجاج",
-    nameEn: "Chicken Specials",
-    blurbAr: "دجاج طازج متبل يومياً مع صلصاتنا البيتية",
+    slug: "salads",
+    nameAr: "السلطات",
+    nameEn: "Salads",
+    blurbAr: "طازجة ومنعشة",
   },
   {
-    slug: "baked",
-    nameAr: "من الفرن",
-    nameEn: "Baked al Forno",
-    blurbAr: "مخبوزة بالفرن بجبنة ذهبية ذائبة",
-  },
-  {
-    slug: "extras",
-    nameAr: "إضافات ومقبلات",
-    nameEn: "Sides & Extras",
+    slug: "sides",
+    nameAr: "الأطباق الجانبية",
+    nameEn: "Sides",
     blurbAr: "كمّل وجبتك",
-  },
-  {
-    slug: "drinks",
-    nameAr: "مشروبات",
-    nameEn: "Drinks",
-    blurbAr: "منعش مع كل لقمة",
   },
 ];
 
-/** Shared modifier options (referenced by id from products). */
-const SIZES: ModifierGroup = {
-  id: "size",
-  nameAr: "الحجم",
+/** Optional paid chicken add-on — pasta dishes only. */
+const CHICKEN_ADDON: ModifierGroup = {
+  id: "extras",
+  nameAr: "إضافات",
+  type: "multi",
+  required: false,
+  maxSelections: 1,
+  options: [
+    {
+      id: "chicken",
+      nameAr: "إضافة دجاج",
+      priceMinor: toMinorUnits("10"),
+    },
+  ],
+};
+
+/** Mandatory sauce choice for chicken nuggets. */
+const NUGGET_SAUCE: ModifierGroup = {
+  id: "sauce",
+  nameAr: "الصوص",
   type: "single",
   required: true,
   options: [
-    { id: "regular", nameAr: "فردي", priceMinor: 0 },
-    { id: "large", nameAr: "كبير", priceMinor: toMinorUnits("6") },
+    { id: "bbq", nameAr: "باربيكيو", priceMinor: 0 },
+    { id: "sweet-chili", nameAr: "سويت تشيلي", priceMinor: 0 },
+    { id: "buffalo", nameAr: "بافلو", priceMinor: 0 },
+    { id: "teriyaki", nameAr: "صوص تيرياكي", priceMinor: 0 },
   ],
 };
 
-const HEAT: ModifierGroup = {
-  id: "heat",
-  nameAr: "مستوى الحرارة",
+/**
+ * Optional pasta-type choice. Not required: the first option (fettuccine) is
+ * preselected by the item sheet, so the customer can simply keep it.
+ */
+const PASTA_TYPE: ModifierGroup = {
+  id: "pasta",
+  nameAr: "نوع الباستا",
   type: "single",
   required: false,
   options: [
-    { id: "mild", nameAr: "بدون حار", priceMinor: 0 },
-    { id: "medium", nameAr: "وسط", priceMinor: 0 },
-    { id: "hot", nameAr: "حار 🌶", priceMinor: 0 },
+    { id: "fettuccine", nameAr: "فيتوتشيني", priceMinor: 0 },
+    { id: "penne", nameAr: "بيني", priceMinor: 0 },
   ],
 };
-
-const DONENESS: ModifierGroup = {
-  id: "doneness",
-  nameAr: "درجة الاستواء",
-  type: "single",
-  required: false,
-  options: [
-    { id: "al-dente", nameAr: "Al Dente (موصى به)", priceMinor: 0 },
-    { id: "soft", nameAr: "مطبوخ أكثر", priceMinor: 0 },
-  ],
-};
-
-const extra = (id: string, nameAr: string, major: string): ModifierOption => ({
-  id,
-  nameAr,
-  priceMinor: toMinorUnits(major),
-});
-
-function extras(...options: ModifierOption[]): ModifierGroup {
-  return {
-    id: "extras",
-    nameAr: "إضافات",
-    type: "multi",
-    required: false,
-    maxSelections: 6,
-    options,
-  };
-}
-
-const X_GRILL_CHICKEN = extra("grill-chicken", "دجاج مشوي إضافي", "6");
-const X_MUSHROOM = extra("mushroom", "فطر طازج", "3");
-const X_PARMESAN = extra("parmesan", "بارميزان إضافي", "2.5");
-const X_GARLIC_BREAD = extra("garlic-bread", "خبز ثوم", "4");
-const X_EXTRA_SAUCE = extra("extra-sauce", "صلصة إضافية", "3");
-const X_SHRIMP = extra("shrimp", "روبيان", "9");
-const X_CHILI = extra("chili", "فلفل حار", "1.5");
-
-/** Pasta dishes share size + doneness; heat only where it makes sense. */
-function pastaGroups(opts?: {
-  heat?: boolean;
-  extras?: ModifierOption[];
-}): ModifierGroup[] {
-  const groups: ModifierGroup[] = [SIZES, DONENESS];
-  if (opts?.heat) groups.push(HEAT);
-  groups.push(
-    extras(
-      ...(opts?.extras ?? [
-        X_GRILL_CHICKEN,
-        X_MUSHROOM,
-        X_PARMESAN,
-        X_GARLIC_BREAD,
-        X_EXTRA_SAUCE,
-      ]),
-    ),
-  );
-  return groups;
-}
 
 export const PRODUCTS: Product[] = [
-  // ── الكلاسيك الإيطالي ────────────────────────────────────────────────
+  // ── الباستا ──────────────────────────────────────────────────────────
   {
-    id: "alfredo-classico",
-    slug: "alfredo-classico",
-    categorySlug: "classics",
-    nameAr: "ألفريدو الكلاسيك",
-    nameEn: "Alfredo Classico",
-    descAr: "فيتوتشيني طازة بصوص ألفريدو كريمي بالبارميزان الحقيقي وزبدة طازة",
-    basePriceMinor: toMinorUnits("24"),
+    id: "fettuccine-mushroom",
+    slug: "fettuccine-mushroom",
+    categorySlug: "pasta",
+    nameAr: "فيتوتشيني مع فطر",
+    nameEn: "Fettuccine Mushroom",
+    descAr: "فيتوتشيني باستا مع فطر وصوص ألفريدو كريمي",
+    basePriceMinor: toMinorUnits("20"),
     sauce: "alfredo",
-    toppings: ["cheese", "basil"],
+    toppings: ["mushroom", "cheese", "basil"],
     heat: 0,
     badges: ["bestseller", "fresh"],
-    groups: pastaGroups(),
+    featured: true,
+    groups: [CHICKEN_ADDON],
   },
   {
-    id: "marinara",
-    slug: "marinara",
-    categorySlug: "classics",
-    nameAr: "مارينارا",
-    nameEn: "Marinara",
-    descAr: "صلصة طماطم إيطالية مطبوخة ببطء مع ثوم وأوريغانو وزيت زيتون بكر",
-    basePriceMinor: toMinorUnits("19"),
-    sauce: "marinara",
-    toppings: ["tomato", "basil"],
-    heat: 0,
-    badges: ["fresh"],
-    groups: pastaGroups(),
-  },
-  {
-    id: "arrabbiata",
-    slug: "arrabbiata",
-    categorySlug: "classics",
-    nameAr: "أرابياتا",
-    nameEn: "Arrabbiata",
-    descAr: "الغاضبة الإيطالية — صلصة طماطم حارة بثوم مشوي وفلفل تشيلي",
-    basePriceMinor: toMinorUnits("21"),
-    sauce: "marinara",
-    toppings: ["tomato", "chili", "basil"],
-    heat: 2,
-    badges: ["spicy"],
-    groups: pastaGroups({ heat: true }),
-  },
-  {
-    id: "aglio-olio",
-    slug: "aglio-olio",
-    categorySlug: "classics",
-    nameAr: "أغليو إي أوليو",
-    nameEn: "Aglio e Olio",
-    descAr:
-      "بساطة إيطاليا الحقيقية — ثوم ذهبي، زيت زيتون، بقدونس، ورشة فلفل حار",
-    basePriceMinor: toMinorUnits("18"),
-    sauce: "golden",
-    toppings: ["chili"],
-    heat: 1,
-    badges: [],
-    groups: pastaGroups(),
-  },
-  {
-    id: "pesto-genovese",
-    slug: "pesto-genovese",
-    categorySlug: "classics",
-    nameAr: "بيستو جينوفيزي",
-    nameEn: "Pesto Genovese",
-    descAr:
-      "ريحان طازج، صنوبر محمص، بارميزان، وزيت زيتون — مصفوفة طازة كل صباح",
-    basePriceMinor: toMinorUnits("24"),
+    id: "penne-pesto",
+    slug: "penne-pesto",
+    categorySlug: "pasta",
+    nameAr: "بيني بيستو",
+    nameEn: "Penne Pesto",
+    descAr: "بيني باستا مع صوص الريحان",
+    basePriceMinor: toMinorUnits("25"),
     sauce: "pesto",
     toppings: ["basil", "cheese"],
     heat: 0,
-    badges: ["new"],
-    groups: pastaGroups({
-      extras: [X_MUSHROOM, X_PARMESAN, X_GARLIC_BREAD, X_EXTRA_SAUCE],
-    }),
+    badges: ["fresh"],
+    featured: true,
+    groups: [CHICKEN_ADDON],
   },
   {
-    id: "chicken-carbonara",
-    slug: "chicken-carbonara",
-    categorySlug: "classics",
-    nameAr: "كاربونارا بالدجاج المدخن",
-    nameEn: "Chicken Carbonara",
-    descAr: "صلصة كريمية بالبارميزان مع دجاج مدخن وصفار طازج وفلفل أسود مطحون",
-    basePriceMinor: toMinorUnits("26"),
+    id: "fettuccine-alfredo",
+    slug: "fettuccine-alfredo",
+    categorySlug: "pasta",
+    nameAr: "فيتوتشيني ألفريدو",
+    nameEn: "Fettuccine Alfredo",
+    descAr: "فيتوتشيني باستا مع صوص ألفريدو",
+    basePriceMinor: toMinorUnits("20"),
     sauce: "alfredo",
-    toppings: ["chicken", "cheese"],
-    heat: 0,
-    badges: ["bestseller"],
-    groups: pastaGroups(),
-  },
-  // ── سبشل الدجاج ──────────────────────────────────────────────────────
-  {
-    id: "chicken-alfredo",
-    slug: "chicken-alfredo",
-    categorySlug: "chicken",
-    nameAr: "تشيكن ألفريدو",
-    nameEn: "Chicken Alfredo",
-    descAr:
-      "شرائح دجاج مشوي متبلة على ألفريدو الكريمي — الطبق اللي بيطلبه الكل",
-    basePriceMinor: toMinorUnits("28"),
-    sauce: "alfredo",
-    toppings: ["chicken", "cheese", "basil"],
-    heat: 0,
-    badges: ["bestseller"],
-    groups: pastaGroups(),
-  },
-  {
-    id: "spicy-chicken",
-    slug: "spicy-chicken",
-    categorySlug: "chicken",
-    nameAr: "باستا الدجاج الحارة",
-    nameEn: "Spicy Chicken Pasta",
-    descAr: "دجاج مشوي بصوص طماطم حار بلمسة كريمة وفلفل تشيلي طازج",
-    basePriceMinor: toMinorUnits("27"),
-    sauce: "pink",
-    toppings: ["chicken", "chili"],
-    heat: 3,
-    badges: ["spicy"],
-    groups: pastaGroups({
-      heat: true,
-      extras: [
-        X_GRILL_CHICKEN,
-        X_MUSHROOM,
-        X_CHILI,
-        X_PARMESAN,
-        X_GARLIC_BREAD,
-      ],
-    }),
-  },
-  {
-    id: "lemon-chicken",
-    slug: "lemon-chicken",
-    categorySlug: "chicken",
-    nameAr: "ليموني بالدجاج",
-    nameEn: "Lemon Chicken Pasta",
-    descAr: "صوص الزبدة والليمون الطازج مع دجاج مشوي وحبة البركة الإيطالية",
-    basePriceMinor: toMinorUnits("26"),
-    sauce: "golden",
-    toppings: ["chicken", "basil"],
-    heat: 0,
-    badges: ["new"],
-    groups: pastaGroups({ extras: [X_MUSHROOM, X_PARMESAN, X_EXTRA_SAUCE] }),
-  },
-  {
-    id: "chicken-pesto-shrimp",
-    slug: "chicken-pesto-shrimp",
-    categorySlug: "chicken",
-    nameAr: "بيستو بالدجاج والروبيان",
-    nameEn: "Chicken & Shrimp Pesto",
-    descAr: "الطبق الفخم — دجاج مشوي وروبيان على بيستو الكريمي",
-    basePriceMinor: toMinorUnits("38"),
-    sauce: "pesto",
-    toppings: ["chicken", "basil"],
+    toppings: ["cheese", "basil"],
     heat: 0,
     badges: ["fresh"],
-    groups: pastaGroups({ extras: [X_SHRIMP, X_PARMESAN, X_GARLIC_BREAD] }),
+    featured: true,
+    groups: [CHICKEN_ADDON],
   },
-  // ── من الفرن ─────────────────────────────────────────────────────────
   {
-    id: "chicken-lasagna",
-    slug: "chicken-lasagna",
-    categorySlug: "baked",
-    nameAr: "لازانيا الدجاج",
-    nameEn: "Chicken Lasagna",
-    descAr:
-      "طبقات باستا طازة، دجاج، بشاميل، وصلصة طماطم — مخبوزة بالجبنة الذهبية",
-    basePriceMinor: toMinorUnits("32"),
-    sauce: "baked",
-    toppings: ["chicken", "cheese", "tomato"],
+    id: "smoked-pasta",
+    slug: "smoked-pasta",
+    categorySlug: "pasta",
+    nameAr: "سموكد باستا",
+    nameEn: "Smoked Pasta",
+    descAr: "بيني باستا مدخنة مع صوص ألفريدو وجبنة الشيدر",
+    basePriceMinor: toMinorUnits("25"),
+    sauce: "alfredo",
+    toppings: ["cheese"],
     heat: 0,
-    badges: ["bestseller"],
-    groups: [extras(X_GARLIC_BREAD, X_EXTRA_SAUCE)],
+    badges: ["new"],
+    groups: [CHICKEN_ADDON],
   },
   {
-    id: "mac-cheese",
-    slug: "mac-cheese",
-    categorySlug: "baked",
-    nameAr: "ماك أند تشيز",
-    nameEn: "Mac & Cheese",
-    descAr: "مكرونة مخصوصة بصوص الجبنة الثلاثي المخبوزة بالخبز المقرمش",
+    id: "stroganoff-pasta",
+    slug: "stroganoff-pasta",
+    categorySlug: "pasta",
+    nameAr: "ستروجانوف باستا",
+    nameEn: "Stroganoff Pasta",
+    descAr: "فيتوتشيني باستا مع قطع دجاج وفلفل أحمر وبصل وفطر",
+    basePriceMinor: toMinorUnits("30"),
+    sauce: "pink",
+    toppings: ["chicken", "tomato", "mushroom"],
+    heat: 0,
+    badges: ["fresh"],
+    featured: true,
+    groups: [CHICKEN_ADDON],
+  },
+  {
+    id: "lemon-pasta",
+    slug: "lemon-pasta",
+    categorySlug: "pasta",
+    nameAr: "باستا ليمون",
+    nameEn: "Lemon Pasta",
+    descAr: "فيتوتشيني باستا مع صوص الليمون وجبنة البارميزان",
+    basePriceMinor: toMinorUnits("20"),
+    sauce: "golden",
+    toppings: ["cheese", "basil"],
+    heat: 0,
+    badges: ["fresh"],
+    groups: [CHICKEN_ADDON],
+  },
+  {
+    id: "crunchy-cheese-pasta",
+    slug: "crunchy-cheese-pasta",
+    categorySlug: "pasta",
+    nameAr: "كرانشي تشيز باستا",
+    nameEn: "Crunchy Cheese Pasta",
+    descAr: "فيتوتشيني أو بيني باستا مع شيتوس",
     basePriceMinor: toMinorUnits("20"),
     sauce: "baked",
     toppings: ["cheese"],
     heat: 0,
-    badges: [],
-    groups: [extras(X_GRILL_CHICKEN, X_MUSHROOM, X_EXTRA_SAUCE)],
+    badges: ["new"],
+    groups: [PASTA_TYPE, CHICKEN_ADDON],
   },
   {
-    id: "pasta-al-forno",
-    slug: "pasta-al-forno",
-    categorySlug: "baked",
-    nameAr: "باستا آل فورنو",
-    nameEn: "Pasta al Forno",
-    descAr: "بيني مخبوزة بصوص الطماطم والدجاج والموزاريلا الذائبة",
-    basePriceMinor: toMinorUnits("29"),
-    sauce: "baked",
-    toppings: ["chicken", "cheese", "basil"],
+    id: "fettuccine-pesto",
+    slug: "fettuccine-pesto",
+    categorySlug: "pasta",
+    nameAr: "فيتوتشيني بيستو",
+    nameEn: "Fettuccine Pesto",
+    descAr: "فيتوتشيني باستا مع صوص الريحان",
+    basePriceMinor: toMinorUnits("25"),
+    sauce: "pesto",
+    toppings: ["basil", "cheese"],
     heat: 0,
     badges: [],
-    groups: pastaGroups({ extras: [X_GARLIC_BREAD, X_EXTRA_SAUCE] }),
+    groups: [CHICKEN_ADDON],
   },
-  // ── إضافات ومقبلات ───────────────────────────────────────────────────
   {
-    id: "garlic-bread",
-    slug: "garlic-bread",
-    categorySlug: "extras",
-    nameAr: "خبز الثوم",
-    nameEn: "Garlic Bread",
-    descAr: "خبز طازة بالزبدة والثوم والبقدونس — محمص بالفرن",
-    basePriceMinor: toMinorUnits("8"),
-    sauce: "golden",
-    toppings: [],
+    id: "mozzarella-pasta",
+    slug: "mozzarella-pasta",
+    categorySlug: "pasta",
+    nameAr: "موزاريلا باستا",
+    nameEn: "Mozzarella Pasta",
+    descAr: "بيني باستا مع صوص الفطر وجبنة الموزاريلا",
+    basePriceMinor: toMinorUnits("25"),
+    sauce: "alfredo",
+    toppings: ["mushroom", "cheese"],
     heat: 0,
     badges: [],
-    groups: [extras(X_PARMESAN, X_EXTRA_SAUCE)],
+    groups: [CHICKEN_ADDON],
   },
   {
-    id: "chicken-wings",
-    slug: "chicken-wings",
-    categorySlug: "extras",
-    nameAr: "أجنحة دجاج مشوية",
-    nameEn: "Grilled Chicken Wings",
-    descAr: "أجنحة متبلة بتتبيلتنا السرية — مشوية على نار هادئة",
+    id: "penne-alfredo",
+    slug: "penne-alfredo",
+    categorySlug: "pasta",
+    nameAr: "بيني ألفريدو",
+    nameEn: "Penne Alfredo",
+    descAr: "بيني باستا مع صوص ألفريدو",
+    basePriceMinor: toMinorUnits("20"),
+    sauce: "alfredo",
+    toppings: ["cheese"],
+    heat: 0,
+    badges: [],
+    groups: [CHICKEN_ADDON],
+  },
+  // ── السلطات ──────────────────────────────────────────────────────────
+  {
+    id: "tabbouleh",
+    slug: "tabbouleh",
+    categorySlug: "salads",
+    nameAr: "تبولة",
+    nameEn: "Tabbouleh",
+    descAr: "طبق شعبي منعش، طازج ومحضّر بعناية",
     basePriceMinor: toMinorUnits("15"),
     sauce: "golden",
-    toppings: ["chicken", "chili"],
-    heat: 1,
-    badges: [],
-    groups: [HEAT, extras(X_EXTRA_SAUCE)],
-  },
-  // ── مشروبات ──────────────────────────────────────────────────────────
-  {
-    id: "lemonade",
-    slug: "lemonade",
-    categorySlug: "drinks",
-    nameAr: "ليموناضة طازة",
-    nameEn: "Fresh Lemonade",
-    descAr: "ليمون طازج بالنعناع — تُحضّر عند الطلب",
-    basePriceMinor: toMinorUnits("7"),
-    sauce: "golden",
-    toppings: [],
+    toppings: ["tomato", "basil"],
     heat: 0,
     badges: ["fresh"],
     groups: [],
   },
+  // ── الأطباق الجانبية ─────────────────────────────────────────────────
   {
-    id: "peach-iced-tea",
-    slug: "peach-iced-tea",
-    categorySlug: "drinks",
-    nameAr: "آيس تي الخوخ",
-    nameEn: "Peach Iced Tea",
-    descAr: "شاي مثلج بالخوخ الطازج — منعش وغير محلي بزيادة",
-    basePriceMinor: toMinorUnits("8"),
+    id: "chicken-nuggets",
+    slug: "chicken-nuggets",
+    categorySlug: "sides",
+    nameAr: "ناجتس الدجاج",
+    nameEn: "Chicken Nuggets",
+    descAr: "قطع دجاج مقلية مغلفة بصوص من اختيارك",
+    basePriceMinor: toMinorUnits("15"),
     sauce: "golden",
-    toppings: [],
+    toppings: ["chicken"],
     heat: 0,
     badges: [],
-    groups: [],
-  },
-  {
-    id: "soft-drink",
-    slug: "soft-drink",
-    categorySlug: "drinks",
-    nameAr: "مشروب غازي",
-    nameEn: "Soft Drink",
-    descAr: "علبة مبردة — اختر نوعك في الملاحظات",
-    basePriceMinor: toMinorUnits("5"),
-    sauce: "golden",
-    toppings: [],
-    heat: 0,
-    badges: [],
-    groups: [],
+    groups: [NUGGET_SAUCE],
   },
 ];
 
@@ -459,5 +318,10 @@ export function getProduct(slug: string): Product | undefined {
 }
 
 export function featuredProducts(): Product[] {
-  return PRODUCTS.filter((p) => p.badges.includes("bestseller")).slice(0, 4);
+  const featured = PRODUCTS.filter((p) => p.featured);
+  return (
+    featured.length > 0
+      ? featured
+      : PRODUCTS.filter((p) => p.badges.includes("bestseller"))
+  ).slice(0, 4);
 }

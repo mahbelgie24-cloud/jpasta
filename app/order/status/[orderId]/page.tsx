@@ -1,5 +1,5 @@
 import { Clock, MapPin } from "lucide-react";
-import { LogoMark } from "@/components/brand/logo";
+import { Logo, LogoMark } from "@/components/brand/logo";
 import { OrderStatusClient, type SerializableOrder } from "./status-client";
 import { getOrderForStatus } from "@/lib/server/orders";
 import { SITE } from "@/lib/site";
@@ -20,7 +20,7 @@ export default async function OrderStatusPage({
   if (!order) {
     return (
       <main className="flex min-h-dvh flex-col items-center justify-center px-4 text-center">
-        <LogoMark className="size-16" />
+        <LogoMark className="size-20" />
         <h1 className="mt-6 type-section text-ink">الطلب غير موجود</h1>
         <p className="mt-3 max-w-sm text-ink-soft">
           تأكد أنك فتحت الرابط الصحيح — روابط متابعة الطلب خاصة بكل طلب.
@@ -51,11 +51,8 @@ export default async function OrderStatusPage({
   return (
     <main className="min-h-dvh bg-cream-50">
       <div className="mx-auto max-w-lg px-4 py-8">
-        <div className="flex items-center justify-center gap-2.5">
-          <LogoMark className="size-9" />
-          <span className="font-display text-xl font-semibold text-basil-800">
-            JPasta
-          </span>
+        <div className="flex justify-center">
+          <Logo size="lg" />
         </div>
         <OrderStatusClient
           orderId={orderId}

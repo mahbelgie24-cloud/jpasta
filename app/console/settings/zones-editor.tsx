@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 import { Price } from "@/components/ui/price";
-import { toMinorUnits, formatPrice } from "@/lib/pricing";
+import { tryToMinorUnits, formatPrice } from "@/lib/pricing";
 import {
   addZone,
   fetchZones,
@@ -55,7 +55,11 @@ export function ZonesEditor() {
 
   async function saveFee(zone: Zone) {
     const raw = drafts[zone.id]?.trim() ?? "";
-    const feeMinor = toMinorUnits(raw);
+    const feeMinor = tryToMinorUnits(raw);
+    if (feeMinor === null) {
+      setNotice("رسوم غير صحيحة — استخدم رقماً مثل 5.00");
+      return;
+    }
     setRowBusy(zone.id);
     const res = await updateZoneFee(zone.id, feeMinor);
     setRowBusy(null);
@@ -96,7 +100,11 @@ export function ZonesEditor() {
   }
 
   async function create() {
-    const feeMinor = toMinorUnits(newFee.trim() || "5");
+    const feeMinor = tryToMinorUnits(newFee.trim() || "5");
+    if (feeMinor === null) {
+      setNotice("رسوم غير صحيحة — استخدم رقماً مثل 5.00");
+      return;
+    }
     setRowBusy("new");
     const res = await addZone(newName.trim(), feeMinor);
     setRowBusy(null);
@@ -141,13 +149,13 @@ export function ZonesEditor() {
                 aria-label={`${zone.isActive ? "إيقاف" : "تفعيل"} ${zone.nameAr}`}
                 disabled={rowBusy === zone.id}
                 onClick={() => void toggle(zone)}
-                className={`relative h-8 w-14 shrink-0 rounded-full transition-colors ${
+                className={`relative h-11 w-16 shrink-0 rounded-full transition-colors ${
                   zone.isActive ? "bg-basil-600" : "bg-cream-400"
                 }`}
               >
                 <span
-                  className={`absolute top-1 size-6 rounded-full bg-cream-50 shadow transition-all ${
-                    zone.isActive ? "start-7" : "start-1"
+                  className={`absolute top-2 size-7 rounded-full bg-cream-50 shadow transition-all ${
+                    zone.isActive ? "start-7" : "start-2"
                   }`}
                 />
               </button>

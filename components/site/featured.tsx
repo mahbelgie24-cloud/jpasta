@@ -26,7 +26,7 @@ export async function Featured() {
         index="01"
         eyebrow="أطباق التوقيع"
         title="الأطباق اللي الكل بيرجع عليها"
-        sub="اختيارات زبائننا المفضلة — وكلها تبدأ بعجينة تُصنع في نفس اليوم."
+        sub="اختيارات زبائننا المفضلة — باستا طازة تُطبخ عند الطلب، بصلصات بيتية تُحضّر طازجة كل يوم."
       />
 
       <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2">
@@ -34,6 +34,7 @@ export async function Featured() {
           <Link
             key={lead.id}
             href={`/menu#${lead.slug}`}
+            prefetch={false}
             className="group relative flex min-h-[26rem] flex-col justify-end overflow-hidden rounded-card border border-border-soft bg-brand-deep p-6 text-cream-50 shadow-card transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-lift sm:col-span-2 lg:row-span-2"
           >
             <div
@@ -43,6 +44,7 @@ export async function Featured() {
             <DishMedia
               product={lead}
               variant="dark"
+              decorative
               sizes="(min-width: 1024px) 50vw, 100vw"
               className="absolute inset-x-0 top-0 mx-auto w-full max-w-md transition-transform duration-700 ease-out group-hover:scale-[1.03] motion-reduce:transition-none"
             />
@@ -76,6 +78,7 @@ export async function Featured() {
           <Link
             key={p.id}
             href={`/menu#${p.slug}`}
+            prefetch={false}
             className={cn(
               "group flex flex-col overflow-hidden rounded-card border border-border-soft bg-paper p-4 shadow-card transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-lift",
               rest.length === 3 && i === 2 && "sm:col-span-2 lg:col-span-2",
@@ -84,6 +87,7 @@ export async function Featured() {
             <div className="relative flex min-h-36 items-center justify-center overflow-hidden rounded-xl bg-paper-deep">
               <DishMedia
                 product={p}
+                decorative
                 className="w-full max-w-48 transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transition-none"
               />
               <div className="absolute start-2 top-2 flex flex-wrap gap-1.5">
@@ -111,7 +115,11 @@ export async function Featured() {
       </div>
 
       <div className="mt-12 text-center">
-        <Link href="/menu" className={buttonStyles("dark", "lg")}>
+        <Link
+          href="/menu"
+          prefetch={false}
+          className={buttonStyles("dark", "lg")}
+        >
           القائمة الكاملة
           <ArrowLeft className="size-5" aria-hidden />
         </Link>

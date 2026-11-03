@@ -1,7 +1,8 @@
 # JPasta — Fresh Pasta & Chicken
 
 Digital menu, first-party ordering, and an owner console for **JPasta**
-(Qalqilya) — fresh pasta made every day, with a lot of sauce and love.
+(Qalqilya) — fresh pasta cooked to order, house sauces made fresh daily, and a
+lot of love.
 
 **Stack:** Next.js 16 (App Router) · React 19 · TypeScript strict · Tailwind v4 ·
 Drizzle + Neon Postgres · **Cloudflare Workers** via
@@ -11,6 +12,9 @@ Drizzle + Neon Postgres · **Cloudflare Workers** via
 - Architecture: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)
 - Design system: [`docs/DESIGN.md`](./docs/DESIGN.md) · brand: [`docs/brand/brand.md`](./docs/brand/brand.md)
 - Deploy runbook: [`docs/DEPLOY.md`](./docs/DEPLOY.md)
+- Audit (2026-11-02, honest findings + fixes): [`docs/AUDIT-2026-11-02.md`](./docs/AUDIT-2026-11-02.md)
+- Menu photo prompts (18 dishes + logo prompt): [`docs/menu-photo-prompts.md`](./docs/menu-photo-prompts.md)
+- Handoff: [`docs/HANDOFF.md`](./docs/HANDOFF.md) · next-session prompt: [`docs/NEXT-SESSION-PROMPT.md`](./docs/NEXT-SESSION-PROMPT.md)
 
 ## What shipped in v2
 
@@ -26,7 +30,30 @@ Drizzle + Neon Postgres · **Cloudflare Workers** via
   typography, the DishArt illustration system, dark editorial landing, live
   menu search, real zone fees in the cart, dark console, PWA shell + offline
   page, photo upload to R2.
-- **49 tests** (unit + integration + hardening regressions).
+- **70 tests** (unit + integration + hardening regressions) plus a
+  **44-test Playwright suite** (`npm run test:e2e`): real journeys, axe
+  a11y gate (serious/critical = fail) and visual regression at
+  375/768/1440.
+- **Lighthouse budgets** (`npm run test:lighthouse` / `:desktop`): **two
+  honest gates**. Mobile (Lighthouse's default profile) has hard CWV/byte
+  gates — LCP < 4.5s, CLS < 0.05, JS < 300KB, fonts < 250KB — while its
+  performance score and TBT are tracked as warnings, because the mobile lab
+  score is bounded by React App Router hydration (~74KB React DOM). Desktop
+  proves the code itself is lean — performance ≥ 0.95, LCP < 1.5s,
+  CLS < 0.02, TBT < 200ms. A controlled real-throttled mobile probe
+  (1.6 Mbps/150ms/4× CPU) measured FCP 1.67s and LCP 2.07s; the old 98/100
+  figure was the desktop preset and is superseded.
+- **Settings-driven shop** (`/console/settings`): hours, minimum order,
+  payment methods, the ordering flag, and the public shop name/phone/WhatsApp
+  — owner-edited, live without a deploy; the money path enforces the minimum
+  server-side on a fresh read, and Hero/Footer/Visit/MobileNav/receipt read
+  the same settings.
+- **Order archive & receipts** (`/console/orders`): local-day history with
+  status/date filters, order/name/phone/item search, an 80mm printable
+  receipt (settings-driven footer), and a per-order audit timeline.
+- **CI** runs three jobs on every push/PR: `verify` (the full gate +
+  OpenNext bundle), `e2e` (Playwright against a fresh build + Postgres),
+  and `lighthouse` (budget assertions).
 
 ## Getting started
 
@@ -47,7 +74,10 @@ npm run db:seed
 ```
 
 Console PIN comes from `JPASTA_OWNER_PIN` in `.env.local`.
-`AUTH_PEPPER` and `REALTIME_SECRET` are required for production (32+ chars).
+`AUTH_PEPPER` and `REALTIME_SECRET` are required for production (32+ chars); `PII_ENCRYPTION_KEY` (64 hex chars) turns on field-level encryption of customer PII (spec §13)
+**and for `next start`**, which runs in production mode — E2E needs them
+locally too. Changing `AUTH_PEPPER` requires `npm run db:seed -- --provision`
+to re-bind the owner credential.
 
 ## Scripts
 
@@ -59,8 +89,10 @@ npm run preview        # local workerd
 npm run deploy         # check-env → build → wrangler deploy
 npm run typecheck      # next typegen + tsc
 npm run lint
-npm test               # vitest (49 tests)
-npm run icons          # regenerate PWA icons from app/icon.svg
+npm test               # vitest (70 tests)
+npm run test:e2e       # build + Playwright: journeys, axe, visual (port 3220)
+npm run test:lighthouse # LHCI budgets on / and /menu (set CHROME_PATH locally)
+npm run icons          # regenerate favicon/PWA/OG from public/brand/logo*.svg
 ```
 
 Quality gates:

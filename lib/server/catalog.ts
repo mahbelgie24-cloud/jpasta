@@ -83,6 +83,7 @@ const getCatalogFromDb = unstable_cache(
       toppings: (p.toppings as ToppingKind[]) ?? [],
       heat: (p.heat as 0 | 1 | 2 | 3) ?? 0,
       badges: (p.badges as Badge[]) ?? [],
+      featured: p.isFeatured,
       ...(p.imageKey
         ? {
             image: {
@@ -113,8 +114,7 @@ const getCatalogFromDb = unstable_cache(
     // map categoryId (uuid) → category slug for the client shape
     const slugById = new Map(cats.map((c) => [c.id, c.slug]));
     for (const p of mappedProducts) {
-      p.categorySlug =
-        slugById.get(p.categorySlug) ?? cats[0]?.slug ?? "classics";
+      p.categorySlug = slugById.get(p.categorySlug) ?? cats[0]?.slug ?? "pasta";
     }
 
     const mappedCategories: Category[] = cats.map((c) => ({
@@ -152,5 +152,10 @@ export const getCatalog = cache(async (): Promise<CatalogResult> => {
 
 export async function getFeatured(): Promise<Product[]> {
   const { products: all } = await getCatalog();
-  return all.filter((p) => p.badges.includes("bestseller")).slice(0, 4);
+  const curated = all.filter((p) => p.featured);
+  return (
+    curated.length > 0
+      ? curated
+      : all.filter((p) => p.badges.includes("bestseller"))
+  ).slice(0, 4);
 }

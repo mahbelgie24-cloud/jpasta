@@ -8,6 +8,7 @@ import { HowToOrder } from "@/components/site/how-to-order";
 import { Marquee } from "@/components/site/marquee";
 import { Visit } from "@/components/site/visit";
 import { SITE } from "@/lib/site";
+import { serializeJsonLd } from "@/lib/json-ld";
 
 const DAYS = [
   "Monday",
@@ -81,7 +82,7 @@ export default function LandingPage() {
     <>
       <AnnouncementBar />
       <Header />
-      <main id="main">
+      <main id="main" tabIndex={-1}>
         <Hero />
         <Marquee />
         <Featured />
@@ -92,7 +93,7 @@ export default function LandingPage() {
       <Footer />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
     </>
   );

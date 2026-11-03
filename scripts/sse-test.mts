@@ -8,8 +8,8 @@ for (const line of readFileSync(".env.local", "utf8").split("\n")) {
 const { placeOrder } = await import("../lib/server/orders");
 const { db, pool } = await import("../lib/db/index");
 const { products } = await import("../db/schema");
-const marinara = (await db.select().from(products)).find(
-  (p) => p.slug === "marinara",
+const mainDish = (await db.select().from(products)).find(
+  (p) => p.slug === "fettuccine-mushroom",
 );
 const t0 = Date.now();
 const result = await placeOrder({
@@ -18,9 +18,9 @@ const result = await placeOrder({
   customer: { name: "اختبار SSE", phone: "0566064976", address: "" },
   lines: [
     {
-      productId: marinara!.id,
+      productId: mainDish!.id,
       quantity: 1,
-      selections: [{ groupKey: "size", optionKey: "regular" }],
+      selections: [],
     },
   ],
 });

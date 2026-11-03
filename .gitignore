@@ -38,3 +38,12 @@ yarn-error.log*
 
 # database backups (local dumps)
 /backups
+
+# lighthouse ci artifacts
+/.lighthouseci
+/.lighthouseci-desktop
+
+# design-lab review captures and generated report (large, reproducible)
+/design-lab/_baseline/
+/design-lab/screenshots/
+/design-lab/publish/

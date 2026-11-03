@@ -8,7 +8,11 @@ never raw hex in components.
 
 - **Name:** JPasta — جي باستا
 - **Secondary line:** Fresh Pasta & Chicken
-- **Tagline:** Fresh pasta made everyday. With a lot of Sauce and love
+- **Tagline:** Fresh pasta, cooked to order. With a lot of sauce and love.
+- **Product truth:** pasta is bought fresh, not kneaded or made in-house;
+  house sauces are prepared fresh daily. Copy may say selected fresh pasta,
+  house sauces made fresh daily, marinated chicken, cooked to order; never
+  dough, daily pasta-making, handmade, or "made today" for the pasta.
 - **Personality:** fresh, warm, appetizing, young — premium without stiffness.
 - **Voice:** Arabic-first, friendly, food-forward; English accents from the
   brand line only (never UI chrome).
@@ -58,6 +62,17 @@ captivating. The scales below are tuned for AA contrast on the cream base.
 contrast as body text). On `basil-800+` dark surfaces wheat-300/400 is safe
 for large text and icons.
 
+### Logo colours (locked, not UI tokens)
+
+Each supplied lockup carries its own locked pair:
+
+- **Roundel:** green `#296034`, cream `#EBE1BD`.
+- **Horizontal header plaque:** green `#134021`, cream `#ECE0B8`.
+
+They sit between `basil-700`/`basil-900` and `cream-300`, but they are asset
+colours: never recolour a lockup to match a token, and never promote them to
+UI tokens. The UI palette above is unchanged.
+
 ### Ink & text
 
 | Token      | Hex       | Role                                            |
@@ -75,11 +90,11 @@ for large text and icons.
 
 ## 3. Typography
 
-| Use                      | Family         | Weights         | Notes                                                  |
-| ------------------------ | -------------- | --------------- | ------------------------------------------------------ |
-| Arabic display + body    | **Alexandria** | 400/500/700/800 | `--font-arabic`; body 1.7 line-height, headings 1.25   |
-| Latin display (wordmark) | **Fraunces**   | 600/700         | `--font-display`; "JPasta", big Latin numerals/accents |
-| Prices / numeric data    | Alexandria     | 700             | `tabular-nums` — legibility where accuracy matters     |
+| Use                   | Family         | Weights         | Notes                                                                                             |
+| --------------------- | -------------- | --------------- | ------------------------------------------------------------------------------------------------- |
+| Arabic display + body | **Alexandria** | 400/500/700/800 | `--font-arabic`; body 1.7 line-height, headings 1.25                                              |
+| Latin display accents | **Fraunces**   | 600/700         | `--font-display`; large Latin accents only — the wordmark is inside the logo asset, never retyped |
+| Prices / numeric data | Alexandria     | 700             | `tabular-nums` — legibility where accuracy matters                                                |
 
 **Type tiers** (fluid, clamp-based — see globals.css): `type-hero`,
 `type-section`, `type-title`, `type-body`, `type-micro`. No ad-hoc sizes.
@@ -97,22 +112,58 @@ for large text and icons.
 
 ## 5. Logo
 
-The mark: a fork lifting a twirled pasta nest (spiral) with a basil leaf —
-rounded strokes on a basil-800 rounded-square badge, cream pasta, one wheat
-highlight strand.
+The identity is the supplied **JPasta roundel**: a deep-green circular field
+framed by a cream outer ring and a second thin inner ring, with the wordmark
+`JPASTA` in cream outlined capitals and `Fresh Pasta & Chicken` beneath it.
+The roundel is one lockup — the wordmark, rules and field are part of the
+asset, not typeset in the UI.
 
-- **Files:** `app/icon.svg` (badge mark / favicon), `public/brand/logo.svg`
-  (full lockup), `public/brand/logo-mark.svg` (mark only),
-  `public/brand/logo-mono.svg` (single-color print/receipt).
-- **In-app rendering:** `components/brand/logo.tsx` — mark as inline SVG +
-  wordmark as live text (Fraunces), so the wordmark always ships the real
-  webfont and stays crisp at every size.
-- **Clear space:** height of the "J" cap on all sides. **Minimum:** mark
-  32px, lockup 120px wide.
-- **Never:** recolor outside the palette, stretch, outline, or place the
-  full-color mark on busy photos without a cream/green safe area.
-- **Receipts:** `logo-mono.svg` (single-color basil-900 on white) — thermal
-  printers are black-only.
+- **Files:** `public/brand/logo.svg` (full roundel, with the secondary line),
+  `public/brand/logo-mark.svg` (compact roundel without the secondary line,
+  for small spaces), `public/brand/logo-mono.svg` (single-colour line art for
+  print/receipts), `public/brand/logo-horizontal.svg` (the wide rounded header
+  plaque), `public/brand/logo-512.png` (transparent raster for OG/social),
+  `app/icon.svg` (favicon), `app/favicon.ico` (fallback), `public/icons/*`
+  (PWA/Apple icons, generated).
+- **In-app rendering:** `components/brand/logo.tsx` references those files
+  with `next/image`; the wordmark is never retyped in Fraunces or any other
+  face. `Logo` = full/mark roundel; `LogoMark` = compact/mono;
+  `HeaderLogo` = horizontal plaque.
+- **Clear space:** the height of the wordmark's `J` on all sides; never crop
+  the outer cream ring.
+- **Minimum size:** full roundel 96px on screen (the secondary line needs the
+  room); compact mark 32px; horizontal plaque 40px high; favicon/PWA follow
+  the generated set. Print: 12mm for the full roundel, 8mm for the mono line
+  art.
+- **Colours (locked):** roundel green `#296034` / cream `#EBE1BD`; horizontal
+  plaque green `#134021` / cream `#ECE0B8`. These are the supplied asset
+  colours — do not recolour them to UI tokens.
+- **Never:** recolor, stretch, outline, add a drop shadow, crop the ring, place
+  the full-colour roundel on a busy photo without a cream/green safe area, or
+  recreate the wordmark in another typeface. The earlier twirl “j” mark is
+  retired.
+- **Receipts:** `logo-mono.svg` (single-colour, thermal printers are
+  black-only). Use the mono line art, not the colour roundel.
+
+### Header lockup (horizontal)
+
+The sticky top bar uses a header-specific horizontal lockup, not the roundel:
+a wide deep-green plaque with rounded corners and a double cream frame. The
+rooster/fork/pasta emblem sits at the RTL start, with `J PASTA` enlarged
+beside it and `Fresh Pasta & Chicken` beneath the wordmark. The arrangement
+uses the header's horizontal space so the name stays readable at 40px.
+
+- **File:** `public/brand/logo-horizontal.svg` — 1600×557; the rounded green
+  field and rounded frame are vector, the cream emblem, wordmark and tagline
+  are a clean trace of the supplied art.
+- **Rendering:** `HeaderLogo`; 40px high on phones, 44px on small screens,
+  52px on desktop (minimum 40px), width auto from the 1600×557 aspect ratio.
+  The corner radius and frame are built into the asset, never CSS-clipped.
+- **Clear space:** one quarter of the lockup height on all sides; keep the
+  green margin and the frame intact.
+- **Never:** stretch, recolour, crop the frame, set it below 40px high, or use
+  it in the footer, status page, console, receipts or app icons. The roundel
+  is the primary mark on those surfaces.
 
 ## 6. Imagery
 
@@ -124,21 +175,24 @@ stock photos with watermarks; never emoji as food imagery.
 
 ## 7. Application by Surface
 
-| Surface            | Priority                              | Brand expression                                                            |
-| ------------------ | ------------------------------------- | --------------------------------------------------------------------------- |
-| `/` landing        | Editorial, appetizing, brand-defining | Cream base, basil display type, wheat accents, illustration hero            |
-| `/menu`            | One-hand ordering, zero friction      | Cream cards, basil pill CTAs, bottom sheets, sticky category nav            |
-| `/console`         | Calm clarity under pressure           | Dark `theme-console`, big status colors, 44px+ targets, thumb-reach actions |
-| `/console/kitchen` | Readable from two metres              | High-contrast `theme-kitchen`, huge type, aging escalation                  |
-| Receipts/print     | Legibility                            | Monochrome mark, plain text, tabular figures                                |
+| Surface            | Priority                              | Brand expression                                                                                                         |
+| ------------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `/` landing        | Editorial, appetizing, brand-defining | Cream base, basil display type, wheat accents, horizontal plaque in the header, roundel in the footer, illustration hero |
+| `/menu`            | One-hand ordering, zero friction      | Cream cards, basil pill CTAs, bottom sheets, sticky category nav                                                         |
+| `/console`         | Calm clarity under pressure           | Dark `theme-console`, big status colors, 44px+ targets, thumb-reach actions                                              |
+| `/console/kitchen` | Readable from two metres              | High-contrast `theme-kitchen`, huge type, aging escalation                                                               |
+| Receipts/print     | Legibility                            | Monochrome roundel, plain text, tabular figures                                                                          |
 
-## 8. v2 implementation notes (2026-10-28)
+## 8. v2 implementation notes (2026-11 logo update)
 
-The identity is unchanged; the expression is sharper.
+The editorial system (paper/ink, Amiri/Alexandria/Fraunces, DishArt) is
+unchanged. The supplied roundel replaces the earlier twirl “j” mark, and the
+supplied horizontal plaque is the header lockup.
 
 - **Display type:** **Amiri** for Arabic hero/section headings, paired with
   Alexandria for UI/body and Fraunces for Latin accents. The full ladder is
-  `type-display` → `type-micro`.
+  `type-display` → `type-micro`. The logo wordmark is part of the SVG asset;
+  it is never set in Fraunces.
 - **Semantic tokens:** components use `surface/paper/line/text/brand/accent`
   rather than raw scales. The console and kitchen are the same components
   under dark semantic themes.
@@ -147,8 +201,12 @@ The identity is unchanged; the expression is sharper.
   `DishMedia` swaps in real R2 photography when a product has one; the
   illustration is the permanent fallback.
 - **Landing:** dark editorial hero, wheat marquee, asymmetric signature grid,
-  dark craft band, paper visit section, oversized wordmark.
-- **OG/PWA:** the share card is drawn from the same art language (no emoji);
-  the PWA uses PNG + maskable icons and a branded offline page.
+  dark craft band, paper visit section. The header uses the horizontal plaque;
+  the footer uses the roundel. The oversized Fraunces wordmark was removed.
+- **Two lockups, two jobs:** the horizontal plaque is header-only; the roundel
+  is the primary mark on the footer, status pages, console, app icons and
+  receipts. Never swap their surfaces.
+- **OG/PWA:** the share card shows the roundel; the PWA uses PNG + maskable +
+  monochrome icons and a branded offline page.
 - **Never:** emoji as food, stock photos with watermarks, raw hex in
-  components, or colour as the only signal.
+  components, colour as the only signal, or a retyped logo wordmark.

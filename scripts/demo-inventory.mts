@@ -39,8 +39,8 @@ if (existing.length === 0) {
     reorderThreshold: 3000,
     costPerUnitMinor: 1800,
   });
-  const marinara = (await db.select().from(products)).find(
-    (p) => p.slug === "marinara",
+  const mainDish = (await db.select().from(products)).find(
+    (p) => p.slug === "fettuccine-mushroom",
   );
   const flour = (await db.select().from(ingredients)).find(
     (i) => i.name === "دقيق القمح 00",
@@ -48,20 +48,20 @@ if (existing.length === 0) {
   const sauce = (await db.select().from(ingredients)).find(
     (i) => i.name === "صلصة الطماطم",
   );
-  if (marinara && flour && sauce) {
+  if (mainDish && flour && sauce) {
     await setRecipeLine({
-      productId: marinara.id,
+      productId: mainDish.id,
       ingredientId: flour.id,
       quantityUsed: 180,
     });
     await setRecipeLine({
-      productId: marinara.id,
+      productId: mainDish.id,
       ingredientId: sauce.id,
       quantityUsed: 120,
     });
   }
   console.log(
-    "✓ demo inventory seeded: 3 ingredients + marinara recipe (موزاريلا تحت حد الطلب)",
+    "✓ demo inventory seeded: 3 ingredients + fettuccine-mushroom recipe (موزاريلا تحت حد الطلب)",
   );
 } else {
   console.log("ingredients already present — skipped");

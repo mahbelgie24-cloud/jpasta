@@ -33,14 +33,18 @@ d("orders — v2 hardening", () => {
       {
         productId,
         quantity: 1,
-        selections: [{ groupKey: "size", optionKey: "regular" }],
+        selections: [],
       },
     ],
     ...overrides,
   });
 
   beforeAll(async () => {
-    const [p] = await db.select({ id: products.id }).from(products).limit(1);
+    const [p] = await db
+      .select({ id: products.id })
+      .from(products)
+      .where(eq(products.slug, "fettuccine-mushroom"))
+      .limit(1);
     if (!p) throw new Error("seed missing — run npm run db:seed");
     productId = p.id;
     const [primary] = await db
@@ -126,7 +130,7 @@ d("orders — v2 hardening", () => {
           {
             productId,
             quantity: 2,
-            selections: [{ groupKey: "size", optionKey: "regular" }],
+            selections: [],
           },
         ],
       }),
@@ -197,13 +201,38 @@ d("orders — v2 hardening", () => {
     expect(row?.status).toBe("received");
   });
 
+  it("clears the cancellation reason when a cancel is undone", async () => {
+    const placed = await placeOrder(baseInput("hardening-undo-cancel"));
+    expect(placed.ok).toBe(true);
+    if (!placed.ok) return;
+
+    await transitionOrder({
+      orderId: placed.order.id,
+      next: "cancelled",
+      expected: "received",
+      reason: "سبب اختباري",
+    });
+    const undone = await undoLastTransition({ orderId: placed.order.id });
+    expect(undone.ok).toBe(true);
+
+    const [row] = await db
+      .select({
+        status: orders.status,
+        reason: orders.cancelledReason,
+      })
+      .from(orders)
+      .where(eq(orders.id, placed.order.id));
+    expect(row?.status).toBe("received");
+    expect(row?.reason).toBeNull();
+  });
+
   it("issues gap-free local-day order numbers", async () => {
     const a = await placeOrder(baseInput("hardening-number-a"));
     const b = await placeOrder(baseInput("hardening-number-b"));
     expect(a.ok && b.ok).toBe(true);
     if (!a.ok || !b.ok) return;
 
-    expect(a.order.orderNumber).toMatch(/^JP-\d{6}-\d{3}$/);
+    expect(a.order.orderNumber).toMatch(/^JP-\d{6}-\d{3,}$/);
     const aSeq = Number(a.order.orderNumber.split("-").at(-1));
     const bSeq = Number(b.order.orderNumber.split("-").at(-1));
     expect(bSeq).toBe(aSeq + 1);

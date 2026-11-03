@@ -1,17 +1,25 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 
 export const alt = "JPasta — Fresh Pasta & Chicken, Qalqilya";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 /**
- * OG image — brand palette in a raster surface. Satori has no access to CSS
- * tokens, so the approved brand hex values are inlined here only. Latin text
- * is used because the default OG font has no Arabic glyphs; the Arabic line
- * lives in the page metadata instead.
+ * OG image — the brand roundel is the identity, so the layout does not repeat
+ * the wordmark in another typeface. The approved hex values are inlined here
+ * because Satori cannot read CSS tokens; the roundel itself is the supplied
+ * transparent PNG export.
  */
-export default function OpengraphImage() {
-  const strands = Array.from({ length: 14 }, (_, i) => i);
+export default async function OpengraphImage() {
+  const fraunces = await readFile(
+    join(process.cwd(), "app/fonts/fraunces-og.ttf"),
+  );
+  const roundel = `data:image/png;base64,${(
+    await readFile(join(process.cwd(), "public/brand/logo-512.png"))
+  ).toString("base64")}`;
+
   return new ImageResponse(
     <div
       style={{
@@ -69,34 +77,29 @@ export default function OpengraphImage() {
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div
             style={{
-              fontSize: 132,
+              display: "flex",
+              flexDirection: "column",
+              fontFamily: "Fraunces",
+              fontSize: 78,
               fontWeight: 700,
-              letterSpacing: -5,
-              lineHeight: 1,
+              lineHeight: 1.04,
+              letterSpacing: -1,
             }}
           >
-            JPasta
+            <span>Fresh pasta,</span>
+            <span>cooked to order.</span>
           </div>
           <div
             style={{
-              marginTop: 18,
-              fontSize: 34,
-              letterSpacing: 6,
-              color: "#E3C98F",
-            }}
-          >
-            FRESH PASTA &amp; CHICKEN
-          </div>
-          <div
-            style={{
-              marginTop: 22,
-              fontSize: 26,
+              marginTop: 20,
+              fontSize: 27,
+              lineHeight: 1.45,
               color: "rgba(249,245,236,0.72)",
               maxWidth: 470,
-              lineHeight: 1.45,
             }}
           >
-            Handmade daily. With a lot of sauce and love.
+            House sauce made fresh daily. A lot of love. Order online, or call
+            the shop.
           </div>
         </div>
 
@@ -121,12 +124,12 @@ export default function OpengraphImage() {
         </div>
       </div>
 
-      {/* right: the plate */}
+      {/* right: the supplied roundel */}
       <div
         style={{
           position: "absolute",
           right: 40,
-          top: 86,
+          top: 80,
           width: 470,
           height: 470,
           display: "flex",
@@ -143,69 +146,25 @@ export default function OpengraphImage() {
             border: "1px solid rgba(227,201,143,0.22)",
           }}
         />
-        <div
-          style={{
-            position: "absolute",
-            width: 390,
-            height: 390,
-            borderRadius: 999,
-            background:
-              "radial-gradient(circle at 40% 32%, #FDFBF7 0%, #F2EBDB 62%, #E7DDC8 100%)",
-            boxShadow: "0 40px 90px rgba(0,0,0,0.45)",
-          }}
-        />
-        {/* sauce pool */}
-        <div
-          style={{
-            position: "absolute",
-            width: 250,
-            height: 210,
-            borderRadius: 999,
-            background:
-              "radial-gradient(circle at 42% 38%, #E3C98F 0%, #B98F4C 100%)",
-            opacity: 0.95,
-          }}
-        />
-        {/* pasta nest */}
-        {strands.map((i) => (
-          <div
-            key={i}
-            style={{
-              position: "absolute",
-              width: 236,
-              height: 26,
-              borderRadius: 999,
-              border: "6px solid #D4AF6E",
-              borderTopColor: "transparent",
-              borderBottomColor: "transparent",
-              transform: `rotate(${i * 13}deg) scale(${1 - (i % 3) * 0.08})`,
-              opacity: 0.9,
-            }}
-          />
-        ))}
-        {/* garnish */}
-        <div
-          style={{
-            position: "absolute",
-            width: 54,
-            height: 30,
-            borderRadius: "50% 50% 50% 50% / 60% 60% 40% 40%",
-            background: "#3D8A5F",
-            transform: "translate(52px, -62px) rotate(-24deg)",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            width: 26,
-            height: 26,
-            borderRadius: 999,
-            background: "#B3402F",
-            transform: "translate(-58px, 40px)",
-          }}
+        <img
+          src={roundel}
+          width={420}
+          height={420}
+          alt=""
+          style={{ objectFit: "contain" }}
         />
       </div>
     </div>,
-    size,
+    {
+      ...size,
+      fonts: [
+        {
+          name: "Fraunces",
+          data: fraunces,
+          weight: 700,
+          style: "normal",
+        },
+      ],
+    },
   );
 }

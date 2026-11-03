@@ -16,6 +16,10 @@ import { Price } from "@/components/ui/price";
 import { Sheet } from "@/components/ui/sheet";
 import { Stepper } from "@/components/ui/stepper";
 import { useCart } from "@/components/menu/cart-context";
+import {
+  PAYMENT_METHOD_LABELS,
+  type PaymentMethod,
+} from "@/lib/domain/payment";
 import { addMinor, formatPrice, ZERO, type Minor } from "@/lib/pricing";
 import { buildOrderMessage, whatsappUrl } from "@/lib/whatsapp";
 import { SITE } from "@/lib/site";
@@ -34,12 +38,18 @@ type OrderType = "delivery" | "pickup";
 export function CartDrawer({
   open,
   onClose,
+  paymentMethods,
 }: {
   open: boolean;
   onClose: () => void;
+  /** Owner-configured accepted methods (settings); defaults to cash. */
+  paymentMethods?: PaymentMethod[];
 }) {
   const cart = useCart();
+  const methods: PaymentMethod[] =
+    paymentMethods && paymentMethods.length > 0 ? paymentMethods : ["cash"];
   const [orderType, setOrderType] = useState<OrderType>("delivery");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -142,6 +152,9 @@ export function CartDrawer({
           ? ("delivery" as const)
           : ("takeaway" as const),
       ...(orderType === "delivery" ? { zoneId } : {}),
+      paymentMethod: methods.includes(paymentMethod)
+        ? paymentMethod
+        : methods[0],
       customer: {
         name: name.trim(),
         phone: phone.trim(),
@@ -274,7 +287,7 @@ export function CartDrawer({
                     type="button"
                     onClick={() => cart.remove(l.key)}
                     aria-label={`حذف ${l.nameAr} من السلة`}
-                    className="flex size-10 shrink-0 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-terracotta/10 hover:text-terracotta"
+                    className="flex size-11 shrink-0 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-terracotta/10 hover:text-terracotta"
                   >
                     <Trash2 className="size-4" aria-hidden />
                   </button>
@@ -361,6 +374,40 @@ export function CartDrawer({
               )}
             </div>
           )}
+
+          {/* payment — the owner configures the accepted methods */}
+          {methods.length > 1 ? (
+            <fieldset>
+              <legend className="text-sm font-bold text-ink">
+                طريقة الدفع
+              </legend>
+              <div className="mt-2.5 grid gap-2 sm:grid-cols-3">
+                {methods.map((method) => {
+                  const active = paymentMethod === method;
+                  return (
+                    <label
+                      key={method}
+                      className={
+                        active
+                          ? "flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-md border-2 border-basil-700 bg-basil-50 px-2 text-center text-xs font-bold text-basil-800 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-basil-600"
+                          : "flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-md border border-cream-300 bg-cream-100 px-2 text-center text-xs font-bold text-ink-soft transition-colors hover:border-basil-300 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-basil-600"
+                      }
+                    >
+                      <input
+                        type="radio"
+                        name="payment-method"
+                        value={method}
+                        checked={active}
+                        onChange={() => setPaymentMethod(method)}
+                        className="sr-only"
+                      />
+                      {PAYMENT_METHOD_LABELS[method]}
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+          ) : null}
 
           {/* customer info */}
           <div className="space-y-3">
@@ -514,7 +561,9 @@ export function CartDrawer({
             </button>
           </div>
           <p className="text-center text-xs text-ink-soft">
-            الدفع نقداً عند الاستلام — بدون أي رسوم إضافية.
+            {methods.length > 1
+              ? "الدفع عند الاستلام — بدون أي رسوم إضافية."
+              : "الدفع نقداً عند الاستلام — بدون أي رسوم إضافية."}
           </p>
         </form>
       )}

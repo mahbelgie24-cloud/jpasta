@@ -17,10 +17,10 @@ const { placeOrder } = await import("../lib/server/orders");
 const { db, pool } = await import("../lib/db/index");
 const { products } = await import("../db/schema");
 
-const alfredo = (await db.select().from(products)).find(
-  (p) => p.slug === "chicken-alfredo",
+const mainDish = (await db.select().from(products)).find(
+  (p) => p.slug === "fettuccine-mushroom",
 );
-if (!alfredo) throw new Error("seeded product missing — run npm run db:seed");
+if (!mainDish) throw new Error("seeded product missing — run npm run db:seed");
 
 const result = await placeOrder({
   idempotencyKey: "demo-live-order-2026-10-27",
@@ -33,12 +33,9 @@ const result = await placeOrder({
   note: "الاتصال قبل الوصول",
   lines: [
     {
-      productId: alfredo.id,
+      productId: mainDish.id,
       quantity: 2,
-      selections: [
-        { groupKey: "size", optionKey: "large" },
-        { groupKey: "extras", optionKey: "parmesan" },
-      ],
+      selections: [{ groupKey: "extras", optionKey: "chicken" }],
       note: "صلصة زيادة عالجنب",
     },
   ],

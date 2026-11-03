@@ -12,6 +12,7 @@ import type { Product } from "@/lib/menu-data";
 function HeatLevel({ level }: { level: number }) {
   return (
     <span
+      role="img"
       className="inline-flex items-center gap-0.5 rounded-full bg-terracotta/10 px-2 py-0.5 text-terracotta"
       aria-label={`مستوى حرارة ${level} من 3`}
     >
@@ -31,6 +32,9 @@ export function ProductCard({
   orderingEnabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const hasPriceVariation = product.groups.some((group) =>
+    group.options.some((option) => option.priceMinor > 0),
+  );
 
   return (
     <article
@@ -46,6 +50,7 @@ export function ProductCard({
         >
           <DishMedia
             product={product}
+            decorative
             className="w-full max-w-52 transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
           />
         </button>
@@ -70,7 +75,9 @@ export function ProductCard({
             minor={product.basePriceMinor}
             className="text-lg font-extrabold text-basil-800"
           />
-          <span className="block text-xs text-text-secondary">يبدأ من</span>
+          <span className="block text-xs text-text-secondary">
+            {hasPriceVariation ? "يبدأ من" : "السعر"}
+          </span>
         </div>
         <button
           type="button"

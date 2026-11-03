@@ -8,7 +8,7 @@ const badgeStyles: Record<Badge, { label: string; className: string }> = {
   },
   new: { label: "جديد", className: "bg-basil-100 text-basil-800" },
   spicy: { label: "حار", className: "bg-terracotta/12 text-terracotta" },
-  fresh: { label: "طازة اليوم", className: "bg-basil-700 text-cream-50" },
+  fresh: { label: "طازج", className: "bg-basil-700 text-cream-50" },
 };
 
 export function ProductBadge({

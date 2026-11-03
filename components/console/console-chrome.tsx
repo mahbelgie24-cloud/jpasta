@@ -12,7 +12,7 @@ export function ConsoleChrome({ role }: { role: "owner" | "staff" }) {
   if (pathname === "/console/login") return null;
 
   return (
-    <div className="sticky top-0 z-30 border-b border-border-soft glass-dark">
+    <div className="sticky top-0 z-30 border-b border-border-soft glass-dark print:hidden">
       <div className="mx-auto max-w-6xl px-4 py-2 sm:px-6">
         <ConsoleNav role={role} />
       </div>

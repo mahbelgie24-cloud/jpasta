@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ClipboardList, MousePointerClick, ShoppingBag } from "lucide-react";
 import { buttonStyles } from "@/components/ui/button";
 import { SectionHeading } from "@/components/ui/section-heading";
@@ -56,9 +57,13 @@ export function HowToOrder() {
         ))}
       </ol>
       <div className="mt-10 text-center">
-        <a href="/menu" className={buttonStyles("primary", "lg")}>
+        <Link
+          href="/menu"
+          prefetch={false}
+          className={buttonStyles("primary", "lg")}
+        >
           ابدأ الطلب الآن
-        </a>
+        </Link>
       </div>
     </section>
   );

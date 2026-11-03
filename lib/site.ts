@@ -6,10 +6,10 @@ export const SITE = {
   name: "JPasta",
   nameAr: "جي باستا",
   secondaryLine: "Fresh Pasta & Chicken",
-  tagline: "Fresh pasta made everyday. With a lot of Sauce and love",
-  taglineAr: "باستا طازة تُصنع يومياً — بصلصة كتير ومحبة",
+  tagline: "Fresh pasta, cooked to order. With a lot of sauce and love.",
+  taglineAr: "باستا طازة تُطبخ عند الطلب — وصلصة بيتية تُحضّر طازجة كل يوم.",
   description:
-    "JPasta في قلقيلية — باستا طازة تُصنع يومياً بصلصات بيتية ودجاج طازج. اطلب أونلاين أو عبر واتساب، استلام أو توصيل.",
+    "JPasta في قلقيلية — باستا طازة تُطبخ عند الطلب بصلصات بيتية تُحضّر طازجة كل يوم ودجاج طازج. اطلب أونلاين أو عبر واتساب، استلام أو توصيل.",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   phoneDisplay: "0566064976",
   phoneIntl: "+970566064976",

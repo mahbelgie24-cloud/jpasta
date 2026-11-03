@@ -90,12 +90,14 @@ export function PinLogin() {
 
   return (
     <div className="mt-8 w-full max-w-72">
-      {/* pin dots */}
+      {/* pin dots — the progress is announced by a real sr-only live node;
+          aria-label on a plain div is an axe violation (aria-prohibited-attr) */}
       <div
         className={`flex items-center justify-center gap-3 ${error ? "animate-pulse" : ""}`}
-        aria-live="polite"
-        aria-label={pin ? `${pin.length} من 6 أرقام` : "أدخل الرمز"}
       >
+        <span className="sr-only" role="status">
+          {pin ? `${pin.length} من 6 أرقام` : "أدخل الرمز"}
+        </span>
         {Array.from({ length: 6 }).map((_, i) => (
           <span
             key={i}

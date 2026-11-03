@@ -141,15 +141,46 @@ export function formatDateInShop(date: Date | string, tz = SHOP_TZ): string {
 /** Shop hours: 13:00 → 01:00, crossing midnight. */
 export const SHOP_HOURS = { opensAt: 13, closesAt: 1 } as const;
 
-export function shopOpenState(now = new Date()): {
-  open: boolean;
-  label: string;
-} {
+/** Raw "HH:mm" wall-clock pair (as stored in the settings table). */
+export interface ShopHoursSpec {
+  opensAt: string;
+  closesAt: string;
+}
+
+/** "13:05" → 785; null unless a well-formed 24h clock time. */
+export function parseClockToMinutes(value: string): number | null {
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value.trim());
+  if (!match) return null;
+  const hh = Number.parseInt(match[1] ?? "", 10);
+  const mm = Number.parseInt(match[2] ?? "", 10);
+  return hh * 60 + mm;
+}
+
+/**
+ * Live open state against the shop's configured hours. A closing time at or
+ * before the opening time crosses midnight (13:00 → 01:00); a later closing
+ * time is a same-day window. Malformed settings fall back to SHOP_HOURS.
+ */
+export function shopOpenState(
+  now = new Date(),
+  hours?: ShopHoursSpec,
+): { open: boolean; label: string } {
+  let opens = SHOP_HOURS.opensAt * 60;
+  let closes = SHOP_HOURS.closesAt * 60;
+  if (hours) {
+    const open = parseClockToMinutes(hours.opensAt);
+    const close = parseClockToMinutes(hours.closesAt);
+    if (open !== null && close !== null) {
+      opens = open;
+      closes = close;
+    }
+  }
   const { hour, minute } = zonedParts(now);
   const minutes = hour * 60 + minute;
-  const opens = SHOP_HOURS.opensAt * 60;
-  const closes = SHOP_HOURS.closesAt * 60;
-  const open = minutes >= opens || minutes < closes;
+  const open =
+    closes > opens
+      ? minutes >= opens && minutes < closes
+      : minutes >= opens || minutes < closes;
   return {
     open,
     label: open ? "مفتوح الآن" : "مغلق الآن",

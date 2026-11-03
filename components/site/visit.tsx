@@ -2,11 +2,14 @@ import { Clock, MapPin, MessageCircle, Navigation, Phone } from "lucide-react";
 import { buttonStyles } from "@/components/ui/button";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { OpenStatus } from "@/components/site/open-status";
+import { getShopSettings } from "@/lib/server/settings";
 import { SITE } from "@/lib/site";
 import { whatsappUrl } from "@/lib/whatsapp";
 
 /** Visit — a stylised locality map, live hours, and one-tap contact. */
-export function Visit() {
+export async function Visit() {
+  const shop = await getShopSettings();
+  const phone = shop.shopPhone || SITE.phoneDisplay;
   return (
     <section
       id="visit"
@@ -84,25 +87,25 @@ export function Visit() {
           <div className="flex flex-col rounded-card border border-border-soft bg-surface p-6 shadow-card">
             <div className="flex items-center justify-between gap-3">
               <h3 className="type-title text-ink">كل يوم</h3>
-              <OpenStatus />
+              <OpenStatus hours={shop} />
             </div>
             <p className="mt-2 flex items-center gap-2 text-sm text-text-secondary">
               <Clock className="size-4 text-brand" aria-hidden />
-              {SITE.hoursLabel}
+              {shop.hoursLabel}
             </p>
 
             <div className="mt-6 space-y-3">
               <a
-                href={`tel:${SITE.phoneIntl}`}
+                href={`tel:${phone}`}
                 className="flex min-h-13 items-center justify-center gap-2 rounded-full border border-border-strong bg-paper px-5 font-bold text-ink transition-colors hover:border-brand/40"
               >
                 <Phone className="size-4 text-brand" aria-hidden />
                 <span dir="ltr" className="tabular-nums">
-                  {SITE.phoneDisplay}
+                  {phone}
                 </span>
               </a>
               <a
-                href={whatsappUrl(SITE.whatsapp, "مرحباً JPasta — بدي أطلب")}
+                href={whatsappUrl(shop.whatsapp, "مرحباً JPasta — بدي أطلب")}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={buttonStyles("primary", "lg", "w-full")}

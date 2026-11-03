@@ -20,18 +20,18 @@ import { placeOrder, transitionOrder } from "@/lib/server/orders";
 const DB_READY = Boolean(process.env.DATABASE_URL);
 const d = DB_READY ? describe : describe.skip;
 
-const RECIPE_QTY = 200; // 200 g of flour per marinara
+const RECIPE_QTY = 200; // 200 g of flour per fettuccine-mushroom
 
 d("inventory — recipe-driven deduction", () => {
-  let marinaraId = "";
+  let fettuccineId = "";
   let flourId = "";
 
   beforeAll(async () => {
-    const marinara = (await db.select().from(products)).find(
-      (p) => p.slug === "marinara",
+    const fettuccine = (await db.select().from(products)).find(
+      (p) => p.slug === "fettuccine-mushroom",
     );
-    if (!marinara) throw new Error("seed missing");
-    marinaraId = marinara.id;
+    if (!fettuccine) throw new Error("seed missing");
+    fettuccineId = fettuccine.id;
     await db.execute(
       sql`TRUNCATE order_items, orders, inventory_moves, recipes, ingredients CASCADE`,
     );
@@ -53,7 +53,7 @@ d("inventory — recipe-driven deduction", () => {
     flourId = flour.id;
 
     await setRecipeLine({
-      productId: marinaraId,
+      productId: fettuccineId,
       ingredientId: flourId,
       quantityUsed: RECIPE_QTY,
     });
@@ -64,7 +64,7 @@ d("inventory — recipe-driven deduction", () => {
   });
 
   it("recipe persists and reads back", async () => {
-    const lines = await listRecipes(marinaraId);
+    const lines = await listRecipes(fettuccineId);
     expect(lines).toHaveLength(1);
     expect(lines[0]?.ingredientId).toBe(flourId);
     expect(lines[0]?.quantityUsed).toBe(RECIPE_QTY);
@@ -80,9 +80,9 @@ d("inventory — recipe-driven deduction", () => {
       customer: { name: "زبون المخزون", phone: "0566064976", address: "" },
       lines: [
         {
-          productId: marinaraId,
+          productId: fettuccineId,
           quantity: 10,
-          selections: [{ groupKey: "size", optionKey: "regular" }],
+          selections: [],
         },
       ],
     });
@@ -153,16 +153,16 @@ d("inventory — recipe-driven deduction", () => {
     const before = (await listIngredients()).find(
       (i) => i.id === flourId,
     )?.currentStock;
-    // lemonade has no recipe
-    const lemonade = (await db.select().from(products)).find(
-      (p) => p.slug === "lemonade",
+    // tabbouleh has no recipe
+    const tabbouleh = (await db.select().from(products)).find(
+      (p) => p.slug === "tabbouleh",
     );
-    if (!lemonade) throw new Error("seed missing");
+    if (!tabbouleh) throw new Error("seed missing");
     const result = await placeOrder({
       idempotencyKey: "inventory-no-recipe-1",
       channel: "takeaway",
       customer: { name: "زبون بلا وصفة", phone: "0566064976", address: "" },
-      lines: [{ productId: lemonade.id, quantity: 3, selections: [] }],
+      lines: [{ productId: tabbouleh.id, quantity: 3, selections: [] }],
     });
     expect(result.ok).toBe(true);
     const after = (await listIngredients()).find(
@@ -180,9 +180,9 @@ d("inventory — recipe-driven deduction", () => {
       customer: { name: "زبون ملغي", phone: "0566064976", address: "" },
       lines: [
         {
-          productId: marinaraId,
+          productId: fettuccineId,
           quantity: 1,
-          selections: [{ groupKey: "size", optionKey: "regular" }],
+          selections: [],
         },
       ],
     });

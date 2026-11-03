@@ -55,10 +55,17 @@ function createPool(): Pool {
   return pool;
 }
 
-export const pool = globalForDb.jpastaPool ?? createPool();
+// Test suites end the shared pool in their afterAll; the next file in the
+// same process must get a LIVE pool, not the ended singleton (vitest runs
+// files sequentially with fileParallelism: false).
+const cachedPool = globalForDb.jpastaPool;
+export const pool: Pool =
+  cachedPool && !cachedPool.ended ? cachedPool : createPool();
 
 export const db: NodePgDatabase =
-  globalForDb.jpastaDb ?? drizzle(pool, { logger: false });
+  globalForDb.jpastaPool === pool && globalForDb.jpastaDb
+    ? globalForDb.jpastaDb
+    : drizzle(pool, { logger: false });
 
 if (process.env.NODE_ENV !== "production") {
   globalForDb.jpastaPool = pool;

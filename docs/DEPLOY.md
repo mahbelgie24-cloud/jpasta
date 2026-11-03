@@ -53,14 +53,16 @@ npx wrangler secret put DATABASE_URL      # Neon pooled URL
 npx wrangler secret put JPASTA_OWNER_PIN  # 6 digits
 npx wrangler secret put AUTH_PEPPER       # openssl rand -hex 32
 npx wrangler secret put REALTIME_SECRET   # openssl rand -hex 32
+npx wrangler secret put PII_ENCRYPTION_KEY # openssl rand -hex 32 (64 hex)
 ```
 
-| Secret             | Purpose                                                 |
-| ------------------ | ------------------------------------------------------- |
-| `DATABASE_URL`     | Node fallback connection (Workers use Hyperdrive first) |
-| `JPASTA_OWNER_PIN` | provisioning the owner account                          |
-| `AUTH_PEPPER`      | O(1) PIN lookup HMAC (must stay stable)                 |
-| `REALTIME_SECRET`  | signs 2-minute WebSocket tokens                         |
+| Secret               | Purpose                                                 |
+| -------------------- | ------------------------------------------------------- |
+| `DATABASE_URL`       | Node fallback connection (Workers use Hyperdrive first) |
+| `JPASTA_OWNER_PIN`   | provisioning the owner account                          |
+| `AUTH_PEPPER`        | O(1) PIN lookup HMAC (must stay stable)                 |
+| `REALTIME_SECRET`    | signs 2-minute WebSocket tokens                         |
+| `PII_ENCRYPTION_KEY` | AES-256-GCM for customer PII at rest (required in prod) |
 
 `NEXT_PUBLIC_*` values are **build-time**; export them in the deploy shell.
 
@@ -76,6 +78,27 @@ DATABASE_URL="$NEON_POOLED_URL" npm run db:seed -- --provision
 ```
 
 `db:seed --force` is refused when `NODE_ENV=production` (it truncates orders).
+
+### Menu catalog updates (no schema change)
+
+When `lib/menu-data.ts` changes, replace only the catalog:
+
+```bash
+DATABASE_URL="$NEON_POOLED_URL" npm run db:menu
+```
+
+- Runs in one transaction: deletes the old categories/products/modifier
+  groups, inserts the new catalog, and touches nothing else.
+- `orders`, `order_items`, `order_status_history`, `settings`,
+  `delivery_zones`, `users` and `ingredients` stay intact. Historical items
+  keep their `name_ar`/`detail_ar`/price snapshots; their `product_id`
+  becomes `NULL`.
+- Recipes attached to removed products are deleted (cascade). Old product
+  photos are removed with their rows; new products render the DishArt
+  illustration until the owner uploads photos from `/console/menu`.
+- The catalog cache has a 5-minute bound (`unstable_cache`); allow up to five
+  minutes for the storefront to show the new menu.
+- Never use `db:seed --force` against production — it truncates orders.
 
 ---
 
@@ -127,6 +150,7 @@ for i in $(seq 1 20); do curl -s -o /dev/null -w "%{http_code}\n" https://jpasta
 - **Logs:** `npx wrangler tail` (structured JSON events)
 - **Schema change:** generate migration → `db:migrate` → deploy → run
   `db:seed -- --provision` if credentials/settings changed.
+- **Menu content change:** `npm run db:menu` (see §3); it never touches orders.
 - **Secret rotation:** `npx wrangler secret put <NAME>`; no redeploy needed.
 - **Service worker:** bump `VERSION` in `public/sw.js` when the shell changes.
 

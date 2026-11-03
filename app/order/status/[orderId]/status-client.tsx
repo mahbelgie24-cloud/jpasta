@@ -36,7 +36,11 @@ const STEPS = [
     label: "وصل طلبك",
     hint: "وصلنا طلبك — بدأنا نجهزه فوراً",
   },
-  { key: "preparing", label: "جارٍ التحضير", hint: "الباستا تُعجن وتُلف الآن" },
+  {
+    key: "preparing",
+    label: "جارٍ التحضير",
+    hint: "طبقك على النار الآن — شوي وبكون جاهز.",
+  },
   { key: "ready", label: "جاهزة!", hint: "طبقك جاهز بالصلصة والمحبة" },
   { key: "completed", label: "تم التسليم", hint: "بالهناء والشفاء 🌿" },
 ] as const;
@@ -91,9 +95,21 @@ export function OrderStatusClient({
   const currentIndex = STEPS.findIndex((s) => s.key === order.status);
   const cancelled = order.status === "cancelled";
   const ready = order.status === "ready";
+  // Polling updates the timeline without a navigation; a polite live region
+  // is the only way a screen-reader user hears that the order advanced. It
+  // announces the step HINT, not the visible label — repeating the label made
+  // it appear twice in the accessibility tree (and in strict-mode queries).
+  const liveMessage = cancelled
+    ? "تم إلغاء الطلب."
+    : currentIndex >= 0
+      ? (STEPS[currentIndex]?.hint ?? "")
+      : "";
 
   return (
     <div className="mt-8">
+      <p aria-live="polite" aria-atomic="true" className="sr-only">
+        {liveMessage}
+      </p>
       {/* header card — the order identity */}
       <div className="relative overflow-hidden rounded-card border border-border-soft bg-surface-raised p-6 text-center shadow-card">
         <div
@@ -104,6 +120,7 @@ export function OrderStatusClient({
           طلب رقم
         </p>
         <p
+          data-testid="status-order-number"
           className="relative font-display text-4xl font-bold text-basil-800"
           dir="ltr"
         >
@@ -121,7 +138,10 @@ export function OrderStatusClient({
               </>
             )}
           </span>
-          <span className="inline-flex items-center gap-1">
+          <span
+            data-testid="status-timestamp"
+            className="inline-flex items-center gap-1"
+          >
             <Clock className="size-3.5" aria-hidden />
             {mounted ? `${timeAgoAr(order.createdAt)} — ` : null}
             <span dir="ltr">{formatTimeAr(order.createdAt)}</span>

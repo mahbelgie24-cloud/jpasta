@@ -10,6 +10,7 @@ import { registerOfflineSync } from "@/lib/offline/sync";
 import { placeStorefrontOrder } from "@/app/actions/orders";
 import { arabicIncludes } from "@/lib/arabic";
 import type { Category, Product } from "@/lib/menu-data";
+import type { PaymentMethod } from "@/lib/domain/payment";
 import { cn } from "@/lib/utils";
 
 /**
@@ -18,14 +19,22 @@ import { cn } from "@/lib/utils";
  * browse-only placeholder fallback).
  */
 
+function itemCountLabel(count: number): string {
+  if (count === 1) return "صنف واحد";
+  if (count === 2) return "صنفان";
+  return `${count} أصناف`;
+}
+
 function MenuContent({
   categories,
   products: allProducts,
   orderingEnabled,
+  paymentMethods,
 }: {
   categories: Category[];
   products: Product[];
   orderingEnabled: boolean;
+  paymentMethods?: PaymentMethod[];
 }) {
   const cart = useCart();
   const [cartOpen, setCartOpen] = useState(false);
@@ -91,7 +100,7 @@ function MenuContent({
               type="button"
               onClick={() => setQuery("")}
               aria-label="مسح البحث"
-              className="absolute end-2 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-full text-text-secondary hover:bg-paper-deep hover:text-ink"
+              className="absolute end-2 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-full text-text-secondary hover:bg-paper-deep hover:text-ink"
             >
               <X className="size-4" aria-hidden />
             </button>
@@ -166,13 +175,13 @@ function MenuContent({
                   </h2>
                   <p className="mt-1 text-sm text-text-secondary">
                     {category.blurbAr}{" "}
-                    <span dir="ltr" className="font-display italic opacity-60">
+                    <span dir="ltr" className="font-display italic">
                       · {category.nameEn}
                     </span>
                   </p>
                 </div>
                 <span className="hidden text-xs font-bold text-text-secondary tabular-nums sm:block">
-                  {categoryProducts.length} أطباق
+                  {itemCountLabel(categoryProducts.length)}
                 </span>
               </div>
               <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -214,7 +223,11 @@ function MenuContent({
         {cart.count > 0 ? `${cart.count} عناصر في السلة` : ""}
       </p>
 
-      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
+      <CartDrawer
+        open={cartOpen}
+        onClose={() => setCartOpen(false)}
+        paymentMethods={paymentMethods}
+      />
     </>
   );
 }
@@ -223,10 +236,12 @@ export function MenuShell({
   categories,
   products,
   orderingEnabled = true,
+  paymentMethods,
 }: {
   categories: Category[];
   products: Product[];
   orderingEnabled?: boolean;
+  paymentMethods?: PaymentMethod[];
 }) {
   return (
     <CartProvider>
@@ -234,6 +249,7 @@ export function MenuShell({
         categories={categories}
         products={products}
         orderingEnabled={orderingEnabled}
+        paymentMethods={paymentMethods}
       />
     </CartProvider>
   );

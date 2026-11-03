@@ -4,6 +4,7 @@ import {
   Banknote,
   Bike,
   HandPlatter,
+  History,
   Receipt,
   TrendingUp,
   XCircle,
@@ -106,6 +107,16 @@ export default async function ReportsPage({
             className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm font-bold ${date >= todayLocal() ? "pointer-events-none text-ink-soft opacity-30" : "text-basil-700 hover:bg-basil-50"}`}
           >
             اليوم التالي →
+          </Link>
+        </div>
+
+        <div className="mt-2 text-end">
+          <Link
+            href={`/console/orders?date=${date}`}
+            className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-basil-700 hover:text-basil-600"
+          >
+            <History className="size-4" aria-hidden />
+            عرض طلبات هذا اليوم
           </Link>
         </div>
 

@@ -21,6 +21,13 @@ before starting work.
 Work on **one roadmap phase item at a time** (spec §15). Finish, verify,
 review, commit — then ask before stretching scope.
 
+## Copy truth
+
+Pasta is bought fresh and cooked to order — never kneaded or produced
+in-house. Do not write dough, daily pasta-making, handmade, or "made today"
+claims. The honest craft story is selected fresh pasta, house sauces prepared
+fresh daily, marinated chicken, and cooking to order.
+
 ## Money representation
 
 All money is an **integer in minor units (agorot)**. `lib/pricing.ts` is the

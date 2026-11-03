@@ -54,6 +54,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const store = await cookies();
   const token = store.get(COOKIE_NAME)?.value;
   if (!token) return null;
+  const tokenHash = await hashToken(token);
 
   const [row] = await db
     .select({
@@ -66,7 +67,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     .innerJoin(users, eq(users.id, sessions.userId))
     .where(
       and(
-        eq(sessions.tokenHash, hashToken(token)),
+        eq(sessions.tokenHash, tokenHash),
         eq(sessions.userVersion, users.sessionVersion),
         gt(sessions.expiresAt, new Date()),
         gt(sessions.lastSeenAt, new Date(Date.now() - IDLE_TTL_MS)),
@@ -82,7 +83,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     await db
       .update(sessions)
       .set({ lastSeenAt: new Date() })
-      .where(eq(sessions.tokenHash, hashToken(token)));
+      .where(eq(sessions.tokenHash, tokenHash));
   }
 
   return { id: row.id, name: row.name, role: row.role };
@@ -169,7 +170,7 @@ export async function loginWithPin(
   const token = newSessionToken();
   await db.insert(sessions).values({
     userId: user.id,
-    tokenHash: hashToken(token),
+    tokenHash: await hashToken(token),
     userVersion: user.sessionVersion,
     expiresAt: new Date(Date.now() + SESSION_TTL_MS),
   });
@@ -207,7 +208,9 @@ export async function logout(): Promise<void> {
   const store = await cookies();
   const token = store.get(COOKIE_NAME)?.value;
   if (token) {
-    await db.delete(sessions).where(eq(sessions.tokenHash, hashToken(token)));
+    await db
+      .delete(sessions)
+      .where(eq(sessions.tokenHash, await hashToken(token)));
   }
   store.delete(COOKIE_NAME);
 }

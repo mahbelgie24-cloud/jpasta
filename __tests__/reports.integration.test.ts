@@ -22,21 +22,21 @@ import {
 const DB_READY = Boolean(process.env.DATABASE_URL);
 const d = DB_READY ? describe : describe.skip;
 
-const ALFREDO = 2400;
-const MARINARA = 1900;
+const FETTUCCINE = 2000; // fettuccine-mushroom
+const PENNE_PESTO = 2500;
 const DELIVERY_FEE = 500;
 
 d("reports — the manual-count DoD", () => {
   let zoneId = "";
 
   beforeAll(async () => {
-    const alfredo = (await db.select().from(products)).find(
-      (p) => p.slug === "alfredo-classico",
+    const fettuccine = (await db.select().from(products)).find(
+      (p) => p.slug === "fettuccine-mushroom",
     );
-    const marinara = (await db.select().from(products)).find(
-      (p) => p.slug === "marinara",
+    const pennePesto = (await db.select().from(products)).find(
+      (p) => p.slug === "penne-pesto",
     );
-    if (!alfredo || !marinara) throw new Error("seed missing");
+    if (!fettuccine || !pennePesto) throw new Error("seed missing");
     const [zone] = await db
       .select({ id: deliveryZones.id })
       .from(deliveryZones)
@@ -47,7 +47,7 @@ d("reports — the manual-count DoD", () => {
     await db.execute(sql`TRUNCATE order_items, orders CASCADE`);
 
     // 3 takeaway + 2 delivery + 1 cancelled = 6 orders
-    // revenue: (24 + 19 + 24) + (24+5 + 19+5) = 120.00 ; cancelled 19.00
+    // revenue: (20 + 25 + 20) + (20+5 + 25+5) = 120.00 ; cancelled 25.00
     const mk = (i: number, channel: "takeaway" | "delivery", pid: string) =>
       placeOrder({
         idempotencyKey: `report-dod-${i}`,
@@ -62,20 +62,20 @@ d("reports — the manual-count DoD", () => {
           {
             productId: pid,
             quantity: 1,
-            selections: [{ groupKey: "size", optionKey: "regular" }],
+            selections: [],
           },
         ],
         source: "console",
       });
 
     const results = await Promise.all([
-      mk(1, "takeaway", alfredo.id),
-      mk(2, "takeaway", marinara.id),
-      mk(3, "takeaway", alfredo.id),
-      mk(4, "delivery", alfredo.id),
-      mk(5, "delivery", marinara.id),
+      mk(1, "takeaway", fettuccine.id),
+      mk(2, "takeaway", pennePesto.id),
+      mk(3, "takeaway", fettuccine.id),
+      mk(4, "delivery", fettuccine.id),
+      mk(5, "delivery", pennePesto.id),
     ]);
-    const cancelled = await mk(6, "takeaway", marinara.id);
+    const cancelled = await mk(6, "takeaway", pennePesto.id);
 
     for (const r of results) expect(r.ok).toBe(true);
     expect(cancelled.ok).toBe(true);
@@ -96,33 +96,35 @@ d("reports — the manual-count DoD", () => {
 
   it("day summary matches the manual count exactly", async () => {
     const summary = await getDaySummary(todayLocal());
-    // manual count: 3 takeaway (24+19+24) + 2 delivery (24+5, 19+5) = 120.00
+    // manual count: 3 takeaway (20+25+20) + 2 delivery (20+5, 25+5) = 120.00
     expect(summary.orderCount).toBe(5);
     expect(summary.revenueMinor).toBe(
-      ALFREDO * 3 + MARINARA * 2 + DELIVERY_FEE * 2,
+      FETTUCCINE * 3 + PENNE_PESTO * 2 + DELIVERY_FEE * 2,
     );
     expect(summary.deliveryCount).toBe(2);
     expect(summary.takeawayCount).toBe(3);
     expect(summary.cancelledCount).toBe(1);
-    expect(summary.cancelledMinor).toBe(MARINARA);
+    expect(summary.cancelledMinor).toBe(PENNE_PESTO);
     expect(summary.avgOrderMinor).toBe(Math.round(summary.revenueMinor / 5));
   });
 
   it("Z cash view totals the drawer exactly", async () => {
     const z = await getZSummary(todayLocal());
     expect(z.cashCount).toBe(5); // every order is cash today
-    expect(z.cashMinor).toBe(ALFREDO * 3 + MARINARA * 2 + DELIVERY_FEE * 2);
+    expect(z.cashMinor).toBe(
+      FETTUCCINE * 3 + PENNE_PESTO * 2 + DELIVERY_FEE * 2,
+    );
     expect(z.deliveryFeesMinor).toBe(DELIVERY_FEE * 2);
   });
 
   it("best sellers rank by quantity with exact revenue", async () => {
     const best = await getBestSellers(todayLocal());
-    // alfredo sold 3×, marinara 2× (cancelled marinara excluded)
-    expect(best[0]?.nameAr).toBe("ألفريدو الكلاسيك");
+    // fettuccine sold 3×, penne pesto 2× (cancelled penne excluded)
+    expect(best[0]?.nameAr).toBe("فيتوتشيني مع فطر");
     expect(best[0]?.qty).toBe(3);
-    expect(best[0]?.revenueMinor).toBe(ALFREDO * 3);
+    expect(best[0]?.revenueMinor).toBe(FETTUCCINE * 3);
     expect(best[1]?.qty).toBe(2);
-    expect(best[1]?.revenueMinor).toBe(MARINARA * 2);
+    expect(best[1]?.revenueMinor).toBe(PENNE_PESTO * 2);
   });
 
   it("the 7-day series contains today with the same totals", async () => {
@@ -131,7 +133,7 @@ d("reports — the manual-count DoD", () => {
     const today = week[week.length - 1];
     expect(today?.orderCount).toBe(5);
     expect(today?.revenueMinor).toBe(
-      ALFREDO * 3 + MARINARA * 2 + DELIVERY_FEE * 2,
+      FETTUCCINE * 3 + PENNE_PESTO * 2 + DELIVERY_FEE * 2,
     );
     // and the series sums never double-count cancelled revenue
     const cancelledToday = await db

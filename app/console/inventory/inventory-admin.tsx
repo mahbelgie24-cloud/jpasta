@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Loader2, Plus, Trash2 } from "lucide-react";
 import { Price } from "@/components/ui/price";
-import { toMinorUnits } from "@/lib/pricing";
+import { tryToMinorUnits } from "@/lib/pricing";
 import {
   createIngredient,
   fetchInventoryState,
@@ -99,6 +99,11 @@ export function InventoryAdmin() {
   }
 
   async function create() {
+    const costPerUnitMinor = tryToMinorUnits(newCost.trim() || "0");
+    if (costPerUnitMinor === null) {
+      setNotice("تكلفة الوحدة غير صحيحة — أدخل رقماً مثل 12.50.");
+      return;
+    }
     const ok = await act(
       () =>
         createIngredient({
@@ -106,7 +111,7 @@ export function InventoryAdmin() {
           unit: newUnit,
           openingStock: Number.parseFloat(newStock || "0") || 0,
           reorderThreshold: Number.parseFloat(newThreshold || "0") || 0,
-          costPerUnitMinor: toMinorUnits(newCost || "0"),
+          costPerUnitMinor,
         }),
       "✓ أُضيف المكوّن",
     );
@@ -208,7 +213,7 @@ export function InventoryAdmin() {
                             : `${ing.id}:${btn.kind}`,
                         )
                       }
-                      className="inline-flex min-h-9 items-center rounded-full border border-cream-300 bg-cream-100 px-3 text-xs font-bold text-ink-soft transition-colors hover:border-basil-400"
+                      className="inline-flex min-h-11 items-center rounded-full border border-cream-300 bg-cream-100 px-3 text-xs font-bold text-ink-soft transition-colors hover:border-basil-400"
                     >
                       {btn.label}
                     </button>
@@ -310,7 +315,7 @@ export function InventoryAdmin() {
                                   [`${ing.id}:${kind}`]: "",
                                 }));
                             }}
-                            className="col-span-3 inline-flex min-h-10 items-center justify-center rounded-full bg-basil-700 text-sm font-bold text-cream-50 disabled:opacity-50"
+                            className="col-span-3 inline-flex min-h-11 items-center justify-center rounded-full bg-basil-700 text-sm font-bold text-cream-50 disabled:opacity-50"
                           >
                             تسجيل
                           </button>
@@ -392,29 +397,31 @@ export function InventoryAdmin() {
                         v > 0 &&
                         v !== line.quantityUsed
                       ) {
-                        await saveRecipeLine({
+                        const res = await saveRecipeLine({
                           productId: selectedProduct,
                           ingredientId: line.ingredientId,
                           quantityUsed: v,
                         });
+                        if (!res.ok) setNotice(res.error ?? "تعذر حفظ الوصفة");
                         await loadRecipes(selectedProduct);
                       }
                     }}
-                    className="w-24 rounded-md border border-cream-300 bg-cream-50 px-2 py-1.5 text-center text-sm font-bold tabular-nums outline-none focus:border-basil-500"
+                    className="min-h-11 w-24 rounded-md border border-cream-300 bg-cream-50 px-2 py-1.5 text-center text-sm font-bold tabular-nums outline-none focus:border-basil-500"
                     maxLength={9}
                   />
                   <button
                     type="button"
                     aria-label={`حذف ${line.ingredientName} من الوصفة`}
                     onClick={async () => {
-                      await saveRecipeLine({
+                      const res = await saveRecipeLine({
                         productId: selectedProduct,
                         ingredientId: line.ingredientId,
                         quantityUsed: null,
                       });
+                      if (!res.ok) setNotice(res.error ?? "تعذر الحذف");
                       await loadRecipes(selectedProduct);
                     }}
-                    className="flex size-9 items-center justify-center rounded-full text-ink-soft hover:bg-terracotta/10 hover:text-terracotta"
+                    className="flex size-11 items-center justify-center rounded-full text-ink-soft hover:bg-terracotta/10 hover:text-terracotta"
                   >
                     <Trash2 className="size-4" aria-hidden />
                   </button>

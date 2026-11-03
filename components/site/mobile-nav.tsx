@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Menu, MessageCircle, X } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { OpenStatus } from "@/components/site/open-status";
+import { type ShopHoursSpec } from "@/lib/domain/time";
 import { SITE } from "@/lib/site";
 import { whatsappUrl } from "@/lib/whatsapp";
 
@@ -16,7 +17,19 @@ const LINKS = [
 ];
 
 /** Mobile navigation — native <dialog> gives focus trap, Esc and inert. */
-export function MobileNav() {
+export function MobileNav({
+  hours,
+  phone,
+  whatsapp,
+}: {
+  hours?: ShopHoursSpec;
+  /** Owner-configured display phone; falls back to the deploy-time constant. */
+  phone?: string;
+  whatsapp?: string;
+}) {
+  const telHref = phone || SITE.phoneIntl;
+  const telLabel = phone || SITE.phoneDisplay;
+  const wa = whatsapp || SITE.whatsapp;
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDialogElement>(null);
 
@@ -47,7 +60,7 @@ export function MobileNav() {
       >
         <div className="flex h-full flex-col px-5 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           <div className="flex items-center justify-between">
-            <Logo tone="light" size="sm" />
+            <Logo size="md" />
             <button
               type="button"
               onClick={() => ref.current?.close()}
@@ -59,7 +72,7 @@ export function MobileNav() {
           </div>
 
           <div className="mt-3">
-            <OpenStatus tone="dark" />
+            <OpenStatus tone="dark" hours={hours} />
           </div>
 
           <nav aria-label="روابط" className="mt-8 flex-1">
@@ -68,6 +81,7 @@ export function MobileNav() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
+                    prefetch={false}
                     onClick={() => ref.current?.close()}
                     className="flex min-h-14 items-center justify-between gap-3 rounded-2xl px-3 font-display-ar text-2xl font-bold text-cream-50 transition-colors hover:bg-cream-50/5"
                   >
@@ -86,14 +100,14 @@ export function MobileNav() {
 
           <div className="space-y-3 border-t border-cream-50/10 pt-5">
             <a
-              href={`tel:${SITE.phoneIntl}`}
+              href={`tel:${telHref}`}
               dir="ltr"
               className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-cream-50/20 text-sm font-bold text-cream-100"
             >
-              {SITE.phoneDisplay}
+              {telLabel}
             </a>
             <a
-              href={whatsappUrl(SITE.whatsapp, "مرحباً JPasta — بدي أطلب")}
+              href={whatsappUrl(wa, "مرحباً JPasta — بدي أطلب")}
               target="_blank"
               rel="noopener noreferrer"
               className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-wheat-300 text-sm font-bold text-basil-950"

@@ -17,12 +17,14 @@ export function DishMedia({
   className,
   sizes = "(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw",
   priority = false,
+  decorative = false,
 }: {
   product: Pick<Product, "slug" | "sauce" | "toppings" | "image" | "nameAr">;
   variant?: "card" | "hero" | "tile" | "dark";
   className?: string;
   sizes?: string;
   priority?: boolean;
+  decorative?: boolean;
 }) {
   if (product.image) {
     return (
@@ -54,6 +56,8 @@ export function DishMedia({
       toppings={product.toppings as ToppingKind[]}
       variant={variant}
       className={className}
+      decorative={decorative}
+      ariaLabel={product.nameAr}
     />
   );
 }

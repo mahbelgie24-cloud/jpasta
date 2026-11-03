@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Price } from "@/components/ui/price";
-import { formatPrice, toMinorUnits } from "@/lib/pricing";
+import { formatPrice, tryToMinorUnits } from "@/lib/pricing";
 import {
   fetchAdminProducts,
   setProductAvailability,
@@ -68,7 +68,11 @@ export function MenuAdmin() {
 
   async function savePrice(row: AdminProduct) {
     const raw = drafts[row.id]?.trim() ?? "";
-    const minor = toMinorUnits(raw);
+    const minor = tryToMinorUnits(raw);
+    if (minor === null) {
+      setNotice(`سعر ${row.nameAr} غير صحيح — استخدم رقماً مثل 24.00`);
+      return;
+    }
     setBusyId(row.id);
     const res = await setProductPrice(row.id, minor);
     setBusyId(null);
@@ -148,13 +152,13 @@ export function MenuAdmin() {
                 aria-label={`${row.isAvailable ? "إخفاء" : "إظهار"} ${row.nameAr}`}
                 disabled={busyId === row.id}
                 onClick={() => void toggle(row)}
-                className={`relative h-8 w-14 shrink-0 rounded-full transition-colors ${
+                className={`relative h-11 w-16 shrink-0 rounded-full transition-colors ${
                   row.isAvailable ? "bg-basil-600" : "bg-cream-400"
                 }`}
               >
                 <span
-                  className={`absolute top-1 size-6 rounded-full bg-cream-50 shadow transition-all ${
-                    row.isAvailable ? "start-7" : "start-1"
+                  className={`absolute top-2 size-7 rounded-full bg-cream-50 shadow transition-all ${
+                    row.isAvailable ? "start-7" : "start-2"
                   }`}
                 />
               </button>

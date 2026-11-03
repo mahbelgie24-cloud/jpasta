@@ -13,6 +13,7 @@ const REQUIRED = [
   "JPASTA_OWNER_PIN",
   "AUTH_PEPPER",
   "REALTIME_SECRET",
+  "PII_ENCRYPTION_KEY",
   "NEXT_PUBLIC_SITE_URL",
   "NEXT_PUBLIC_WHATSAPP_NUMBER",
 ];
@@ -54,6 +55,16 @@ for (const secret of ["AUTH_PEPPER", "REALTIME_SECRET"]) {
   if (value && value.length < 32) {
     problems.push(`${secret} must be at least 32 characters`);
   }
+}
+
+// Customer name/phone/address are encrypted at rest with this key. A
+// production deploy without it would silently store plaintext PII, so it is
+// a hard requirement (spec §13).
+const piiKey = get("PII_ENCRYPTION_KEY");
+if (piiKey && !/^[0-9a-fA-F]{64}$/.test(piiKey)) {
+  problems.push(
+    "PII_ENCRYPTION_KEY must be exactly 64 hex characters (32 bytes)",
+  );
 }
 
 // NEXT_PUBLIC_* values are inlined into client bundles at BUILD time — a

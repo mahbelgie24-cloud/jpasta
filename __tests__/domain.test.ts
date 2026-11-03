@@ -48,6 +48,53 @@ describe("shop time — Asia/Hebron", () => {
   it("todayInShop is stable for a fixed instant", () => {
     expect(todayInShop(new Date("2026-07-01T21:30:00Z"))).toBe("2026-07-02");
   });
+
+  it("honours owner-configured hours (same-day window)", () => {
+    // Palestine winter time (UTC+2) keeps these mappings stable.
+    const hours = { opensAt: "09:00", closesAt: "21:00" };
+    // 08:59 local → closed, 09:30 → open, 20:59 → open, 21:30 → closed
+    expect(shopOpenState(new Date("2026-01-15T06:59:00Z"), hours).open).toBe(
+      false,
+    );
+    expect(shopOpenState(new Date("2026-01-15T07:30:00Z"), hours).open).toBe(
+      true,
+    );
+    expect(shopOpenState(new Date("2026-01-15T18:59:00Z"), hours).open).toBe(
+      true,
+    );
+    expect(shopOpenState(new Date("2026-01-15T19:30:00Z"), hours).open).toBe(
+      false,
+    );
+  });
+
+  it("honours owner-configured hours (crossing midnight)", () => {
+    const hours = { opensAt: "22:00", closesAt: "02:00" };
+    // 21:59 local → closed, 22:30 → open, 01:59 → open, 02:30 → closed
+    expect(shopOpenState(new Date("2026-01-15T19:59:00Z"), hours).open).toBe(
+      false,
+    );
+    expect(shopOpenState(new Date("2026-01-15T20:30:00Z"), hours).open).toBe(
+      true,
+    );
+    expect(shopOpenState(new Date("2026-01-15T23:59:00Z"), hours).open).toBe(
+      true,
+    );
+    expect(shopOpenState(new Date("2026-01-16T00:30:00Z"), hours).open).toBe(
+      false,
+    );
+  });
+
+  it("falls back to the default window on malformed settings", () => {
+    const broken = { opensAt: "25:00", closesAt: "بكرا" };
+    // 14:30 local — open under the default 13:00 → 01:00 window.
+    expect(shopOpenState(new Date("2026-01-15T12:30:00Z"), broken).open).toBe(
+      true,
+    );
+    // 11:30 local — closed under the default window.
+    expect(shopOpenState(new Date("2026-01-15T09:30:00Z"), broken).open).toBe(
+      false,
+    );
+  });
 });
 
 describe("Arabic search normalisation", () => {

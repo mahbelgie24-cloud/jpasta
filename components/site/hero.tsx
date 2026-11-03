@@ -1,14 +1,8 @@
 import Link from "next/link";
-import {
-  ArrowLeft,
-  Clock,
-  MapPin,
-  MessageCircle,
-  Sparkles,
-} from "lucide-react";
+import { ArrowLeft, ChefHat, Clock, MapPin, MessageCircle } from "lucide-react";
 import { buttonStyles } from "@/components/ui/button";
 import { DishArt } from "@/components/brand/dish-art";
-import { LogoMark } from "@/components/brand/logo";
+import { getShopSettings } from "@/lib/server/settings";
 import { SITE } from "@/lib/site";
 import { whatsappUrl } from "@/lib/whatsapp";
 
@@ -19,14 +13,16 @@ import { whatsappUrl } from "@/lib/whatsapp";
  * Arabic display type (Amiri) against Alexandria body copy. The twirl ring
  * is the only ambient motion and stops under prefers-reduced-motion.
  */
-export function Hero() {
+export async function Hero() {
+  const shop = await getShopSettings();
   return (
     <section
-      className="texture-grain relative overflow-hidden bg-brand-deep text-cream-50"
+      className="relative overflow-hidden bg-brand-deep text-cream-50"
       aria-labelledby="hero-title"
     >
-      <span className="texture-grain-layer" aria-hidden />
-      {/* warm pool of light + a cool edge */}
+      {/* Warm pool of light + a cool edge. The decorative grain layer was
+          removed from the hero: at 3.5% opacity it was invisible, but it was
+          the largest paint candidate on mobile and pushed LCP past 4s. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_60%_at_72%_16%,oklch(0.45_0.08_90_/_0.28)_0%,transparent_62%),radial-gradient(50%_50%_at_8%_88%,oklch(0.35_0.06_160_/_0.35)_0%,transparent_70%)]"
@@ -39,8 +35,7 @@ export function Hero() {
       <div className="relative container-page grid items-center gap-12 pt-14 pb-20 sm:pt-20 lg:grid-cols-[1.02fr_0.98fr] lg:gap-8 lg:pt-24 lg:pb-28">
         <div className="animate-fade-up text-center lg:text-start">
           <p className="inline-flex items-center gap-2 rounded-full border border-cream-50/15 bg-cream-50/5 px-4 py-1.5 text-sm font-bold text-cream-100 backdrop-blur">
-            <LogoMark className="size-5" />
-            قلقيلية · تُعجن كل صباح
+            صلصة بيتية · تُحضّر طازجة يومياً
           </p>
 
           <h1
@@ -58,17 +53,19 @@ export function Hero() {
             className="mt-5 font-display text-lg font-semibold text-wheat-300/90 italic sm:text-xl"
             dir="ltr"
           >
-            Fresh pasta made everyday. With a lot of sauce and love.
+            {SITE.tagline}
           </p>
 
           <p className="mx-auto mt-5 max-w-md type-body text-pretty text-cream-100/75 lg:mx-0">
-            عجينة تُعدّ كل يوم، صلصات بيتية على أصولها، ودجاج طازج متبّل. اطلب
-            من القائمة واستلم بسرعة — أو خلّينا نوصلها لعندك داخل قلقيلية.
+            باستا طازة تُطبخ عند الطلب، وصلصات بيتية تُحضّر طازجة كل يوم، ودجاج
+            طازج متبّل. اطلب من القائمة واستلم بسرعة — أو خلّينا نوصلها لعندك
+            داخل قلقيلية.
           </p>
 
           <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
             <Link
               href="/menu"
+              prefetch={false}
               className={buttonStyles(
                 "primary",
                 "lg",
@@ -80,7 +77,7 @@ export function Hero() {
             </Link>
             <a
               href={whatsappUrl(
-                SITE.whatsapp,
+                shop.whatsapp,
                 "مرحباً JPasta — بدي أستفسر عن القائمة",
               )}
               target="_blank"
@@ -100,7 +97,7 @@ export function Hero() {
             <div className="flex items-center gap-2">
               <Clock className="size-4 text-wheat-300" aria-hidden />
               <dt className="sr-only">ساعات العمل</dt>
-              <dd className="text-cream-100/80">يومياً ١:٠٠ م — ١:٠٠ ص</dd>
+              <dd className="text-cream-100/80">{shop.hoursLabel}</dd>
             </div>
             <div className="flex items-center gap-2">
               <MapPin className="size-4 text-wheat-300" aria-hidden />
@@ -108,9 +105,9 @@ export function Hero() {
               <dd className="text-cream-100/80">توصيل داخل قلقيلية</dd>
             </div>
             <div className="flex items-center gap-2">
-              <Sparkles className="size-4 text-wheat-300" aria-hidden />
-              <dt className="sr-only">طازج</dt>
-              <dd className="text-cream-100/80">بدون مواد حافظة</dd>
+              <ChefHat className="size-4 text-wheat-300" aria-hidden />
+              <dt className="sr-only">التحضير</dt>
+              <dd className="text-cream-100/80">تُطبخ عند الطلب</dd>
             </div>
           </dl>
         </div>
@@ -131,10 +128,11 @@ export function Hero() {
           />
           <div className="relative animate-fade-up px-3 pt-8 pb-6 [animation-delay:120ms]">
             <DishArt
-              seed="chicken-alfredo-hero"
+              seed="fettuccine-mushroom-hero"
               sauce="alfredo"
-              toppings={["chicken", "basil", "cheese", "tomato"]}
+              toppings={["mushroom", "cheese", "basil"]}
               variant="hero"
+              decorative
               className="mx-auto w-full max-w-sm drop-shadow-[0_18px_30px_rgba(12,36,25,0.28)]"
             />
           </div>
@@ -153,14 +151,14 @@ export function Hero() {
           </span>
           <span className="absolute end-8 bottom-8 inline-flex -rotate-2 items-center gap-2 rounded-full border border-cream-50/15 bg-brand-deep/80 px-3.5 py-2 text-xs font-bold text-cream-100 shadow-lift backdrop-blur">
             <span className="size-1.5 rounded-full bg-tomato-500" aria-hidden />
-            دجاج مشوي
+            فطر طازج
           </span>
 
           <p
             className="mt-6 text-center font-display text-sm font-semibold tracking-wide text-cream-100/60"
             dir="ltr"
           >
-            Chicken Alfredo — the one everyone orders
+            Fettuccine Mushroom — the one everyone orders
           </p>
         </div>
       </div>

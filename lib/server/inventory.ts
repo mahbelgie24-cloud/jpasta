@@ -57,7 +57,9 @@ export async function deductForOrder(
   if (usage.size === 0) return;
 
   // Lock the affected ingredient rows so two concurrent sales cannot both
-  // read the same stock and oversell.
+  // read the same stock and oversell. A deterministic id order means every
+  // transaction takes the same lock sequence — two orders sharing ingredients
+  // can queue instead of deadlocking.
   const stockRows = await tx
     .select({
       id: ingredients.id,
@@ -65,6 +67,7 @@ export async function deductForOrder(
     })
     .from(ingredients)
     .where(inArray(ingredients.id, [...usage.keys()]))
+    .orderBy(asc(ingredients.id))
     .for("update");
 
   const stockById = new Map(

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DishArt } from "@/components/brand/dish-art";
-import { Logo } from "@/components/brand/logo";
+import { HeaderLogo, Logo, LogoMark } from "@/components/brand/logo";
 import { ProductBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Price } from "@/components/ui/price";
@@ -70,6 +70,55 @@ export default function StudioPage() {
           </Link>
         </header>
 
+        <section className="mt-10" aria-labelledby="logo">
+          <h2 id="logo" className="type-title text-ink">
+            0 · الشعار
+          </h2>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="flex flex-col items-center gap-4 rounded-card border border-line bg-surface p-6 shadow-card">
+              <Logo size="lg" decorative />
+              <p className="text-xs font-bold text-text-secondary">
+                الكامل — خلفية فاتحة
+              </p>
+            </div>
+            <div className="flex flex-col items-center gap-4 rounded-card bg-brand-deep p-6 shadow-card">
+              <Logo size="lg" decorative />
+              <p className="text-xs font-bold text-cream-100/70">
+                الكامل — خلفية داكنة
+              </p>
+            </div>
+            <div className="flex flex-col items-center gap-4 rounded-card border border-line bg-surface p-6 shadow-card">
+              <LogoMark className="size-16" decorative />
+              <p className="text-xs font-bold text-text-secondary">
+                العلامة — للمساحات الضيقة
+              </p>
+            </div>
+            <div className="flex flex-col items-center gap-4 rounded-card border border-line bg-white p-6 shadow-card">
+              <LogoMark mono decorative className="size-16" />
+              <p className="text-xs font-bold text-text-secondary">
+                أحادي اللون — للطباعة
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 flex flex-col items-center gap-5 rounded-card border border-line bg-surface p-6 shadow-card sm:flex-row sm:gap-7">
+            <HeaderLogo decorative />
+            <div>
+              <p className="type-title text-ink">الأفقي — البار العلوي فقط</p>
+              <p className="mt-1 max-w-xl text-sm leading-relaxed text-text-secondary">
+                لوحة مستطيلة بحدود كريمية مزدوجة. تُستخدم في الهيدر فقط؛ الدائري
+                يبقى في الفوتر والكونسول وحالة الطلب والإيصالات وأيقونات
+                التطبيق.
+              </p>
+            </div>
+          </div>
+          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-text-secondary">
+            لا يُعاد رسم الشعار أو كتابة اسمه بخط آخر. مساحة الحماية حول الدائرة
+            تعادل ارتفاع حرف الـ J، والحد الأدنى للعلامة الرقمية 32px، وللدائري
+            الكامل 96px، وللأفقي 40px ارتفاعاً. ألوان كل نسخة مقفلة: أخضر الشعار
+            ورمله.
+          </p>
+        </section>
+
         <section className="mt-10" aria-labelledby="palette">
           <h2 id="palette" className="type-title text-ink">
             1 · اللوحة
@@ -93,14 +142,15 @@ export default function StudioPage() {
             2 · الطباعة
           </h2>
           <div className="mt-4 space-y-5 border-y border-line py-6">
-            <p className="type-display text-ink">باستا طازة كل يوم</p>
+            <p className="type-display text-ink">باستا طازة، بصلصة كتير</p>
             <p className="font-display-ar type-section text-ink">
-              باستا طازة كل يوم
+              باستا طازة، بصلصة كتير
             </p>
-            <p className="type-hero text-ink">باستا طازة كل يوم</p>
-            <p className="type-title text-ink">باستا طازة كل يوم</p>
+            <p className="type-hero text-ink">باستا طازة، بصلصة كتير</p>
+            <p className="type-title text-ink">باستا طازة، بصلصة كتير</p>
             <p className="max-w-xl type-body text-text-secondary">
-              عجينة تُعدّ كل صباح، صلصات بيتية على أصولها، ودجاج طازج متبّل.
+              باستا طازة تُطبخ عند الطلب، وصلصات بيتية تُحضّر طازجة كل يوم،
+              ودجاج طازج متبّل.
             </p>
             <p className="type-caption text-text-secondary">
               caption — 14px / 1.6
@@ -112,7 +162,7 @@ export default function StudioPage() {
               className="font-display text-2xl font-semibold text-brand-deep italic"
               dir="ltr"
             >
-              Fresh pasta made everyday.
+              Fresh pasta, cooked to order.
             </p>
           </div>
         </section>
@@ -181,6 +231,7 @@ export default function StudioPage() {
                     seed={`studio-${sauce}`}
                     sauce={sauce}
                     toppings={TOPPINGS[i] ?? ["basil"]}
+                    decorative
                     className="w-full"
                   />
                 </div>

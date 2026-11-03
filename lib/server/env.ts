@@ -10,6 +10,7 @@ import "server-only";
 export type ServerEnv = Record<string, string | undefined> & {
   AUTH_PEPPER?: string;
   REALTIME_SECRET?: string;
+  PII_ENCRYPTION_KEY?: string;
   DATABASE_URL?: string;
   JPASTA_OWNER_PIN?: string;
   NEXT_PUBLIC_SITE_URL?: string;
