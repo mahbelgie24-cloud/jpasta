@@ -134,7 +134,11 @@ export const loginAttempts = pgTable(
   },
   (t) => [
     check("login_attempts_failed_count_check", sql`${t.failedCount} >= 0`),
-    index("login_attempts_locked_until_idx").on(t.lockedUntil),
+    // Locked rows are a tiny minority; a partial index stays useful as the
+    // table grows with per-IP failed attempts.
+    index("login_attempts_locked_until_idx")
+      .on(t.lockedUntil)
+      .where(sql`${t.lockedUntil} is not null`),
   ],
 );
 
@@ -153,6 +157,8 @@ export const categories = pgTable(
   (t) => [
     uniqueIndex("categories_slug_uidx").on(t.slug),
     index("categories_sort_order_idx").on(t.sortOrder),
+    // Catalog read: WHERE is_active ORDER BY sort_order.
+    index("categories_active_sort_idx").on(t.isActive, t.sortOrder),
   ],
 );
 
@@ -186,6 +192,8 @@ export const products = pgTable(
   (t) => [
     uniqueIndex("products_slug_uidx").on(t.slug),
     index("products_category_available_idx").on(t.categoryId, t.isAvailable),
+    // Catalog read: WHERE is_available ORDER BY sort_order.
+    index("products_available_sort_idx").on(t.isAvailable, t.sortOrder),
     check("products_base_price_check", sql`${t.basePriceMinor} >= 0`),
     check("products_heat_check", sql`${t.heat} between 0 and 3`),
   ],
@@ -207,6 +215,9 @@ export const modifierGroups = pgTable(
   },
   (t) => [
     index("modifier_groups_product_id_idx").on(t.productId),
+    // Pricing resolves a factory option by (group, key) with .find(). A
+    // duplicate key would silently price the first match and drop the rest.
+    uniqueIndex("modifier_groups_product_key_uidx").on(t.productId, t.key),
     check(
       "modifier_groups_max_selections_check",
       sql`${t.maxSelections} is null or ${t.maxSelections} > 0`,
@@ -226,7 +237,10 @@ export const modifiers = pgTable(
     priceDeltaMinor: integer("price_delta_minor").notNull().default(0),
     sortOrder: integer("sort_order").notNull().default(0),
   },
-  (t) => [index("modifiers_group_id_idx").on(t.groupId)],
+  (t) => [
+    index("modifiers_group_id_idx").on(t.groupId),
+    uniqueIndex("modifiers_group_key_uidx").on(t.groupId, t.key),
+  ],
 );
 
 // ---------- Orders ----------
@@ -282,6 +296,22 @@ export const orders = pgTable(
       "orders_total_check",
       sql`${t.totalMinor} = ${t.subtotalMinor} + ${t.deliveryFeeMinor}`,
     ),
+    // Duplicate/short/negative numbers would break the counter contract.
+    check(
+      "orders_order_number_check",
+      sql`${t.orderNumber} ~ '^JP-[0-9]{6}-[0-9]{3,}$'`,
+    ),
+    // New rows must carry a real SHA-256; only historically migrated rows
+    // may use the explicit `legacy:` sentinel (they are never replayable).
+    check(
+      "orders_payload_hash_check",
+      sql`${t.payloadHash} ~ '^[0-9a-f]{64}$' or ${t.payloadHash} like 'legacy:%'`,
+    ),
+    // The app requires a reason for cancellation; the database must too.
+    check(
+      "orders_cancel_reason_check",
+      sql`${t.status} <> 'cancelled' or (${t.cancelledReason} is not null and length(trim(${t.cancelledReason})) >= 2)`,
+    ),
   ],
 );
 
@@ -336,7 +366,12 @@ export const orderStatusHistory = pgTable(
       .notNull(),
   },
   (t) => [
-    index("order_status_history_order_id_idx").on(t.orderId),
+    // Undo reads the latest row for one order: (order_id, created_at) is the
+    // exact shape, and the index still serves plain order_id lookups.
+    index("order_status_history_order_created_idx").on(
+      t.orderId,
+      t.createdAt,
+    ),
     index("order_status_history_created_at_idx").on(t.createdAt),
   ],
 );
@@ -426,9 +461,11 @@ export const inventoryMoves = pgTable(
   "inventory_moves",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    // Audited stock history must never lose its ingredient: an ingredient
+    // with moves cannot be deleted (the UI must guard, not surface an FK).
     ingredientId: uuid("ingredient_id")
       .notNull()
-      .references(() => ingredients.id),
+      .references(() => ingredients.id, { onDelete: "restrict" }),
     deltaQty: numeric("delta_qty", { precision: 12, scale: 2 }).notNull(),
     reason: inventoryReasonEnum("reason").notNull(),
     refOrderId: uuid("ref_order_id").references(() => orders.id, {
@@ -443,7 +480,11 @@ export const inventoryMoves = pgTable(
       .notNull(),
   },
   (t) => [
-    index("inventory_moves_ingredient_id_idx").on(t.ingredientId),
+    // Per-ingredient history is newest-first: (ingredient_id, created_at).
+    index("inventory_moves_ingredient_created_idx").on(
+      t.ingredientId,
+      t.createdAt,
+    ),
     index("inventory_moves_created_at_idx").on(t.createdAt),
     index("inventory_moves_ref_order_id_idx").on(t.refOrderId),
   ],
@@ -458,13 +499,18 @@ export const priceChanges = pgTable(
     entityId: uuid("entity_id").notNull(),
     oldMinor: integer("old_minor").notNull(),
     newMinor: integer("new_minor").notNull(),
-    changedBy: uuid("changed_by").references(() => users.id),
+    // The audit row survives staff deletion; the actor becomes null, like
+    // every other user-referencing audit column.
+    changedBy: uuid("changed_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
   },
   (t) => [
-    index("price_changes_entity_id_idx").on(t.entityId),
+    // Audit lookup is always (entity_type, entity_id), not entity_id alone.
+    index("price_changes_entity_idx").on(t.entityType, t.entityId),
     index("price_changes_created_at_idx").on(t.createdAt),
     index("price_changes_changed_by_idx").on(t.changedBy),
   ],
