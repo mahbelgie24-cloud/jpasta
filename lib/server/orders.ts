@@ -21,6 +21,7 @@ import {
   type Minor,
 } from "@/lib/pricing";
 import { notifyOrdersChanged } from "@/lib/server/order-feed";
+import { notifyNewOrderPush } from "@/lib/server/push";
 import { decryptPii, encryptPii } from "@/lib/server/pii";
 import { readShopSettings, type ShopSettings } from "@/lib/server/settings";
 import { deductForOrder } from "@/lib/server/inventory";
@@ -512,7 +513,10 @@ export async function placeOrder(
 
     // Notify AFTER the transaction commits — notifying inside the callback
     // races the commit (measured ~2.9s instead of milliseconds).
-    if (result.ok) await notifyOrdersChanged();
+    if (result.ok) {
+      await notifyOrdersChanged();
+      await notifyNewOrderPush();
+    }
     return result;
   } catch (err) {
     if (err instanceof OrderError)

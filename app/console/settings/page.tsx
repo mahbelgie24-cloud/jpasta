@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getSessionUser } from "@/lib/server/session";
 import { readShopSettings, type ShopSettings } from "@/lib/server/settings";
 import { ConsolePageShell } from "@/components/console/page-shell";
+import { PushToggle } from "@/components/console/push-toggle";
 import { ZonesEditor } from "./zones-editor";
 import { ShopSettingsEditor } from "./shop-settings-editor";
 
@@ -55,6 +56,18 @@ export default async function SettingsPage() {
       widthClass="max-w-2xl"
     >
       <ShopSettingsEditor initial={shop} />
+
+      <section className="mt-5 rounded-card border border-border-soft bg-surface-raised p-4">
+        <h2 className="font-bold text-text-primary">إشعارات الطلبات</h2>
+        <p className="mt-1 text-sm text-text-secondary">
+          فعّل الإشعارات على هذا الجهاز ليصلك تنبيه فوري عند وصول طلب جديد —
+          بدون بيانات زبون داخل الإشعار.
+        </p>
+        <div className="mt-3">
+          <PushToggle />
+        </div>
+      </section>
+
       <ZonesEditor />
     </ConsolePageShell>
   );

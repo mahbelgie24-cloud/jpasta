@@ -102,27 +102,51 @@ self.addEventListener("message", (event) => {
   if (event.data === "SKIP_WAITING") self.skipWaiting();
 });
 
-/* Web Push — the server sends { title, body, url }. */
+/* Web Push — empty pushes are a "tickle": fetch the count, then notify.
+   A non-empty payload ({ title, body, url }) is still supported. */
 self.addEventListener("push", (event) => {
-  if (!event.data) return;
-  let payload = {};
-  try {
-    payload = event.data.json();
-  } catch {
-    payload = { body: event.data.text() };
-  }
   event.waitUntil(
-    self.registration.showNotification(payload.title || "JPasta", {
-      body: payload.body || "طلب جديد وصل",
-      icon: "/icons/icon-192.png",
-      badge: "/icons/icon-monochrome-512.png",
-      dir: "rtl",
-      lang: "ar",
-      vibrate: [120, 60, 120],
-      tag: payload.tag || "jpasta-order",
-      renotify: true,
-      data: { url: payload.url || "/console" },
-    }),
+    (async () => {
+      let payload = {};
+      if (event.data) {
+        try {
+          payload = event.data.json();
+        } catch {
+          payload = { body: event.data.text() };
+        }
+      }
+      if (!payload.title && !payload.body) {
+        let count = null;
+        try {
+          const response = await fetch("/api/console/pending-count", {
+            credentials: "include",
+            cache: "no-store",
+          });
+          if (response.ok) count = (await response.json()).count;
+        } catch {
+          // Offline or expired session — the generic message still works.
+        }
+        payload = {
+          title: "JPasta — طلب جديد",
+          body:
+            typeof count === "number" && count > 0
+              ? `طلبات في الطابور الآن: ${count}`
+              : "وصل طلب جديد — افتح لوحة الطلبات",
+          url: "/console",
+        };
+      }
+      await self.registration.showNotification(payload.title || "JPasta", {
+        body: payload.body || "طلب جديد وصل",
+        icon: "/icons/icon-192.png",
+        badge: "/icons/icon-monochrome-512.png",
+        dir: "rtl",
+        lang: "ar",
+        vibrate: [120, 60, 120],
+        tag: payload.tag || "jpasta-order",
+        renotify: true,
+        data: { url: payload.url || "/console" },
+      });
+    })(),
   );
 });
 

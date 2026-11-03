@@ -69,6 +69,24 @@ if (piiKey && !/^[0-9a-fA-F]{64}$/.test(piiKey)) {
 
 // NEXT_PUBLIC_* values are inlined into client bundles at BUILD time — a
 // localhost site URL would ship to production inside the JS and metadata.
+// Web Push is optional, but a half-configured pair is a silent no-op.
+const vapidPrivate = get("VAPID_PRIVATE_KEY");
+const vapidPublic = get("VAPID_PUBLIC_KEY");
+if (Boolean(vapidPrivate) !== Boolean(vapidPublic)) {
+  problems.push(
+    "VAPID_PRIVATE_KEY and VAPID_PUBLIC_KEY must be set together (or both omitted)",
+  );
+}
+if (vapidPublic && !/^[A-Za-z0-9_-]{87}$/.test(vapidPublic)) {
+  problems.push(
+    "VAPID_PUBLIC_KEY must be a base64url P-256 public key (87 characters)",
+  );
+}
+const vapidSubject = get("VAPID_SUBJECT");
+if (vapidSubject && !/^(https:\/\/|mailto:)/.test(vapidSubject)) {
+  problems.push("VAPID_SUBJECT must be an https:// or mailto: URI");
+}
+
 const siteUrl = get("NEXT_PUBLIC_SITE_URL");
 if (siteUrl && /localhost|127\.0\.0\.1/.test(siteUrl)) {
   problems.push(

@@ -11,6 +11,10 @@ export type ServerEnv = Record<string, string | undefined> & {
   AUTH_PEPPER?: string;
   REALTIME_SECRET?: string;
   PII_ENCRYPTION_KEY?: string;
+  VAPID_PRIVATE_KEY?: string;
+  VAPID_PUBLIC_KEY?: string;
+  VAPID_SUBJECT?: string;
+  CRON_SECRET?: string;
   DATABASE_URL?: string;
   JPASTA_OWNER_PIN?: string;
   NEXT_PUBLIC_SITE_URL?: string;
