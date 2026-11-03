@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it } from "vitest";
+import { testDatabaseUrl } from "@/test/db";
 import { eq } from "drizzle-orm";
 import { db, pool } from "@/lib/db";
 import { deliveryZones, orders, products } from "@/db/schema";
@@ -18,7 +19,7 @@ import { getConsoleOrders } from "@/lib/server/orders";
  * local database.
  */
 
-const DB_READY = Boolean(process.env.DATABASE_URL);
+const DB_READY = Boolean(testDatabaseUrl());
 const d = DB_READY ? describe : describe.skip;
 
 describe("pii primitives", () => {

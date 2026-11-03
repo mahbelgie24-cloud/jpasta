@@ -60,7 +60,9 @@ export function isFreshBroadcastTimestamp(
 ): boolean {
   return (
     at === undefined ||
-    (typeof at === "number" && Number.isFinite(at) && Math.abs(now - at) <= windowMs)
+    (typeof at === "number" &&
+      Number.isFinite(at) &&
+      Math.abs(now - at) <= windowMs)
   );
 }
 

@@ -2,10 +2,7 @@ import { redirect } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { getSessionUser } from "@/lib/server/session";
-import {
-  readShopSettings,
-  type ShopSettings,
-} from "@/lib/server/settings";
+import { readShopSettings, type ShopSettings } from "@/lib/server/settings";
 import { ZonesEditor } from "./zones-editor";
 import { ShopSettingsEditor } from "./shop-settings-editor";
 

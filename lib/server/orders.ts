@@ -22,10 +22,7 @@ import {
 } from "@/lib/pricing";
 import { notifyOrdersChanged } from "@/lib/server/order-feed";
 import { decryptPii, encryptPii } from "@/lib/server/pii";
-import {
-  readShopSettings,
-  type ShopSettings,
-} from "@/lib/server/settings";
+import { readShopSettings, type ShopSettings } from "@/lib/server/settings";
 import { deductForOrder } from "@/lib/server/inventory";
 import { sha256Hex, stableStringify } from "@/lib/domain/hash";
 import { todayInShop, zonedDayRange } from "@/lib/domain/time";

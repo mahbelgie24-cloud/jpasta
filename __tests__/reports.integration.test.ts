@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { testDatabaseUrl } from "@/test/db";
 import { eq, sql } from "drizzle-orm";
 import { db, pool } from "@/lib/db";
 import { deliveryZones, orders, products } from "@/db/schema";
@@ -19,7 +20,7 @@ import {
  * last agorot.
  */
 
-const DB_READY = Boolean(process.env.DATABASE_URL);
+const DB_READY = Boolean(testDatabaseUrl());
 const d = DB_READY ? describe : describe.skip;
 
 const FETTUCCINE = 2000; // fettuccine-mushroom

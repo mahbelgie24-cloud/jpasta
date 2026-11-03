@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { testDatabaseUrl } from "@/test/db";
 import { eq, sql } from "drizzle-orm";
 import { db, pool } from "@/lib/db";
 import { products } from "@/db/schema";
@@ -16,7 +17,7 @@ import {
  * the decrypt + filter + detail composition, not just SQL.
  */
 
-const DB_READY = Boolean(process.env.DATABASE_URL);
+const DB_READY = Boolean(testDatabaseUrl());
 const d = DB_READY ? describe : describe.skip;
 
 d("order archive", () => {

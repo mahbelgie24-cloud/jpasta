@@ -1,4 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { testDatabaseUrl } from "@/test/db";
 import { eq } from "drizzle-orm";
 import { db, pool } from "@/lib/db";
 import { products, settings } from "@/db/schema";
@@ -15,7 +16,7 @@ import { placeOrder, type OrderInput } from "@/lib/server/orders";
  * Requires the seeded local database (npm run db:migrate && npm run db:seed).
  */
 
-const DB_READY = Boolean(process.env.DATABASE_URL);
+const DB_READY = Boolean(testDatabaseUrl());
 const d = DB_READY ? describe : describe.skip;
 
 d("shop settings", () => {

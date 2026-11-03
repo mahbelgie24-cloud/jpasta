@@ -16,9 +16,8 @@ describe("PII key enforcement", () => {
     vi.stubEnv("PII_ENCRYPTION_KEY", "");
     vi.resetModules();
 
-    const { encryptPii, decryptPii, PII_UNAVAILABLE } = await import(
-      "@/lib/server/pii"
-    );
+    const { encryptPii, decryptPii, PII_UNAVAILABLE } =
+      await import("@/lib/server/pii");
 
     await expect(encryptPii("0599000000")).rejects.toThrow(
       /PII_ENCRYPTION_KEY/,

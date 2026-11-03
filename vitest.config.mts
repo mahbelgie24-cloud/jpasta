@@ -12,7 +12,27 @@ try {
       process.env[key] = value.trim();
   }
 } catch {
-  // unit tests run without a DB; integration tests skip themselves
+  // .env.local is optional outside CI.
+}
+
+// Destructive integration suites (TRUNCATE orders …) must never run against
+// a real database. TEST_DATABASE_URL wins; otherwise the local DATABASE_URL
+// must be loopback. In CI a missing URL is a hard failure, not a skip.
+const testUrl = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
+const LOOPBACK = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
+if (testUrl) {
+  const host = new URL(testUrl).hostname;
+  if (!LOOPBACK.has(host)) {
+    throw new Error(
+      `Refusing destructive tests against non-loopback host "${host}". ` +
+        "Set TEST_DATABASE_URL to a disposable local database.",
+    );
+  }
+  process.env.DATABASE_URL = testUrl;
+} else if (process.env.CI) {
+  throw new Error(
+    "CI requires TEST_DATABASE_URL — integration tests must not be skipped",
+  );
 }
 
 const root = fileURLToPath(new URL(".", import.meta.url));

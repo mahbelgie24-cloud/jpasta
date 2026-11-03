@@ -12,6 +12,9 @@ concurrency:
   group: deploy-production
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -28,23 +31,42 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ inputs.ref }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
 
       - run: npm ci
 
+      - name: Dependency audit (production)
+        run: npm audit --omit=dev --audit-level=critical
+
+      # Tests are destructive (TRUNCATE orders). They run in CI against a
+      # disposable service container — never here against production. This
+      # job trusts a green CI run on the same ref.
       - name: Verify
         run: |
           npm run format:check
           npm run lint
+          npm run check:contrast
           npm run typecheck
-          npm test
+
+      - name: Back up production database
+        env:
+          JPASTA_BACKUP_MODE: remote
+        run: npm run db:backup
+
+      - name: Upload database backup
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: db-backup
+          path: backups/
+          retention-days: 7
 
       - name: Migrate production database
         run: npm run db:migrate
@@ -55,6 +77,15 @@ jobs:
       - name: Deploy
         run: npm run deploy
 
-      - name: Post-deploy health
+      - name: Post-deploy smoke
         run: |
-          curl --fail --retry 5 --retry-delay 3 "${{ secrets.NEXT_PUBLIC_SITE_URL }}/api/health"
+          set -euo pipefail
+          BASE="${{ secrets.NEXT_PUBLIC_SITE_URL }}"
+          for path in / /menu /robots.txt; do
+            status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$BASE$path")
+            echo "$path -> $status"
+            test "$status" = "200"
+          done
+          curl -sS --max-time 20 "$BASE/api/health" | grep -q '"ok":true'
+          curl -sSI --max-time 20 "$BASE/" | tr -d '\r' | grep -qi '^content-security-policy:'
+          curl -sSI --max-time 20 "$BASE/" | tr -d '\r' | grep -qi '^x-frame-options: DENY'

@@ -52,7 +52,18 @@ if (parsed.username) args.push("-U", parsed.username);
 args.push("-d", DB);
 
 let dump;
-if (process.env.JPASTA_USE_PG_DUMP === "1") {
+if (process.env.JPASTA_BACKUP_MODE === "remote") {
+  // CI/production path: the postgres:17 image guarantees a pg_dump that
+  // matches a Neon 17 server, without installing a client on the runner.
+  // pg_dump accepts the connection URI as its dbname argument.
+  dump = execFileSync(
+    "docker",
+    ["run", "--rm", "postgres:17", "pg_dump", url],
+    {
+      maxBuffer: 256 * 1024 * 1024,
+    },
+  );
+} else if (process.env.JPASTA_USE_PG_DUMP === "1") {
   // host path: connect over TCP with the mapped host/port
   const hostArgs = parsed.hostname ? ["-h", parsed.hostname] : [];
   const portArgs = parsed.port ? ["-p", parsed.port] : [];

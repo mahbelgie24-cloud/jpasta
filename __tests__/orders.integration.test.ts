@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { testDatabaseUrl } from "@/test/db";
 import { eq, sql } from "drizzle-orm";
 import { db, pool } from "@/lib/db";
 import { deliveryZones, orderItems, orders, products } from "@/db/schema";
@@ -10,7 +11,7 @@ import { orderInputSchema, placeOrder } from "@/lib/server/orders";
  * Requires the seeded local database (npm run db:migrate && npm run db:seed).
  */
 
-const DB_READY = Boolean(process.env.DATABASE_URL);
+const DB_READY = Boolean(testDatabaseUrl());
 const d = DB_READY ? describe : describe.skip;
 
 /** Known seeded prices (agorot). */

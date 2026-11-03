@@ -368,10 +368,7 @@ export const orderStatusHistory = pgTable(
   (t) => [
     // Undo reads the latest row for one order: (order_id, created_at) is the
     // exact shape, and the index still serves plain order_id lookups.
-    index("order_status_history_order_created_idx").on(
-      t.orderId,
-      t.createdAt,
-    ),
+    index("order_status_history_order_created_idx").on(t.orderId, t.createdAt),
     index("order_status_history_created_at_idx").on(t.createdAt),
   ],
 );

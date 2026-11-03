@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { testDatabaseUrl } from "@/test/db";
 import { and, eq, sql } from "drizzle-orm";
 import { db, pool } from "@/lib/db";
 import { deliveryZones, orders, products } from "@/db/schema";
@@ -17,7 +18,7 @@ import {
  *  - local-day order numbers are gap-free
  */
 
-const DB_READY = Boolean(process.env.DATABASE_URL);
+const DB_READY = Boolean(testDatabaseUrl());
 const d = DB_READY ? describe : describe.skip;
 
 d("orders — v2 hardening", () => {

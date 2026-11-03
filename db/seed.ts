@@ -44,9 +44,36 @@ const force = process.argv.includes("--force");
 const provisionOnly = process.argv.includes("--provision");
 const catalogOnly = process.argv.includes("--catalog");
 
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+  console.error(
+    "✗ DATABASE_URL is required (set it in .env.local or the shell).",
+  );
+  process.exit(1);
+}
+
+let databaseHost = "";
+try {
+  databaseHost = new URL(databaseUrl).hostname;
+} catch {
+  console.error("✗ DATABASE_URL is not a valid connection URL.");
+  process.exit(1);
+}
+const isLoopback = ["127.0.0.1", "localhost", "::1", "[::1]"].includes(
+  databaseHost,
+);
+
 if (force && process.env.NODE_ENV === "production") {
   console.error(
     "✗ Refusing to run `db:seed --force` with NODE_ENV=production — it TRUNCATEs orders.",
+  );
+  process.exit(1);
+}
+// NODE_ENV is not set by the deploy workflow; the host is the reliable guard.
+if (force && !isLoopback && process.env.ALLOW_DESTRUCTIVE_SEED !== "1") {
+  console.error(
+    `✗ Refusing to run \`db:seed --force\` against non-local host "${databaseHost}". ` +
+      "It TRUNCATEs orders. Set ALLOW_DESTRUCTIVE_SEED=1 only if this is intentional.",
   );
   process.exit(1);
 }

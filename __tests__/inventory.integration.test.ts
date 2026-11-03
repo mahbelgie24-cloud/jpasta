@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { testDatabaseUrl } from "@/test/db";
 import { eq, sql } from "drizzle-orm";
 import { db, pool } from "@/lib/db";
 import { ingredients, inventoryMoves, products } from "@/db/schema";
@@ -17,7 +18,7 @@ import { placeOrder, transitionOrder } from "@/lib/server/orders";
  * referencing the order.
  */
 
-const DB_READY = Boolean(process.env.DATABASE_URL);
+const DB_READY = Boolean(testDatabaseUrl());
 const d = DB_READY ? describe : describe.skip;
 
 const RECIPE_QTY = 200; // 200 g of flour per fettuccine-mushroom
