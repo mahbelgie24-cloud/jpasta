@@ -49,24 +49,26 @@ d("reports — the manual-count DoD", () => {
     // 3 takeaway + 2 delivery + 1 cancelled = 6 orders
     // revenue: (20 + 25 + 20) + (20+5 + 25+5) = 120.00 ; cancelled 25.00
     const mk = (i: number, channel: "takeaway" | "delivery", pid: string) =>
-      placeOrder({
-        idempotencyKey: `report-dod-${i}`,
-        channel,
-        ...(channel === "delivery" ? { zoneId } : {}),
-        customer: {
-          name: `زبون ${i}`,
-          phone: "0566064976",
-          address: channel === "delivery" ? "حي المركز" : "",
-        },
-        lines: [
-          {
-            productId: pid,
-            quantity: 1,
-            selections: [],
+      placeOrder(
+        {
+          idempotencyKey: `report-dod-${i}`,
+          channel,
+          ...(channel === "delivery" ? { zoneId } : {}),
+          customer: {
+            name: `زبون ${i}`,
+            phone: "0566064976",
+            address: channel === "delivery" ? "حي المركز" : "",
           },
-        ],
-        source: "console",
-      });
+          lines: [
+            {
+              productId: pid,
+              quantity: 1,
+              selections: [],
+            },
+          ],
+        },
+        { source: "console" },
+      );
 
     const results = await Promise.all([
       mk(1, "takeaway", fettuccine.id),

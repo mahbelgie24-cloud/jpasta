@@ -7,7 +7,7 @@ import {
   readShopSettings,
   SHOP_SETTINGS_DEFAULTS,
 } from "@/lib/server/settings";
-import { placeOrder } from "@/lib/server/orders";
+import { placeOrder, type OrderInput } from "@/lib/server/orders";
 
 /**
  * Settings-driven behaviour (HANDOFF §11.4): the owner's table drives hours,
@@ -165,20 +165,38 @@ d("shop settings", () => {
 
     // The storefront path is refused even if a client calls the action
     // directly — the menu's view-only state is not the security boundary.
-    const storefront = await placeOrder({
-      ...base,
-      idempotencyKey: `test-ordering-off-${Date.now()}`,
-    });
+    const storefront = await placeOrder(
+      {
+        ...base,
+        idempotencyKey: `test-ordering-off-${Date.now()}`,
+      },
+      { source: "storefront" },
+    );
     expect(storefront.ok).toBe(false);
     if (!storefront.ok) expect(storefront.error).toContain("غير متاح");
 
+    // A public caller cannot forge console provenance: `source` is stripped
+    // by the schema and the action asserts storefront explicitly.
+    const spoofed = await placeOrder(
+      {
+        ...base,
+        idempotencyKey: `test-ordering-spoof-${Date.now()}`,
+        source: "console",
+      } as unknown as OrderInput,
+      { source: "storefront" },
+    );
+    expect(spoofed.ok).toBe(false);
+    if (!spoofed.ok) expect(spoofed.error).toContain("غير متاح");
+
     // Manual console entry is a different channel: the owner is taking a
     // phone order and must not be blocked by the storefront switch.
-    const consoleOrder = await placeOrder({
-      ...base,
-      idempotencyKey: `test-ordering-console-${Date.now()}`,
-      source: "console",
-    });
+    const consoleOrder = await placeOrder(
+      {
+        ...base,
+        idempotencyKey: `test-ordering-console-${Date.now()}`,
+      },
+      { source: "console" },
+    );
     expect(consoleOrder.ok).toBe(true);
 
     await db

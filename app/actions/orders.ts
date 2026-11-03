@@ -59,7 +59,10 @@ export async function placeStorefrontOrder(
     const first = parsed.error.issues[0];
     return { ok: false, error: first?.message ?? "بيانات الطلب غير صحيحة." };
   }
-  return placeOrder(parsed.data);
+  // Provenance is asserted here, not read from the payload: a client that
+  // injects `source: "console"` is stripped by the schema and still takes
+  // the storefront enforcement path.
+  return placeOrder(parsed.data, { source: "storefront" });
 }
 
 /** Console manual entry — authenticated, actor recorded, same money path. */
@@ -73,15 +76,15 @@ export async function placeConsoleOrder(
   } catch (err) {
     return { ok: false, error: userMessageOf(err) };
   }
-  const parsed = orderInputSchema.safeParse({
-    ...(raw as Record<string, unknown>),
-    source: "console",
-  });
+  // A leaked staff PIN must not become an unbounded order-intake primitive.
+  const limited = await checkOrderRateLimit("ORDER_LIMIT", await clientIp());
+  if (limited) return { ok: false, error: limited };
+  const parsed = orderInputSchema.safeParse(raw);
   if (!parsed.success) {
     const first = parsed.error.issues[0];
     return { ok: false, error: first?.message ?? "بيانات الطلب غير صحيحة." };
   }
-  return placeOrder(parsed.data, { actorId });
+  return placeOrder(parsed.data, { source: "console", actorId });
 }
 
 export async function fetchOrderStatus(orderId: string, token: string) {

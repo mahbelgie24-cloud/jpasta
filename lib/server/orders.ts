@@ -55,7 +55,6 @@ export const orderInputSchema = z
   .object({
     idempotencyKey: z.string().min(8).max(80),
     channel: z.enum(["takeaway", "delivery"]),
-    source: z.enum(["storefront", "console"]).default("storefront"),
     zoneId: z.string().uuid().optional(),
     customer: z.object({
       name: z.string().trim().min(2, "الاسم مطلوب").max(60),
@@ -109,6 +108,19 @@ export const orderInputSchema = z
 
 export type OrderInput = z.input<typeof orderInputSchema>;
 export type NormalizedOrderInput = z.output<typeof orderInputSchema>;
+
+/**
+ * Order provenance is a SERVER decision, never part of the client payload.
+ * A storefront caller that could set `source: "console"` would bypass the
+ * owner's ordering switch, the payment-method allowlist, and actor
+ * attribution. The default is the stricter storefront path; console entry
+ * must pass `source: "console"` explicitly from an authenticated action.
+ */
+export type OrderSource = "storefront" | "console";
+export interface PlaceOrderOptions {
+  source?: OrderSource;
+  actorId?: string;
+}
 
 export interface PlacedOrder {
   id: string;
@@ -176,8 +188,10 @@ function assertReplayMatches(
   existing: { payloadHash: string },
   incomingHash: string,
 ): void {
-  // Legacy rows migrated with an empty hash predate payload binding.
-  if (existing.payloadHash && existing.payloadHash !== incomingHash) {
+  // Strict equality — including legacy rows migrated with an empty hash.
+  // A legacy row must never return its accessToken to a caller who only
+  // guessed/reused the idempotency key.
+  if (existing.payloadHash !== incomingHash) {
     throw new OrderError(
       "هذا المفتاح مستخدم لطلب سابق مختلف — حدّث الصفحة وابدأ طلباً جديداً.",
     );
@@ -186,8 +200,9 @@ function assertReplayMatches(
 
 export async function placeOrder(
   raw: OrderInput,
-  options?: { actorId?: string },
+  options: PlaceOrderOptions = { source: "storefront" },
 ): Promise<PlaceOrderResult> {
+  const source = options.source ?? "storefront";
   const parsed = orderInputSchema.safeParse(raw);
   if (!parsed.success) {
     return {
@@ -206,7 +221,7 @@ export async function placeOrder(
   // actions are public RPC endpoints, so a paused shop must reject storefront
   // intake even if a client bypasses the menu's view-only state. Manual
   // console entry stays available (the owner is taking the order by phone).
-  if (input.source === "storefront" && !shop.orderingEnabled) {
+  if (source === "storefront" && !shop.orderingEnabled) {
     return {
       ok: false,
       error: "الطلب المباشر غير متاح مؤقتاً — راسلنا على واتساب.",
@@ -215,7 +230,7 @@ export async function placeOrder(
   // Same reasoning for the accepted payment methods: the checkout picker is
   // a convenience, this is the enforcement.
   if (
-    input.source === "storefront" &&
+    source === "storefront" &&
     !shop.paymentMethods.includes(input.paymentMethod)
   ) {
     return { ok: false, error: "طريقة الدفع غير متاحة حالياً — اختر غيرها." };
@@ -401,7 +416,7 @@ export async function placeOrder(
           idempotencyKey: input.idempotencyKey,
           payloadHash,
           channel: input.channel,
-          source: input.source,
+          source,
           // PII encrypted at rest (spec §13) when PII_ENCRYPTION_KEY is set;
           // CPU-only WebCrypto — no pool access inside the transaction.
           customerName: await encryptPii(input.customer.name),
