@@ -45,8 +45,9 @@ An un-awaited async guard is a no-op — this was a real v1 defect.
 ## 3. Order pipeline (the money path)
 
 ```
-placeOrder(input, { actorId? })
-  1. zod parse (client sends product/option KEYS only)
+placeOrder(input, { source, actorId? })
+  1. zod parse (client sends product/option KEYS only; provenance is a
+     server argument, never part of the payload)
   2. sha256(stableStringify(input)) → payloadHash
   3. BEGIN
      a. replay by idempotencyKey; if found, assert payloadHash matches
@@ -78,7 +79,9 @@ of which Worker isolate handled the write.
 - Handshake: `/api/realtime?token=…` (2-minute HMAC token from the
   authenticated Next route). The custom worker intercepts the upgrade and
   forwards it to the DO; the DO verifies the token with WebCrypto.
-- Fan-out: `notifyOrdersChanged()` POSTs `/broadcast` to the DO.
+- Fan-out: `notifyOrdersChanged()` POSTs `/broadcast` to the DO with the
+  `REALTIME_SECRET` bearer; the DO verifies it in constant time and rejects
+  implausible timestamps.
 - Client: `hooks/use-orders-feed.ts` — WebSocket first, exponential
   reconnect, 8-second polling only while the socket is down, visibility-aware.
   `BroadcastChannel` keeps tabs in sync and elects one tab for the chime.
@@ -121,8 +124,14 @@ Never use `new Date(y, m, d)` or the process timezone for business days.
 - CSP: per-request nonce + `strict-dynamic` on dynamic routes, static tier
   with SRI. `base-uri 'none'`, `frame-ancestors 'none'`, same-origin
   WebSocket only.
-- Idempotency payload binding prevents replay with a different cart.
-- DB CHECK constraints protect totals, quantities, stock and fees.
+- Idempotency payload binding prevents replay with a different cart; the
+  client key is stable across retries of the same payload.
+- A failed settings read rejects the order (the owner's kill switch and
+  minimum are never silently replaced by defaults).
+- DB CHECK constraints protect totals, quantities, stock, fees, the order
+  number shape, the payload hash, and a cancelled order's reason.
+- DB UNIQUE(product/group, key) prevents a duplicate option key from silently
+  mispricing a line.
 
 ## 8. Media
 

@@ -61,8 +61,24 @@
 - No MFA/WebAuthn (PIN-only is a deliberate business constraint).
 - ~~No field-level encryption for phone/address at rest~~ **implemented
   (2026-10-28)**: `lib/server/pii.ts` encrypts name/phone/address/note with
-  AES-256-GCM (WebCrypto, key-gated by `PII_ENCRYPTION_KEY`, legacy rows
-  pass through; the console board is the single decryption point).
+  AES-256-GCM (WebCrypto). **Hardened 2026-11-03:** production refuses to
+  write PII when `PII_ENCRYPTION_KEY` is missing or malformed; a decrypt
+  failure returns a visible placeholder instead of silently showing empty
+  fields. Legacy plaintext rows remain readable.
+- ~~Settings could fail open~~ **fixed 2026-11-03:** a failed settings read
+  rejects the order instead of re-enabling intake with a zero minimum;
+  display surfaces may still degrade to defaults.
+- ~~Order provenance was client-controlled~~ **fixed 2026-11-03:** `source`
+  is a server argument; the storefront action asserts `"storefront"` and
+  strips any forged value from the payload.
+- ~~`/broadcast` on the Durable Object was unauthenticated~~ **fixed
+  2026-11-03:** requires `Authorization: Bearer <REALTIME_SECRET>` with a
+  constant-time comparison; the timestamp is range-validated.
+- **2026-11-03:** `AUTH_PEPPER`/`REALTIME_SECRET` are length-checked (32+)
+  where they are used; a short secret cannot mint forgeable tokens.
+- **2026-11-03:** integration tests refuse a non-loopback database, CI fails
+  when `TEST_DATABASE_URL` is absent, `db:seed --force` guards on the
+  database host, and deploy takes a pg_dump backup before migrating.
 - No WAF custom rules/turnstile on order intake yet; the rate limit +
   idempotency + server validation are the current controls.
 - No Sentry/APM; structured Workers logs + `/api/health` are the current

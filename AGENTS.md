@@ -69,9 +69,21 @@ intercepts `/api/realtime` before Next.js.
 
 ## v2 invariants (do not regress)
 
+- **Order provenance is server-owned.** `placeOrder(input, { source })` —
+  never accept `source` from a client payload. The storefront action asserts
+  `"storefront"`; console intake asserts `"console"` after its guard.
 - **Delivery fee = the customer's selected zone.** `zoneId` is validated
   server-side; never pick the cheapest active zone.
-- **Idempotency is payload-bound.** `payload_hash` must match on replay.
+- **Idempotency is payload-bound.** `payload_hash` must match on replay, and
+  the key must stay stable across a retry of the same payload
+  (`lib/idempotency.ts`).
+- **Fail closed on money rules and secrets.** A failed shop-settings read
+  rejects orders; production writes PII only when `PII_ENCRYPTION_KEY` is
+  present; missing/short `AUTH_PEPPER` or `REALTIME_SECRET` must fail, never
+  degrade to a weaker path.
+- **Integration tests never touch a non-loopback database.**
+  `TEST_DATABASE_URL` is the only test connection; the suites are destructive
+  and must fail, not skip, when the guard cannot prove the host is local.
 - **Transitions are conditional.** Update with `WHERE status = expected`
   inside a transaction; append to `order_status_history`.
 - **Business time is `Asia/Hebron`.** Use `lib/domain/time.ts`; never
