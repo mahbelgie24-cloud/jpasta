@@ -39,4 +39,22 @@ export default {
     }
     return handler.fetch(request, env, ctx);
   },
+
+  // Daily housekeeping via the Cron Trigger in wrangler.jsonc. Calling our
+  // own route keeps the DB code in the Next runtime (Hyperdrive pool) rather
+  // than opening a second pool from the Worker entry.
+  async scheduled(
+    _event: ScheduledController,
+    env: CloudflareEnv,
+    ctx: ExecutionContext,
+  ): Promise<void> {
+    const secret = (env as CloudflareEnv & { CRON_SECRET?: string })
+      .CRON_SECRET;
+    if (!secret) return;
+    ctx.waitUntil(
+      env.WORKER_SELF_REFERENCE.fetch("https://jpasta/api/cron/prune", {
+        headers: { authorization: `Bearer ${secret}` },
+      }).catch(() => undefined),
+    );
+  },
 } satisfies ExportedHandler<CloudflareEnv>;

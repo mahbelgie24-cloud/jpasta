@@ -88,6 +88,17 @@ of which Worker isolate handled the write.
 - Local Node (tests/dev): `next start` has no DO; the client falls back to
   polling and the in-process bus handles same-process notifications.
 
+### 4.1 Web Push
+
+`notifyNewOrderPush()` runs after commit and sends an **empty** VAPID push
+(WebCrypto ES256, no Node libraries) to every active staff subscription.
+There is deliberately no payload: the service worker fetches
+`/api/console/pending-count` and renders the notification itself, so no
+customer data crosses a push service. Subscription endpoints are checked
+against a browser-push host allowlist before the server will POST to them.
+`VAPID_PRIVATE_KEY`/`VAPID_PUBLIC_KEY` are optional; without them the
+transport is disabled rather than degraded.
+
 ## 5. Caching
 
 `open-next.config.ts`:
@@ -132,6 +143,9 @@ Never use `new Date(y, m, d)` or the process timezone for business days.
   number shape, the payload hash, and a cancelled order's reason.
 - DB UNIQUE(product/group, key) prevents a duplicate option key from silently
   mispricing a line.
+- Cart quotes reuse `computeOrderLines`, so a persisted cart is re-priced
+  against the live catalog before submit (a stale localStorage price is
+  corrected, never charged).
 
 ## 8. Media
 
@@ -154,7 +168,13 @@ Never use `new Date(y, m, d)` or the process timezone for business days.
 
 - `lib/server/log.ts` emits one-line JSON events (`order.place_failed`,
   `order.transition_failed`, …) ready for Workers Logpush.
-- `/api/health` reports DB latency for uptime probes.
+- `instrumentation.ts` `onRequestError` captures unhandled server errors as
+  the same JSON shape (path, route, render source, digest — never a body).
+- `/api/health` reports DB readiness, latency, uptime and the build revision
+  (`NEXT_PUBLIC_COMMIT_SHA`, set by deploy), and logs the DB error on 503.
+- A daily Cron Trigger (`0 3 * * *`) calls `/api/cron/prune` with
+  `CRON_SECRET`; it removes expired sessions and login attempts older than
+  30 days. The order audit trail is never pruned.
 - `wrangler observability.enabled` is on.
 
 ## 11. Decisions

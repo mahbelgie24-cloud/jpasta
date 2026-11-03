@@ -30,8 +30,8 @@ Drizzle + Neon Postgres · **Cloudflare Workers** via
   typography, the DishArt illustration system, dark editorial landing, live
   menu search, real zone fees in the cart, dark console, PWA shell + offline
   page, photo upload to R2.
-- **70 tests** (unit + integration + hardening regressions) plus a
-  **44-test Playwright suite** (`npm run test:e2e`): real journeys, axe
+- **104 tests** (unit + integration + hardening regressions) plus a
+  **49-test Playwright suite** (`npm run test:e2e`): real journeys, axe
   a11y gate (serious/critical = fail) and visual regression at
   375/768/1440.
 - **Lighthouse budgets** (`npm run test:lighthouse` / `:desktop`): **two
@@ -51,6 +51,17 @@ Drizzle + Neon Postgres · **Cloudflare Workers** via
 - **Order archive & receipts** (`/console/orders`): local-day history with
   status/date filters, order/name/phone/item search, an 80mm printable
   receipt (settings-driven footer), and a per-order audit timeline.
+- **Web Push** (`/console/settings`): per-device VAPID subscription, empty
+  tickles on new orders, pending-count notification, no customer data in the
+  push service. `npm run vapid` generates the key pair.
+- **Accounting exports**: owner-only CSV for the day's orders and a Z summary
+  (UTF-8 BOM for Excel Arabic), PII excluded by default, `pii=1` audited, and
+  every cell guarded against CSV formula injection.
+- **Console speed**: ⌘/Ctrl+K command palette, KDS swimlanes with a fullscreen
+  wall mode, and quick-add for dishes with no options.
+- **Operational hygiene**: `/api/health` reports version/uptime, server errors
+  emit structured `onRequestError` lines, and a daily Cron prunes expired
+  sessions/old login attempts without touching the order audit trail.
 - **CI** runs three jobs on every push/PR: `verify` (the full gate +
   OpenNext bundle), `e2e` (Playwright against a fresh build + Postgres),
   and `lighthouse` (budget assertions).
@@ -89,10 +100,12 @@ npm run preview        # local workerd
 npm run deploy         # check-env → build → wrangler deploy
 npm run typecheck      # next typegen + tsc
 npm run lint
-npm test               # vitest (70 tests)
+npm test               # vitest (104 tests)
 npm run test:e2e       # build + Playwright: journeys, axe, visual (port 3220)
 npm run test:lighthouse # LHCI budgets on / and /menu (set CHROME_PATH locally)
 npm run icons          # regenerate favicon/PWA/OG from public/brand/logo*.svg
+npm run vapid          # generate the optional Web Push key pair
+npm run db:backup      # compressed logical backup (7-day retention)
 ```
 
 Quality gates:

@@ -56,12 +56,23 @@ interface ExecutionContext {
   passThroughOnException(): void;
 }
 
+interface ScheduledController {
+  scheduledTime: number;
+  cron: string;
+  noRetry(): void;
+}
+
 interface ExportedHandler<Env = unknown> {
   fetch?(
     request: Request,
     env: Env,
     ctx: ExecutionContext,
   ): Response | Promise<Response>;
+  scheduled?(
+    controller: ScheduledController,
+    env: Env,
+    ctx: ExecutionContext,
+  ): void | Promise<void>;
 }
 
 interface RateLimitBinding {
@@ -76,6 +87,10 @@ interface CloudflareEnv {
   REALTIME_SECRET?: string;
   AUTH_PEPPER?: string;
   DATABASE_URL?: string;
+  CRON_SECRET?: string;
+  WORKER_SELF_REFERENCE: {
+    fetch(input: string, init?: RequestInit): Promise<Response>;
+  };
   HYPERDRIVE?: { connectionString: string };
 }
 

@@ -50,7 +50,7 @@ if (ownerPin && !/^\d{6}$/.test(ownerPin)) {
   problems.push("JPASTA_OWNER_PIN must be exactly 6 digits");
 }
 
-for (const secret of ["AUTH_PEPPER", "REALTIME_SECRET"]) {
+for (const secret of ["AUTH_PEPPER", "REALTIME_SECRET", "CRON_SECRET"]) {
   const value = get(secret);
   if (value && value.length < 32) {
     problems.push(`${secret} must be at least 32 characters`);

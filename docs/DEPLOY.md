@@ -54,6 +54,10 @@ npx wrangler secret put JPASTA_OWNER_PIN  # 6 digits
 npx wrangler secret put AUTH_PEPPER       # openssl rand -hex 32
 npx wrangler secret put REALTIME_SECRET   # openssl rand -hex 32
 npx wrangler secret put PII_ENCRYPTION_KEY # openssl rand -hex 32 (64 hex)
+npx wrangler secret put CRON_SECRET        # openssl rand -hex 32 (optional)
+npx wrangler secret put VAPID_PRIVATE_KEY  # npm run vapid (optional)
+npx wrangler secret put VAPID_PUBLIC_KEY   # npm run vapid (optional)
+npx wrangler secret put VAPID_SUBJECT      # https://jpasta.ps (optional)
 ```
 
 | Secret               | Purpose                                                 |
@@ -63,6 +67,10 @@ npx wrangler secret put PII_ENCRYPTION_KEY # openssl rand -hex 32 (64 hex)
 | `AUTH_PEPPER`        | O(1) PIN lookup HMAC (must stay stable)                 |
 | `REALTIME_SECRET`    | signs 2-minute WebSocket tokens                         |
 | `PII_ENCRYPTION_KEY` | AES-256-GCM for customer PII at rest (required in prod) |
+| `CRON_SECRET`        | authorises the daily prune route (optional)             |
+| `VAPID_PRIVATE_KEY`  | Web Push signing key (`npm run vapid`, optional)        |
+| `VAPID_PUBLIC_KEY`   | browser subscription key (`npm run vapid`, optional)    |
+| `VAPID_SUBJECT`      | VAPID contact URI (https or mailto)                     |
 
 `NEXT_PUBLIC_*` values are **build-time**; export them in the deploy shell.
 

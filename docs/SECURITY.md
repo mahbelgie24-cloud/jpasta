@@ -79,6 +79,15 @@
 - **2026-11-03:** integration tests refuse a non-loopback database, CI fails
   when `TEST_DATABASE_URL` is absent, `db:seed --force` guards on the
   database host, and deploy takes a pg_dump backup before migrating.
+- **2026-11-03:** CSV exports are owner-only, default to no PII, quote every
+  cell and neutralise formula-leading values (CSV injection). `pii=1` is an
+  explicit opt-in and writes `reports.export_pii` without the values.
+- **2026-11-03:** Web Push subscription endpoints must be HTTPS and match the
+  browser push-service allowlist (SSRF guard). Pushes carry no payload; the
+  service worker fetches only a pending count.
+- **2026-11-03:** the daily prune route requires `CRON_SECRET` (constant-time
+  bearer check) and only deletes expired sessions and login attempts older
+  than 30 days.
 - No WAF custom rules/turnstile on order intake yet; the rate limit +
   idempotency + server validation are the current controls.
 - No Sentry/APM; structured Workers logs + `/api/health` are the current

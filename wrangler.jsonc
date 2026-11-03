@@ -12,6 +12,10 @@
   "observability": {
     "enabled": true,
   },
+  // Daily housekeeping: expired sessions + old login attempts.
+  "triggers": {
+    "crons": ["0 3 * * *"],
+  },
   // Required by @opennextjs/cloudflare for internal subrequests.
   "services": [
     {

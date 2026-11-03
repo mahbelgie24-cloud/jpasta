@@ -29,6 +29,7 @@ jobs:
       VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
       VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
       VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
       NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
       NEXT_PUBLIC_WHATSAPP_NUMBER: ${{ secrets.NEXT_PUBLIC_WHATSAPP_NUMBER }}
       NEXT_PUBLIC_COMMIT_SHA: ${{ github.sha }}

@@ -41,6 +41,17 @@ Every code path that creates or modifies an order (from Phase 1 on) **must**
 generate and pass an `idempotencyKey` (spec §9). A retried request or offline
 replay must never duplicate a sale.
 
+## Exports, notifications, and retention
+
+- CSV exports are **owner-only**, default to **no PII**, and every cell must
+  pass `lib/csv.ts` (quoting + formula-injection neutralisation). PII export
+  is `pii=1` and audited; never log the values.
+- Web Push sends an **empty tickle** only. Never put customer data in a push
+  payload; the service worker fetches the pending count. Subscription
+  endpoints must pass `isAllowedPushEndpoint()` (HTTPS browser hosts only).
+- The daily prune removes expired sessions and old login attempts. It must
+  never delete `order_status_history` — that is the audit trail.
+
 ## Role-based access control
 
 Authorization is enforced **server-side**, in every server action and route

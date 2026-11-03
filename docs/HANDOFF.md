@@ -8,6 +8,15 @@
 are intentionally left uncommitted until the owner reviews them.
 **Status:** production-ready codebase, **not yet deployed** (infrastructure and owner data are the remaining gates)
 
+> **2026-11-03 update (v2.3):** Wave 0 hardening closed the client-controlled
+> order source, fail-open settings/PII/secrets, unauthenticated DO broadcast,
+> destructive deploy tests, and the missing DB constraints. New in the same
+> pass: Web Push (empty VAPID tickles), owner-only CSV/Z exports, the console
+> command palette, KDS swimlanes + fullscreen, quick-add, server re-pricing of
+> persisted carts, `/api/health` version/uptime, `onRequestError` logging, and
+> a daily session/login-attempt prune. 104 unit/integration tests and 49 E2E
+> journeys are green; real-device push and the owner's visual sign-off remain.
+
 ---
 
 ## 1. Executive summary
@@ -250,20 +259,25 @@ npx wrangler deploy --dry-run      # bundles worker.ts + lists bindings
 
 Environment matrix:
 
-| Variable                             | Kind           | Notes                                                                                    |
-| ------------------------------------ | -------------- | ---------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_SITE_URL`               | build-time     | canonical/OG/sitemap; must not be localhost in prod                                      |
-| `NEXT_PUBLIC_WHATSAPP_NUMBER`        | build-time     | digits only                                                                              |
-| `DATABASE_URL`                       | secret/runtime | Node fallback; Workers use Hyperdrive                                                    |
-| `JPASTA_OWNER_PIN`                   | secret         | 6 digits; provisioning only                                                              |
-| `AUTH_PEPPER`                        | secret         | ≥32 chars; stable once users exist                                                       |
-| `REALTIME_SECRET`                    | secret         | ≥32 chars; safe to rotate                                                                |
-| `PII_ENCRYPTION_KEY`                 | secret         | 64 hex chars (32 bytes); key-gated PII encryption — rows written before it stay readable |
-| `ORDER_LIMIT` / `AUTH_LIMIT`         | binding        | `wrangler.jsonc`                                                                         |
-| `ORDER_FEED` / `NEXT_CACHE_DO_QUEUE` | binding        | DO classes                                                                               |
-| `MEDIA` / `NEXT_INC_CACHE_R2_BUCKET` | binding        | R2                                                                                       |
-| `NEXT_TAG_CACHE_D1`                  | binding        | D1                                                                                       |
-| `HYPERDRIVE`                         | binding        | Neon pooled URL                                                                          |
+| Variable                             | Kind           | Notes                                                                                 |
+| ------------------------------------ | -------------- | ------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SITE_URL`               | build-time     | canonical/OG/sitemap; must not be localhost in prod                                   |
+| `NEXT_PUBLIC_WHATSAPP_NUMBER`        | build-time     | digits only                                                                           |
+| `DATABASE_URL`                       | secret/runtime | Node fallback; Workers use Hyperdrive                                                 |
+| `JPASTA_OWNER_PIN`                   | secret         | 6 digits; provisioning only                                                           |
+| `AUTH_PEPPER`                        | secret         | ≥32 chars; stable once users exist                                                    |
+| `REALTIME_SECRET`                    | secret         | ≥32 chars; safe to rotate                                                             |
+| `PII_ENCRYPTION_KEY`                 | secret         | 64 hex chars (32 bytes); required in production; rows written before it stay readable |
+| `CRON_SECRET`                        | secret         | ≥32 chars; authorises `/api/cron/prune` (optional; route returns 503 without it)      |
+| `VAPID_PRIVATE_KEY`                  | secret         | P-256 JWK JSON from `npm run vapid` (optional; disables push when absent)             |
+| `VAPID_PUBLIC_KEY`                   | secret         | base64url P-256 public key from `npm run vapid`                                       |
+| `VAPID_SUBJECT`                      | secret         | https:// or mailto: contact URI                                                       |
+| `NEXT_PUBLIC_COMMIT_SHA`             | build-time     | reported by `/api/health`; set to `github.sha` in deploy                              |
+| `ORDER_LIMIT` / `AUTH_LIMIT`         | binding        | `wrangler.jsonc`                                                                      |
+| `ORDER_FEED` / `NEXT_CACHE_DO_QUEUE` | binding        | DO classes                                                                            |
+| `MEDIA` / `NEXT_INC_CACHE_R2_BUCKET` | binding        | R2                                                                                    |
+| `NEXT_TAG_CACHE_D1`                  | binding        | D1                                                                                    |
+| `HYPERDRIVE`                         | binding        | Neon pooled URL                                                                       |
 
 Local console PIN is `JPASTA_OWNER_PIN` from `.env.local` (currently `135790`
 in the owner's local environment; never commit it).
@@ -342,8 +356,12 @@ photography. (Playwright E2E, axe automation and visual baselines shipped
    `updateShopSettings` with `updateTag` (read-your-own-writes; this Next 16
    deprecates the one-argument `revalidateTag` inside Server Actions). It
    also surfaced a hard rule — see §12.16.
-4. **Web Push**: VAPID keys, subscription UI in `/console/settings`, send on new order.
-5. **Console polish**: KDS swimlanes + command palette + offline indicator.
+4. ~~Web Push~~ **done (2026-11-03)**: WebCrypto VAPID, per-device toggle in
+   `/console/settings`, empty tickles on new orders, endpoint allowlist and
+   automatic 404/410 pruning. Remaining: enable it on the owner's real phone.
+5. ~~Console polish~~ **done (2026-11-03)**: KDS swimlanes + fullscreen wall
+   mode, ⌘/Ctrl+K command palette, server-re-priced cart. Remaining: an
+   explicit offline badge in the console chrome.
 6. ~~Order history page + receipt/print view~~ **done (2026-11-02)**:
    `/console/orders` (local-day archive, status filter, order/name/phone/item
    search, revenue summary), `/console/orders/[id]` (items + audit history +
@@ -474,7 +492,7 @@ photography. (Playwright E2E, axe automation and visual baselines shipped
 - [x] Code committed and tagged (`v2.0.0`), tree clean.
 - [x] Spec, architecture, design, security, deploy, ADRs updated.
 - [x] Migrations applied locally; seed/provision documented.
-- [x] 70 tests + all gates green.
+- [x] 104 tests + all gates green.
 - [x] Cloudflare bundle + dry-run verified.
 - [x] Owner credentials verified locally.
 - [ ] Owner accounts/resources (see §11).
