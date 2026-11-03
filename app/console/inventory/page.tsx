@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/server/session";
+import { ConsolePageShell } from "@/components/console/page-shell";
 import { InventoryAdmin } from "./inventory-admin";
 
 export const dynamic = "force-dynamic";
@@ -13,5 +14,12 @@ export default async function InventoryPage() {
   const user = await getSessionUser();
   if (!user) redirect("/console/login");
   if (user.role !== "owner") redirect("/console");
-  return <InventoryAdmin />;
+  return (
+    <ConsolePageShell
+      title="المخزون والوصفات"
+      description="كل حركة مخزون مسجّلة، والبيع يخصم المكوّنات تلقائياً."
+    >
+      <InventoryAdmin />
+    </ConsolePageShell>
+  );
 }

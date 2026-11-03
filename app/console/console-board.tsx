@@ -129,9 +129,9 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
         <div className="flex items-center gap-2.5">
           <LogoMark className="size-10" />
           <div>
-            <p className="font-display-ar text-lg font-semibold text-basil-800">
+            <h1 className="font-display-ar text-lg font-semibold text-basil-800">
               لوحة الطلبات
-            </p>
+            </h1>
             <p className="text-xs text-ink-soft">مرحباً {ownerName}</p>
           </div>
         </div>

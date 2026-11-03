@@ -90,6 +90,13 @@ export function CartDrawer({
   // A retried submit must reuse its key; an edited cart must not reuse it
   // with a different payload (the server binds the key to payload_hash).
   const idempotency = useRef<IdempotencyScope | null>(null);
+  const confirmationRef = useRef<HTMLHeadingElement | null>(null);
+
+  // The form is replaced by a confirmation; move focus there so a keyboard
+  // or screen-reader user is not dropped on <body>.
+  useEffect(() => {
+    if (placed || offlineQueued !== null) confirmationRef.current?.focus();
+  }, [placed, offlineQueued]);
 
   const selectedZone = zones?.find((z) => z.id === zoneId) ?? null;
   const deliveryFee: Minor =
@@ -207,9 +214,11 @@ export function CartDrawer({
       title={placed ? "تم استلام طلبك" : "سلتك"}
     >
       {offlineQueued !== null && !placed ? (
-        <div className="py-6 text-center">
+        <div className="py-6 text-center" role="status" aria-live="polite">
           <CloudUpload className="mx-auto size-14 text-bronze" aria-hidden />
-          <h3 className="mt-4 type-title">طلبك محفوظ وسيتولى الإرسال</h3>
+          <h3 ref={confirmationRef} tabIndex={-1} className="mt-4 type-title">
+            طلبك محفوظ وسيتولى الإرسال
+          </h3>
           <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-ink-soft">
             الشبكة منقطعة الآن — عند عودة الاتصال يُرسل طلبك تلقائياً وبنفس
             الرقم، بدون تكرار
@@ -222,12 +231,12 @@ export function CartDrawer({
           </div>
         </div>
       ) : placed ? (
-        <div className="py-6 text-center">
+        <div className="py-6 text-center" role="status" aria-live="polite">
           <CheckCircle2
             className="mx-auto size-14 text-basil-600"
             aria-hidden
           />
-          <h3 className="mt-4 type-title">
+          <h3 ref={confirmationRef} tabIndex={-1} className="mt-4 type-title">
             طلبك رقم {placed.orderNumber} وصلنا
           </h3>
           <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-ink-soft">

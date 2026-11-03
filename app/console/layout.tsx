@@ -13,7 +13,11 @@ export default async function ConsoleLayout({
     // Each page still performs its own server-side auth/role gate.
     <div className="theme-console min-h-dvh bg-surface text-text-primary print:min-h-0 print:bg-white print:text-black">
       {user && <ConsoleChrome role={user.role} />}
-      {children}
+      {/* The one main landmark for every console route; the root skip link
+          targets #main, and pages render their <h1> inside it. */}
+      <main id="main" tabIndex={-1}>
+        {children}
+      </main>
     </div>
   );
 }

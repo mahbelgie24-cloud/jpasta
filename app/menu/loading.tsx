@@ -1,7 +1,7 @@
 /** Menu skeleton — mirrors the real card grid to avoid layout shift. */
 export default function MenuLoading() {
   return (
-    <main className="min-h-dvh bg-canvas">
+    <main id="main" tabIndex={-1} className="min-h-dvh bg-canvas">
       <div className="container-page pt-12 pb-32">
         <div className="mx-auto h-7 w-40 animate-pulse rounded-full bg-paper-deep" />
         <div className="mx-auto mt-4 h-12 w-56 animate-pulse rounded-2xl bg-paper-deep" />

@@ -19,7 +19,11 @@ export default async function OrderStatusPage({
 
   if (!order) {
     return (
-      <main className="flex min-h-dvh flex-col items-center justify-center px-4 text-center">
+      <main
+        id="main"
+        tabIndex={-1}
+        className="flex min-h-dvh flex-col items-center justify-center px-4 text-center"
+      >
         <LogoMark className="size-20" />
         <h1 className="mt-6 type-section text-ink">الطلب غير موجود</h1>
         <p className="mt-3 max-w-sm text-ink-soft">
@@ -49,7 +53,7 @@ export default async function OrderStatusPage({
   };
 
   return (
-    <main className="min-h-dvh bg-cream-50">
+    <main id="main" tabIndex={-1} className="min-h-dvh bg-cream-50">
       <div className="mx-auto max-w-lg px-4 py-8">
         <div className="flex justify-center">
           <Logo size="lg" />

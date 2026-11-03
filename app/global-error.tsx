@@ -22,7 +22,7 @@ export default function GlobalError({
           padding: 24,
         }}
       >
-        <main style={{ maxWidth: 420 }}>
+        <main id="main" tabIndex={-1} style={{ maxWidth: 420 }}>
           <div
             aria-hidden
             style={{

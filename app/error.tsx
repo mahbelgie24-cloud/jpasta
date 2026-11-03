@@ -17,7 +17,11 @@ export default function ErrorPage({
   }, [error]);
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center bg-canvas px-4 text-center">
+    <main
+      id="main"
+      tabIndex={-1}
+      className="flex min-h-dvh flex-col items-center justify-center bg-canvas px-4 text-center"
+    >
       <LogoMark className="size-20" />
       <h1 className="mt-6 font-display-ar type-section text-ink">
         صار في مشكلة

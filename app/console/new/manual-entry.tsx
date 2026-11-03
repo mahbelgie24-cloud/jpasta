@@ -2,14 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  CheckCircle2,
-  Loader2,
-  Minus,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { CheckCircle2, Loader2, Minus, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Price } from "@/components/ui/price";
 import {
@@ -142,6 +135,11 @@ export function ManualEntry({
   // A retried submit must reuse its key; editing the order must not reuse it
   // with a different payload (the server binds the key to the payload hash).
   const idempotency = useRef<IdempotencyScope | null>(null);
+  const placedHeadingRef = useRef<HTMLHeadingElement | null>(null);
+
+  useEffect(() => {
+    if (placed) placedHeadingRef.current?.focus();
+  }, [placed]);
 
   useEffect(() => {
     let alive = true;
@@ -333,7 +331,7 @@ export function ManualEntry({
     return (
       <div className="py-8 text-center" role="status" aria-live="polite">
         <CheckCircle2 className="mx-auto size-14 text-basil-600" aria-hidden />
-        <h2 className="mt-4 type-title">
+        <h2 ref={placedHeadingRef} tabIndex={-1} className="mt-4 type-title">
           طلب {placed.orderNumber} دخل الطابور
         </h2>
         <p className="mt-2 text-sm text-ink-soft">
@@ -702,13 +700,6 @@ export function ManualEntry({
       <p className="text-center text-xs text-ink-soft">
         مرحباً {ownerName} — الطلبات اليدوية تمر بنفس خط أنابيب الأسعار المحمي.
       </p>
-      <Link
-        href="/console"
-        className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-basil-700"
-      >
-        <ArrowRight className="size-4" aria-hidden />
-        رجوع للوحة
-      </Link>
     </div>
   );
 }

@@ -160,9 +160,9 @@ export function KitchenBoard() {
           <div className="flex items-center gap-2.5">
             <LogoMark className="size-12" />
             <div>
-              <p className="font-display-ar text-2xl font-semibold text-basil-800">
+              <h1 className="font-display-ar text-2xl font-semibold text-basil-800">
                 شاشة المطبخ
-              </p>
+              </h1>
               <p className="text-sm text-ink-soft">
                 {tickets.length} تذاكر مفتوحة
               </p>

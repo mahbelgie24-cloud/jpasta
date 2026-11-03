@@ -3,6 +3,7 @@ import { asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { categories, modifierGroups, modifiers, products } from "@/db/schema";
 import { getSessionUser } from "@/lib/server/session";
+import { ConsolePageShell } from "@/components/console/page-shell";
 import { ManualEntry, type ManualProduct } from "./manual-entry";
 
 export const dynamic = "force-dynamic";
@@ -71,5 +72,12 @@ export default async function NewOrderPage() {
     })),
   }));
 
-  return <ManualEntry products={catalog} ownerName={user.name} />;
+  return (
+    <ConsolePageShell
+      title="طلب يدوي"
+      description="طلبات الهاتف والمحل تمر بنفس خط الأسعار المحمي وإعادة المحاولة الآمنة."
+    >
+      <ManualEntry products={catalog} ownerName={user.name} />
+    </ConsolePageShell>
+  );
 }
