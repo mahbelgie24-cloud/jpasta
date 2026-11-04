@@ -17,8 +17,8 @@ schema/migration، وكل تغيير في commit مستقل قابل للترا�
 | اختبارات الوحدة/التكامل                     | 104                    | **120**                       | +16 انحدار                              |
 | Playwright E2E                              | 49/49                  | **49/49**                     | نفس المجموعة، لا انحدار بصري            |
 | format / lint / contrast / typecheck        | ناجح                   | **ناجح**                      | `format:check` و`lint --max-warnings 0` |
-| `npm run build`                             | 17.14s                 | 20.06s                        | فرق توقيت مضيف، لا تغيير معماري         |
-| `npm run build:cf`                          | 39.60s                 | 32.09s                        | فرق توقيت مضيف                          |
+| `npm run build`                             | 17.14s                 | 17.60s                        | فرق توقيت مضيف، لا تغيير معماري         |
+| `npm run build:cf`                          | 39.60s                 | 32.55s                        | فرق توقيت مضيف                          |
 | Lighthouse mobile `/` perf                  | 0.75                   | 0.76                          | بوابة LCP/CLS/JS/الخطوط                 |
 | Lighthouse mobile `/` LCP / CLS / TBT       | 4124ms / 0 / 447ms     | 4045ms / 0 / 453ms            | ضمن LCP<4.5s                            |
 | Lighthouse mobile `/menu` perf              | 0.78                   | **0.81**                      | تحسّن                                   |
