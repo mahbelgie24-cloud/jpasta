@@ -232,7 +232,6 @@ async function main() {
       key: "receipt_footer",
       value: "شكراً لكم — JPasta، باستا طازة تُطبخ عند الطلب",
     },
-    { key: "feature_web_push", value: "false" },
   ];
   for (const s of settingRows) {
     await db.insert(settings).values(s).onConflictDoNothing();

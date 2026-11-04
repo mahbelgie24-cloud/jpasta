@@ -48,7 +48,7 @@ jobs:
       - run: npm ci
 
       - name: Dependency audit (production)
-        run: npm audit --omit=dev --audit-level=critical
+        run: npm audit --omit=dev --audit-level=high
 
       # Tests are destructive (TRUNCATE orders). They run in CI against a
       # disposable service container — never here against production. This

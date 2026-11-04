@@ -45,7 +45,6 @@ export interface ShopSettings {
   /** Master switch ANDed with the catalog-derived ordering readiness. */
   orderingEnabled: boolean;
   receiptFooter: string;
-  webPushEnabled: boolean;
 }
 
 export const SHOP_SETTINGS_DEFAULTS: ShopSettings = {
@@ -61,7 +60,6 @@ export const SHOP_SETTINGS_DEFAULTS: ShopSettings = {
   paymentMethods: ["cash", "cash_on_delivery", "card_terminal"],
   orderingEnabled: true,
   receiptFooter: "شكراً لكم — JPasta، باستا طازة تُطبخ عند الطلب",
-  webPushEnabled: false,
 };
 
 const CLOCK = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -125,7 +123,6 @@ export function parseShopSettings(
     paymentMethods: paymentMethodsOr(map.get("payment_methods")),
     orderingEnabled: boolOr(map.get("ordering_enabled"), d.orderingEnabled),
     receiptFooter: map.get("receipt_footer")?.trim() || d.receiptFooter,
-    webPushEnabled: boolOr(map.get("feature_web_push"), d.webPushEnabled),
   };
 }
 
