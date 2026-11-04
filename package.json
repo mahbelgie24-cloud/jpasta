@@ -58,12 +58,12 @@
     "@opennextjs/cloudflare": "^1.20.16",
     "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4.3.4",
-    "@types/node": "^22",
+    "@types/node": "^26",
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.11",
-    "eslint": "^9",
+    "eslint": "^10",
     "eslint-config-next": "~16.4.5",
     "fake-indexeddb": "^6.2.7",
     "patch-package": "^8.0.1",
@@ -72,7 +72,7 @@
     "sharp": "^0.35.5",
     "tailwindcss": "^4.3.4",
     "tsx": "^4.23.15",
-    "typescript": "^5",
+    "typescript": "^7",
     "vitest": "^5.1.0",
     "wrangler": "^4.157.0"
   }
