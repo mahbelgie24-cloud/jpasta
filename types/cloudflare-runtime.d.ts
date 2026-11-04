@@ -84,6 +84,7 @@ interface CloudflareEnv {
   MEDIA?: R2Bucket;
   AUTH_LIMIT?: RateLimitBinding;
   ORDER_LIMIT?: RateLimitBinding;
+  READ_LIMIT?: RateLimitBinding;
   REALTIME_SECRET?: string;
   AUTH_PEPPER?: string;
   DATABASE_URL?: string;

@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { and, eq, gt, like } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -50,7 +51,10 @@ export function loginThrottleKeys(ip: string): string[] {
   return [`ip:${clean}`, "global"];
 }
 
-export async function getSessionUser(): Promise<SessionUser | null> {
+// Dedupe the session read across a layout + page + metadata render. React's
+// cache is request-scoped, so a revoked session can never be reused by a
+// later request.
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const store = await cookies();
   const token = store.get(COOKIE_NAME)?.value;
   if (!token) return null;
@@ -87,7 +91,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   }
 
   return { id: row.id, name: row.name, role: row.role };
-}
+});
 
 export async function loginWithPin(
   pin: string,

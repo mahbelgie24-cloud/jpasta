@@ -120,6 +120,9 @@ export async function verifyPin(pin: string, stored: string): Promise<boolean> {
     if (
       !Number.isFinite(cost) ||
       cost < 1024 ||
+      // Same reasoning as the PBKDF2 cap: a tampered legacy row must not
+      // turn login into an unbounded memory/CPU allocation (CWE-400).
+      cost > 1_048_576 ||
       !salt ||
       !fromHex(expectedHex) ||
       expectedHex.length !== 128

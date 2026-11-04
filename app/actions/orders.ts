@@ -29,21 +29,21 @@ async function clientIp(): Promise<string> {
   );
 }
 
-async function checkOrderRateLimit(
-  bindingName: "ORDER_LIMIT",
+async function checkRateLimit(
+  bindingName: "ORDER_LIMIT" | "READ_LIMIT",
   key: string,
+  message = "طلبات كثيرة جداً — انتظر دقيقة ثم حاول مجدداً.",
 ): Promise<string | null> {
   try {
     const { getCloudflareContext } = await import("@opennextjs/cloudflare");
     const env = getCloudflareContext().env as {
       ORDER_LIMIT?: { limit(key: string): Promise<{ success: boolean }> };
+      READ_LIMIT?: { limit(key: string): Promise<{ success: boolean }> };
     };
     const binding = env[bindingName];
     if (!binding) return null;
     const { success } = await binding.limit(key);
-    if (!success) {
-      return "طلبات كثيرة جداً — انتظر دقيقة ثم حاول مجدداً.";
-    }
+    if (!success) return message;
     return null;
   } catch {
     return null; // Node runtime (local dev/tests) — binding is Workers-only
@@ -53,7 +53,7 @@ async function checkOrderRateLimit(
 export async function placeStorefrontOrder(
   raw: unknown,
 ): Promise<PlaceOrderResult> {
-  const limited = await checkOrderRateLimit("ORDER_LIMIT", await clientIp());
+  const limited = await checkRateLimit("ORDER_LIMIT", await clientIp());
   if (limited) return { ok: false, error: limited };
   const parsed = orderInputSchema.safeParse(raw);
   if (!parsed.success) {
@@ -78,7 +78,7 @@ export async function placeConsoleOrder(
     return { ok: false, error: userMessageOf(err) };
   }
   // A leaked staff PIN must not become an unbounded order-intake primitive.
-  const limited = await checkOrderRateLimit("ORDER_LIMIT", await clientIp());
+  const limited = await checkRateLimit("ORDER_LIMIT", await clientIp());
   if (limited) return { ok: false, error: limited };
   const parsed = orderInputSchema.safeParse(raw);
   if (!parsed.success) {
@@ -89,11 +89,22 @@ export async function placeConsoleOrder(
 }
 
 export async function fetchOrderStatus(orderId: string, token: string) {
+  // The status page polls every 4s; a per-IP ceiling keeps a scripted client
+  // from turning that convenience into unbounded database reads. Returning
+  // null keeps the client on its last known state (the next tick retries).
+  const limited = await checkRateLimit(
+    "READ_LIMIT",
+    await clientIp(),
+    "تحديثات كثيرة — انتظر لحظة ثم حاول مجدداً.",
+  );
+  if (limited) return null;
   return getOrderForStatus(orderId, token);
 }
 
 /** Public zone list — the cart must show the real fee before submitting. */
 export async function fetchDeliveryZones() {
+  const limited = await checkRateLimit("READ_LIMIT", await clientIp());
+  if (limited) return [];
   return getActiveDeliveryZones();
 }
 
@@ -103,5 +114,7 @@ export async function fetchDeliveryZones() {
  * creates an order.
  */
 export async function fetchCartQuote(lines: unknown) {
+  const limited = await checkRateLimit("READ_LIMIT", await clientIp());
+  if (limited) return { ok: false as const, error: limited };
   return quoteCart({ lines });
 }

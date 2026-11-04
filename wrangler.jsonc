@@ -75,6 +75,11 @@
       "namespace_id": "1002",
       "simple": { "limit": 8, "period": 60 },
     },
+    {
+      "name": "READ_LIMIT",
+      "namespace_id": "1003",
+      "simple": { "limit": 240, "period": 60 },
+    },
   ],
   // Neon Postgres pooling. Replace the id with:
   //   npx wrangler hyperdrive create jpasta-pg --connection-string="<NEON_POOLED_URL>"
