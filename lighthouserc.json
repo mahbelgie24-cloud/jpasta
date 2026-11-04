@@ -4,7 +4,11 @@
       "startServerCommand": "npx next start -p 3220",
       "startServerReadyPattern": "Ready",
       "url": ["http://127.0.0.1:3220/", "http://127.0.0.1:3220/menu"],
-      "numberOfRuns": 3
+      "numberOfRuns": 3,
+      "settings": {
+        "formFactor": "mobile",
+        "throttlingMethod": "simulate"
+      }
     },
     "assert": {
       "assertions": {

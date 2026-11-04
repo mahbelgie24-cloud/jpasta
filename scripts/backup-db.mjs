@@ -81,7 +81,40 @@ if (process.env.JPASTA_BACKUP_MODE === "remote") {
 // gzip via node zlib (no shell pipeline)
 const { gzipSync } = await import("node:zlib");
 const { writeFileSync } = await import("node:fs");
-writeFileSync(out, gzipSync(dump));
+const gz = gzipSync(dump);
+
+// Optional client-side encryption before the archive leaves the machine.
+// GitHub encrypts artifacts at rest, but the bundle itself is not encrypted;
+// a production deploy should set this secret. `-pass env:` keeps the key out
+// of the process list and shell history.
+const encryptionKey = process.env.BACKUP_ENCRYPTION_KEY?.trim();
+let finalOut = out;
+if (encryptionKey) {
+  if (encryptionKey.length < 32) {
+    throw new Error("BACKUP_ENCRYPTION_KEY must be at least 32 characters");
+  }
+  finalOut = `${out}.enc`;
+  const encrypted = execFileSync(
+    "openssl",
+    [
+      "enc",
+      "-aes-256-cbc",
+      "-pbkdf2",
+      "-salt",
+      "-pass",
+      "env:BACKUP_ENCRYPTION_KEY",
+    ],
+    { input: gz, maxBuffer: 256 * 1024 * 1024, env: process.env },
+  );
+  writeFileSync(finalOut, encrypted);
+} else {
+  writeFileSync(finalOut, gz);
+  if (process.env.JPASTA_BACKUP_MODE === "remote") {
+    console.warn(
+      "⚠ BACKUP_ENCRYPTION_KEY is not set — the uploaded dump is not client-side encrypted.",
+    );
+  }
+}
 
 // retention
 const cutoff = Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000;
@@ -95,12 +128,16 @@ for (const f of readdirSync("backups")) {
 }
 
 console.log(
-  `✓ backup written: ${out} (${Math.round(dump.length / 1024)} KB raw)`,
+  `✓ backup written: ${finalOut} (${Math.round(dump.length / 1024)} KB raw${encryptionKey ? ", encrypted" : ""})`,
 );
 console.log(
   `  pruned ${pruned} old backup(s) older than ${RETENTION_DAYS} days`,
 );
-console.log(`  restore: gunzip -c ${out} | psql "$DATABASE_URL"`);
+console.log(
+  encryptionKey
+    ? `  restore: openssl enc -d -aes-256-cbc -pbkdf2 -pass env:BACKUP_ENCRYPTION_KEY -in ${finalOut} | gunzip -c | psql "$DATABASE_URL"`
+    : `  restore: gunzip -c ${finalOut} | psql "$DATABASE_URL"`,
+);
 console.log(
   `  VERIFY the restore before trusting it (G3 habit): restore into a scratch DB and count orders.`,
 );
