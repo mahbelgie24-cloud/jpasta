@@ -4,10 +4,11 @@ import { asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { revalidatePath, updateTag } from "next/cache";
 import { db } from "@/lib/db";
-import { deliveryZones, settings } from "@/db/schema";
+import { deliveryZones, priceChanges, settings } from "@/db/schema";
 import { SETTINGS_TAG } from "@/lib/server/settings";
 import { requireOwner } from "@/lib/server/session";
 import { userMessageOf } from "@/lib/server/guard";
+import { isPlausiblePhone } from "@/lib/domain/phone";
 
 /**
  * Delivery-zone settings (Phase 2) — the owner edits fees without a deploy.
@@ -48,18 +49,40 @@ export async function updateZoneFee(
   feeMinor: number,
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    await guard();
+    const user = await guard();
     const parsedId = uuidSchema.safeParse(id);
     const parsedFee = zoneFeeSchema.safeParse(feeMinor);
     if (!parsedId.success) return { ok: false, error: "منطقة غير صحيحة." };
     if (!parsedFee.success)
       return { ok: false, error: "الرسوم بين 0 و 1000 ₪" };
-    const rows = await db
-      .update(deliveryZones)
-      .set({ feeMinor: parsedFee.data })
-      .where(eq(deliveryZones.id, parsedId.data))
-      .returning({ id: deliveryZones.id });
-    if (rows.length === 0) return { ok: false, error: "المنطقة غير موجودة." };
+
+    const outcome = await db.transaction(async (tx) => {
+      const [zone] = await tx
+        .select({ feeMinor: deliveryZones.feeMinor })
+        .from(deliveryZones)
+        .where(eq(deliveryZones.id, parsedId.data))
+        .limit(1)
+        .for("update");
+      if (!zone) return "missing" as const;
+      if (zone.feeMinor === parsedFee.data) return "ok" as const;
+
+      await tx
+        .update(deliveryZones)
+        .set({ feeMinor: parsedFee.data })
+        .where(eq(deliveryZones.id, parsedId.data));
+      // A delivery fee is a price: every change leaves an audit row
+      // (spec §9), exactly like a product price.
+      await tx.insert(priceChanges).values({
+        entityType: "delivery_zone",
+        entityId: parsedId.data,
+        oldMinor: zone.feeMinor,
+        newMinor: parsedFee.data,
+        changedBy: user.id,
+      });
+      return "ok" as const;
+    });
+    if (outcome === "missing")
+      return { ok: false, error: "المنطقة غير موجودة." };
     revalidatePath("/menu");
     return { ok: true };
   } catch (err) {
@@ -100,24 +123,41 @@ export async function setZoneActive(
     const parsedId = uuidSchema.safeParse(id);
     if (!parsedId.success) return { ok: false, error: "منطقة غير صحيحة." };
 
-    if (!isActive) {
-      const all = await db
-        .select({ id: deliveryZones.id })
+    const outcome = await db.transaction(async (tx) => {
+      // Two concurrent deactivations could each see the other zone as
+      // active and both commit, leaving zero active zones. Serialise the
+      // whole delivery-zone configuration on one advisory lock.
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext('jpasta:delivery_zones'))`,
+      );
+      const [target] = await tx
+        .select({ id: deliveryZones.id, isActive: deliveryZones.isActive })
         .from(deliveryZones)
-        .where(eq(deliveryZones.isActive, true));
-      if (all.length <= 1 && all.some((z) => z.id === parsedId.data)) {
-        return {
-          ok: false,
-          error: "لا بد من منطقة توصيل واحدة نشطة على الأقل.",
-        };
+        .where(eq(deliveryZones.id, parsedId.data))
+        .limit(1);
+      if (!target) return "missing" as const;
+
+      if (!isActive && target.isActive) {
+        const active = await tx
+          .select({ id: deliveryZones.id })
+          .from(deliveryZones)
+          .where(eq(deliveryZones.isActive, true));
+        if (active.length <= 1) return "last" as const;
       }
-    }
-    const rows = await db
-      .update(deliveryZones)
-      .set({ isActive })
-      .where(eq(deliveryZones.id, parsedId.data))
-      .returning({ id: deliveryZones.id });
-    if (rows.length === 0) return { ok: false, error: "المنطقة غير موجودة." };
+      await tx
+        .update(deliveryZones)
+        .set({ isActive })
+        .where(eq(deliveryZones.id, parsedId.data));
+      return "ok" as const;
+    });
+
+    if (outcome === "missing")
+      return { ok: false, error: "المنطقة غير موجودة." };
+    if (outcome === "last")
+      return {
+        ok: false,
+        error: "لا بد من منطقة توصيل واحدة نشطة على الأقل.",
+      };
     revalidatePath("/menu");
     return { ok: true };
   } catch (err) {
@@ -130,7 +170,7 @@ export async function addZone(
   feeMinor: number,
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    await guard();
+    const user = await guard();
     const name = zoneNameSchema.safeParse(nameAr);
     const fee = zoneFeeSchema.safeParse(feeMinor);
     if (!name.success) return { ok: false, error: "اسم المنطقة قصير جداً" };
@@ -143,10 +183,23 @@ export async function addZone(
     const nextSort =
       (existing.at(-1)?.sortOrder ?? 0) + (existing.length > 0 ? 1 : 0);
 
-    await db.insert(deliveryZones).values({
-      nameAr: name.data,
-      feeMinor: fee.data,
-      sortOrder: nextSort,
+    await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(deliveryZones)
+        .values({
+          nameAr: name.data,
+          feeMinor: fee.data,
+          sortOrder: nextSort,
+        })
+        .returning({ id: deliveryZones.id });
+      if (!row) throw new Error("تعذر إضافة المنطقة");
+      await tx.insert(priceChanges).values({
+        entityType: "delivery_zone",
+        entityId: row.id,
+        oldMinor: 0,
+        newMinor: fee.data,
+        changedBy: user.id,
+      });
     });
     revalidatePath("/menu");
     return { ok: true };
@@ -162,17 +215,33 @@ export async function deleteZone(
     await guard();
     const parsedId = uuidSchema.safeParse(id);
     if (!parsedId.success) return { ok: false, error: "منطقة غير صحيحة." };
-    const all = await db
-      .select({ id: deliveryZones.id })
-      .from(deliveryZones)
-      .where(eq(deliveryZones.isActive, true));
-    if (all.length <= 1 && all.some((z) => z.id === parsedId.data)) {
-      return {
-        ok: false,
-        error: "لا يمكن حذف المنطقة النشطة الوحيدة.",
-      };
-    }
-    await db.delete(deliveryZones).where(eq(deliveryZones.id, parsedId.data));
+
+    const outcome = await db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext('jpasta:delivery_zones'))`,
+      );
+      const [target] = await tx
+        .select({ id: deliveryZones.id, isActive: deliveryZones.isActive })
+        .from(deliveryZones)
+        .where(eq(deliveryZones.id, parsedId.data))
+        .limit(1);
+      if (!target) return "missing" as const;
+
+      if (target.isActive) {
+        const active = await tx
+          .select({ id: deliveryZones.id })
+          .from(deliveryZones)
+          .where(eq(deliveryZones.isActive, true));
+        if (active.length <= 1) return "last" as const;
+      }
+      await tx.delete(deliveryZones).where(eq(deliveryZones.id, parsedId.data));
+      return "ok" as const;
+    });
+
+    if (outcome === "missing")
+      return { ok: false, error: "المنطقة غير موجودة." };
+    if (outcome === "last")
+      return { ok: false, error: "لا يمكن حذف المنطقة النشطة الوحيدة." };
     revalidatePath("/menu");
     return { ok: true };
   } catch (err) {
@@ -193,7 +262,7 @@ const shopSettingsSchema = z.object({
     .trim()
     .min(6, "رقم الهاتف قصير جداً")
     .max(20)
-    .regex(/^[0-9+\-()\s]+$/, "رقم الهاتف غير صحيح"),
+    .refine((value) => isPlausiblePhone(value, 6), "رقم الهاتف غير صحيح"),
   whatsapp: z
     .string()
     .trim()
