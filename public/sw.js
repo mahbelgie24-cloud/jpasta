@@ -1,5 +1,5 @@
 /* JPasta service worker — app shell, offline ordering, push-ready. */
-const VERSION = "jpasta-v3";
+const VERSION = "jpasta-v4";
 const SHELL = `${VERSION}-shell`;
 const MEDIA = `${VERSION}-media`;
 
@@ -44,6 +44,23 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+
+  // Product media is public and immutable; it must be handled BEFORE the
+  // authenticated-API skip below, otherwise this branch is unreachable and
+  // dish photos never survive an offline visit.
+  if (url.pathname.startsWith("/api/media/")) {
+    event.respondWith(
+      caches.open(MEDIA).then(async (cache) => {
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        const response = await fetch(request);
+        if (response.ok) cache.put(request, response.clone());
+        return response;
+      }),
+    );
+    return;
+  }
+
   // Never cache authenticated console/API traffic.
   if (
     url.pathname.startsWith("/console") ||
@@ -54,32 +71,22 @@ self.addEventListener("fetch", (event) => {
   }
 
   // Navigations: network-first, fall back to the cached shell/offline page.
+  // Only a successful response is worth caching — a transient 500 or a 404
+  // must not replace a working page in the offline shell.
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(SHELL).then((cache) => cache.put(request, copy));
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(SHELL).then((cache) => cache.put(request, copy));
+          }
           return response;
         })
         .catch(async () => {
           const cached = await caches.match(request);
           return cached || caches.match("/offline.html");
         }),
-    );
-    return;
-  }
-
-  // Product media: immutable cache-first.
-  if (url.pathname.startsWith("/api/media/")) {
-    event.respondWith(
-      caches.open(MEDIA).then(async (cache) => {
-        const cached = await cache.match(request);
-        if (cached) return cached;
-        const response = await fetch(request);
-        if (response.ok) cache.put(request, response.clone());
-        return response;
-      }),
     );
     return;
   }
