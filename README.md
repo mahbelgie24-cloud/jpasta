@@ -1,5 +1,7 @@
 # JPasta — Fresh Pasta & Chicken
 
+[![CI](https://github.com/mahbelgie24-cloud/jpasta/actions/workflows/ci.yml/badge.svg)](https://github.com/mahbelgie24-cloud/jpasta/actions/workflows/ci.yml)
+
 Digital menu, first-party ordering, and an owner console for **JPasta**
 (Qalqilya) — fresh pasta cooked to order, house sauces made fresh daily, and a
 lot of love.
