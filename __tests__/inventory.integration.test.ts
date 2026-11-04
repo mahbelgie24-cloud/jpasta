@@ -1,8 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { testDatabaseUrl } from "@/test/db";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db, pool } from "@/lib/db";
-import { ingredients, inventoryMoves, products } from "@/db/schema";
+import {
+  ingredients,
+  inventoryMoves,
+  priceChanges,
+  products,
+} from "@/db/schema";
 import {
   addIngredient,
   listIngredients,
@@ -116,12 +121,13 @@ d("inventory — recipe-driven deduction", () => {
     )?.currentStock;
     expect(stock).toBe(5000 - RECIPE_QTY * 10 - 300);
 
-    // 2 kg purchased
+    // 2 kg purchased at a new audited unit cost
     await moveStock({
       ingredientId: flourId,
       qty: 2000,
       kind: "purchase",
       note: "مورد الدقيق الرئيسي",
+      costPerUnitMinor: 350,
     });
     stock = (await listIngredients()).find(
       (i) => i.id === flourId,
@@ -134,6 +140,43 @@ d("inventory — recipe-driven deduction", () => {
       .where(eq(inventoryMoves.ingredientId, flourId));
     expect(moves.filter((m) => m.reason === "waste")).toHaveLength(1);
     expect(moves.filter((m) => m.reason === "purchase")).toHaveLength(1);
+
+    // The purchase updated the cost and left an audit row (old → new).
+    const [ingredient] = await db
+      .select()
+      .from(ingredients)
+      .where(eq(ingredients.id, flourId));
+    expect(ingredient?.costPerUnitMinor).toBe(350);
+    const audits = await db
+      .select()
+      .from(priceChanges)
+      .where(
+        and(
+          eq(priceChanges.entityType, "ingredient"),
+          eq(priceChanges.entityId, flourId),
+        ),
+      );
+    expect(audits).toHaveLength(1);
+    expect(audits[0]?.oldMinor).toBe(300);
+    expect(audits[0]?.newMinor).toBe(350);
+  });
+
+  it("rejects an inbound purchase that is not positive, and a cost on waste", async () => {
+    await expect(
+      moveStock({
+        ingredientId: flourId,
+        qty: -5,
+        kind: "purchase",
+      }),
+    ).rejects.toThrow(/الشراء/);
+    await expect(
+      moveStock({
+        ingredientId: flourId,
+        qty: 5,
+        kind: "waste",
+        costPerUnitMinor: 350,
+      }),
+    ).rejects.toThrow(/الشراء فقط/);
   });
 
   it("low-stock flag flips at the reorder threshold", async () => {

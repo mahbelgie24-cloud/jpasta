@@ -2,7 +2,12 @@ import "server-only";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@/lib/db";
-import { ingredients, inventoryMoves, recipes } from "@/db/schema";
+import {
+  ingredients,
+  inventoryMoves,
+  priceChanges,
+  recipes,
+} from "@/db/schema";
 import {
   clampNonNegative,
   fromCenti,
@@ -119,6 +124,10 @@ export async function listIngredients(): Promise<IngredientRow[]> {
 }
 
 const UNITS = new Set(["g", "ml", "piece"]);
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const MAX_UNITS = 1_000_000;
+const MAX_UNIT_COST_MINOR = 10_000_000;
 
 export async function addIngredient(input: {
   name: string;
@@ -129,36 +138,44 @@ export async function addIngredient(input: {
   actorId?: string;
 }): Promise<void> {
   const name = input.name.trim();
-  if (name.length < 2) throw new Error("اسم المكوّن قصير جداً");
+  if (name.length < 2 || name.length > 60)
+    throw new Error("اسم المكوّن غير صحيح");
   if (!UNITS.has(input.unit))
     throw new Error("الوحدة يجب أن تكون g أو ml أو piece");
-  if (input.openingStock < 0 || input.reorderThreshold < 0)
-    throw new Error("الكميات لا تكون سالبة");
+  for (const value of [input.openingStock, input.reorderThreshold]) {
+    if (!Number.isFinite(value) || value < 0 || value > MAX_UNITS) {
+      throw new Error("الكميات لا تكون سالبة أو ضخمة");
+    }
+  }
   if (!Number.isInteger(input.costPerUnitMinor) || input.costPerUnitMinor < 0) {
     throw new Error("تكلفة الوحدة غير صحيحة");
   }
 
-  const [row] = await db
-    .insert(ingredients)
-    .values({
-      name,
-      unit: input.unit,
-      currentStock: fromCenti(toCenti(input.openingStock)),
-      reorderThreshold: fromCenti(toCenti(input.reorderThreshold)),
-      costPerUnitMinor: input.costPerUnitMinor,
-    })
-    .returning({ id: ingredients.id });
-  if (!row) throw new Error("تعذر الإضافة");
+  // The opening balance and its audit row are one unit of work: a crash
+  // between them would leave stock that no movement explains.
+  await db.transaction(async (tx) => {
+    const [row] = await tx
+      .insert(ingredients)
+      .values({
+        name,
+        unit: input.unit,
+        currentStock: fromCenti(toCenti(input.openingStock)),
+        reorderThreshold: fromCenti(toCenti(input.reorderThreshold)),
+        costPerUnitMinor: input.costPerUnitMinor,
+      })
+      .returning({ id: ingredients.id });
+    if (!row) throw new Error("تعذر الإضافة");
 
-  if (input.openingStock > 0) {
-    await db.insert(inventoryMoves).values({
-      ingredientId: row.id,
-      deltaQty: fromCenti(toCenti(input.openingStock)),
-      reason: "adjustment",
-      notes: "رصيد افتتاحي",
-      createdBy: input.actorId ?? null,
-    });
-  }
+    if (input.openingStock > 0) {
+      await tx.insert(inventoryMoves).values({
+        ingredientId: row.id,
+        deltaQty: fromCenti(toCenti(input.openingStock)),
+        reason: "adjustment",
+        notes: "رصيد افتتاحي",
+        createdBy: input.actorId ?? null,
+      });
+    }
+  });
 }
 
 /** Generic audited stock change: purchase (+), waste (−), adjustment (±). */
@@ -167,16 +184,41 @@ export async function moveStock(input: {
   qty: number;
   kind: "purchase" | "waste" | "adjustment";
   note?: string;
+  /** Purchase only: the new audited unit cost. */
+  costPerUnitMinor?: number;
   actorId?: string;
 }): Promise<void> {
-  if (!Number.isFinite(input.qty) || input.qty === 0)
+  if (!UUID_RE.test(input.ingredientId)) throw new Error("المكوّن غير موجود");
+  if (
+    !Number.isFinite(input.qty) ||
+    input.qty === 0 ||
+    Math.abs(input.qty) > MAX_UNITS
+  ) {
     throw new Error("أدخل كمية صحيحة");
+  }
+  // A purchase is always an inbound movement; a negative one would be
+  // logged as a purchase while actually reducing stock (the UI already
+  // prefixes waste with a negative sign).
+  if (input.kind === "purchase" && input.qty <= 0)
+    throw new Error("كمية الشراء يجب أن تكون أكبر من صفر");
+  if (input.costPerUnitMinor !== undefined) {
+    if (input.kind !== "purchase")
+      throw new Error("تكلفة الوحدة تُحدَّث مع حركة الشراء فقط");
+    if (
+      !Number.isInteger(input.costPerUnitMinor) ||
+      input.costPerUnitMinor < 0 ||
+      input.costPerUnitMinor > MAX_UNIT_COST_MINOR
+    ) {
+      throw new Error("تكلفة الوحدة غير صحيحة");
+    }
+  }
 
   await db.transaction(async (tx) => {
     const [ingredient] = await tx
       .select({
         id: ingredients.id,
         currentStock: ingredients.currentStock,
+        costPerUnitMinor: ingredients.costPerUnitMinor,
       })
       .from(ingredients)
       .where(eq(ingredients.id, input.ingredientId))
@@ -192,9 +234,18 @@ export async function moveStock(input: {
     const after = clampNonNegative(before + requested);
     const delta = subtractCenti(after, before);
 
+    const nextCost = input.costPerUnitMinor;
+    const costChanged =
+      nextCost !== undefined && nextCost !== ingredient.costPerUnitMinor;
+
     await tx
       .update(ingredients)
-      .set({ currentStock: fromCenti(after) })
+      .set({
+        currentStock: fromCenti(after),
+        ...(nextCost !== undefined && nextCost !== ingredient.costPerUnitMinor
+          ? { costPerUnitMinor: nextCost }
+          : {}),
+      })
       .where(eq(ingredients.id, input.ingredientId));
     await tx.insert(inventoryMoves).values({
       ingredientId: input.ingredientId,
@@ -203,6 +254,15 @@ export async function moveStock(input: {
       notes: input.note?.slice(0, 140) || null,
       createdBy: input.actorId ?? null,
     });
+    if (costChanged && nextCost !== undefined) {
+      await tx.insert(priceChanges).values({
+        entityType: "ingredient",
+        entityId: input.ingredientId,
+        oldMinor: ingredient.costPerUnitMinor,
+        newMinor: nextCost,
+        changedBy: input.actorId ?? null,
+      });
+    }
   });
 }
 
@@ -237,6 +297,9 @@ export async function setRecipeLine(input: {
   ingredientId: string;
   quantityUsed: number | null; // null removes the line
 }): Promise<void> {
+  if (!UUID_RE.test(input.productId) || !UUID_RE.test(input.ingredientId)) {
+    throw new Error("بيانات الوصفة غير صحيحة");
+  }
   if (input.quantityUsed === null) {
     await db
       .delete(recipes)

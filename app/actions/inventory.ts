@@ -72,6 +72,7 @@ export async function stockMove(input: {
   qty: number;
   kind: "purchase" | "waste" | "adjustment";
   note?: string;
+  costPerUnitMinor?: number;
 }): Promise<{ ok: boolean; error?: string }> {
   try {
     const user = await guard();

@@ -263,7 +263,7 @@ export function InventoryAdmin() {
                                 htmlFor={`cost-${ing.id}`}
                                 className="text-[10px] font-bold text-ink-soft"
                               >
-                                تكلفة الوحدة (₪) — تحدّث التكلفة لاحقاً
+                                تكلفة الوحدة الجديدة (₪) — اختياري
                               </label>
                               <input
                                 id={`cost-${ing.id}`}
@@ -305,6 +305,18 @@ export function InventoryAdmin() {
                               const qty = Number.parseFloat(
                                 moveQty[`${ing.id}:${kind}`] || "0",
                               );
+                              let costPerUnitMinor: number | undefined;
+                              const costRaw = moveCost[ing.id]?.trim() ?? "";
+                              if (kind === "purchase" && costRaw) {
+                                const parsed = tryToMinorUnits(costRaw);
+                                if (parsed === null) {
+                                  setNotice(
+                                    "تكلفة الوحدة غير صحيحة — استخدم رقماً مثل 12.50.",
+                                  );
+                                  return;
+                                }
+                                costPerUnitMinor = parsed;
+                              }
                               const ok = await act(
                                 () =>
                                   stockMove({
@@ -313,14 +325,22 @@ export function InventoryAdmin() {
                                       kind === "waste" ? -Math.abs(qty) : qty,
                                     kind,
                                     note: moveNote[`${ing.id}:${kind}`],
+                                    costPerUnitMinor,
                                   }),
                                 "✓ سُجّلت الحركة في السجل",
                               );
-                              if (ok)
+                              if (ok) {
                                 setMoveQty((m) => ({
                                   ...m,
                                   [`${ing.id}:${kind}`]: "",
                                 }));
+                                if (kind === "purchase") {
+                                  setMoveCost((m) => ({
+                                    ...m,
+                                    [ing.id]: "",
+                                  }));
+                                }
+                              }
                             }}
                             className="col-span-3 inline-flex min-h-11 items-center justify-center rounded-full bg-basil-700 text-sm font-bold text-cream-50 disabled:opacity-50"
                           >
