@@ -16,6 +16,9 @@ describe("CSV serialization", () => {
     expect(csvCell("+970599000000")).toBe('"\'+970599000000"');
     expect(csvCell("-1")).toBe('"\'-1"');
     expect(csvCell("@cmd")).toBe('"\'@cmd"');
+    expect(csvCell(" =1+1")).toBe('"\' =1+1"');
+    expect(csvCell("\t=1+1")).toBe('"\'\t=1+1"');
+    expect(csvCell("\r=1+1")).toBe('"\'\r=1+1"');
   });
 
   it("joins rows with CRLF", () => {

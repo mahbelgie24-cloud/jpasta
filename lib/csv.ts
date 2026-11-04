@@ -6,7 +6,9 @@
  *     customer-provided name. This is CSV injection defence, not cosmetics.
  */
 
-const FORMULA_PREFIX = /^[=+\-@\t\r]/;
+// A leading tab/CR is dangerous on its own; a formula may also be hidden
+// behind ordinary (or non-breaking) spaces. Both are neutralised.
+const FORMULA_PREFIX = /^(?:[\t\r]|[ \u00A0]*[=+\-@])/;
 
 export function csvCell(value: unknown): string {
   const raw = value === null || value === undefined ? "" : String(value);
