@@ -87,6 +87,9 @@ export async function verifyPin(pin: string, stored: string): Promise<boolean> {
     if (
       !Number.isFinite(iterations) ||
       iterations < 1000 ||
+      // A tampered/legacy row with a billion iterations would turn login
+      // into a CPU denial of service. 2M is far above the current 210k.
+      iterations > 2_000_000 ||
       !salt ||
       !fromHex(expectedHex) ||
       expectedHex.length !== KEYLEN * 2

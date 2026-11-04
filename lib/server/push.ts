@@ -56,14 +56,25 @@ async function sendEmptyPush(
   keys: VapidKeys,
 ): Promise<void> {
   const authorization = await createVapidAuthorization(row.endpoint, keys);
-  const response = await fetch(row.endpoint, {
-    method: "POST",
-    headers: {
-      authorization,
-      ttl: "120",
-      urgency: "high",
-    },
-  });
+  // A push service that accepts the TCP connection and then stalls must not
+  // hold the post-commit fan-out (and its waitUntil budget) open. The push
+  // is a best-effort tickle; 10 seconds is already generous.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
+  let response: Response;
+  try {
+    response = await fetch(row.endpoint, {
+      method: "POST",
+      headers: {
+        authorization,
+        ttl: "120",
+        urgency: "high",
+      },
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (response.status === 404 || response.status === 410) {
     // The browser dropped the subscription — prune it instead of retrying.

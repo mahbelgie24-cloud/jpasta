@@ -10,4 +10,4 @@ NEXT_PUBLIC_WHATSAPP_NUMBER=970566064976
 # Matches lib/server/pin.ts's local fallback so `next start` and
 # `wrangler dev` share the same lookup. Production: `openssl rand -hex 32`.
 AUTH_PEPPER=jpasta-dev-pepper
-REALTIME_SECRET=jpasta-dev-realtime-secret
+REALTIME_SECRET=jpasta-dev-realtime-secret-rotate-me-32

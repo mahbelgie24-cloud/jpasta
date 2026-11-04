@@ -177,4 +177,10 @@ describe("PIN credentials", () => {
     expect(await verifyPin("000000", stored)).toBe(false);
     expect(await verifyPin("135790", "garbage")).toBe(false);
   });
+
+  it("rejects an absurd stored iteration count without doing the work", async () => {
+    const salt = "00112233445566778899aabbccddeeff";
+    const stored = `pbkdf2:3000000:${salt}:${"a".repeat(64)}`;
+    expect(await verifyPin("135790", stored)).toBe(false);
+  });
 });

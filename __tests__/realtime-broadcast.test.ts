@@ -9,16 +9,17 @@ import {
  * These pure guards are what the DO uses before touching a socket.
  */
 describe("realtime broadcast guards", () => {
-  it("requires the exact bearer secret", () => {
-    expect(isAuthorizedBroadcast("Bearer super-secret", "super-secret")).toBe(
-      true,
-    );
-    expect(isAuthorizedBroadcast("Bearer super-secret", "other")).toBe(false);
-    expect(isAuthorizedBroadcast(null, "super-secret")).toBe(false);
-    expect(isAuthorizedBroadcast("Bearer super-secret", undefined)).toBe(false);
-    expect(isAuthorizedBroadcast("Basic super-secret", "super-secret")).toBe(
+  it("requires the exact bearer secret and a full-strength secret", () => {
+    const strong = "a".repeat(32);
+    expect(isAuthorizedBroadcast(`Bearer ${strong}`, strong)).toBe(true);
+    expect(isAuthorizedBroadcast(`Bearer ${strong}`, "b".repeat(32))).toBe(
       false,
     );
+    expect(isAuthorizedBroadcast(null, strong)).toBe(false);
+    expect(isAuthorizedBroadcast(`Bearer ${strong}`, undefined)).toBe(false);
+    expect(isAuthorizedBroadcast(`Basic ${strong}`, strong)).toBe(false);
+    // A short secret must never authorize the fan-out, even if it matches.
+    expect(isAuthorizedBroadcast("Bearer short", "short")).toBe(false);
   });
 
   it("rejects implausible broadcast timestamps", () => {

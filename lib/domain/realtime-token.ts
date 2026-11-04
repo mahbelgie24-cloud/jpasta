@@ -48,7 +48,10 @@ export function isAuthorizedBroadcast(
   authorizationHeader: string | null,
   secret: string | undefined,
 ): boolean {
-  if (!secret) return false;
+  // The same 32-character floor as requireSecret(): a short/empty secret
+  // must never authorize a fan-out, even if a future router exposes this
+  // route beyond the binding.
+  if (!secret || secret.length < 32) return false;
   return timingSafeEqualText(authorizationHeader ?? "", `Bearer ${secret}`);
 }
 
