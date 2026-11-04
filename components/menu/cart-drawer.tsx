@@ -706,6 +706,8 @@ export function CartDrawer({
                       orderType === "delivery" ? "توصيل" : "استلام من المحل",
                     address: address.trim() || undefined,
                     note: note.trim() || undefined,
+                    paymentMethodAr:
+                      PAYMENT_METHOD_LABELS[effectivePaymentMethod],
                   },
                 );
                 window.open(

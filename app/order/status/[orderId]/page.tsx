@@ -1,5 +1,6 @@
+import { notFound } from "next/navigation";
 import { Clock, MapPin } from "lucide-react";
-import { Logo, LogoMark } from "@/components/brand/logo";
+import { Logo } from "@/components/brand/logo";
 import { OrderStatusClient, type SerializableOrder } from "./status-client";
 import { getOrderForStatus } from "@/lib/server/orders";
 import { SITE } from "@/lib/site";
@@ -17,32 +18,15 @@ export default async function OrderStatusPage({
   const { t } = await searchParams;
   const order = await getOrderForStatus(orderId, t ?? "");
 
-  if (!order) {
-    return (
-      <main
-        id="main"
-        tabIndex={-1}
-        className="flex min-h-dvh flex-col items-center justify-center px-4 text-center"
-      >
-        <LogoMark className="size-20" />
-        <h1 className="mt-6 type-section text-ink">الطلب غير موجود</h1>
-        <p className="mt-3 max-w-sm text-ink-soft">
-          تأكد أنك فتحت الرابط الصحيح — روابط متابعة الطلب خاصة بكل طلب.
-        </p>
-        <p className="mt-6 text-sm text-ink-soft">
-          للاستفسار:{" "}
-          <span dir="ltr" className="font-bold tabular-nums">
-            {SITE.phoneDisplay}
-          </span>
-        </p>
-      </main>
-    );
-  }
+  // A missing order or a stale capability token is a real 404 — not a 200
+  // with a friendly message (soft 404s confuse crawlers and monitoring).
+  if (!order) notFound();
 
   const initial: SerializableOrder = {
     orderNumber: order.orderNumber,
     status: order.status,
     channel: order.channel,
+    paymentMethod: order.paymentMethod,
     subtotalMinor: order.subtotalMinor,
     deliveryFeeMinor: order.deliveryFeeMinor,
     zoneNameAr: order.zoneNameAr,

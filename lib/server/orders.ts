@@ -762,6 +762,7 @@ export type OrderStatusView = {
   orderNumber: string;
   status: OrderStatus;
   channel: "takeaway" | "delivery" | "dine_in";
+  paymentMethod: "cash" | "card_terminal" | "cash_on_delivery";
   subtotalMinor: Minor;
   deliveryFeeMinor: Minor;
   totalMinor: Minor;
@@ -805,6 +806,7 @@ export async function getOrderForStatus(
     orderNumber: order.orderNumber,
     status: order.status,
     channel: order.channel,
+    paymentMethod: order.paymentMethod,
     subtotalMinor: order.subtotalMinor,
     deliveryFeeMinor: order.deliveryFeeMinor,
     totalMinor: order.totalMinor,

@@ -3,6 +3,7 @@ import { asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { categories, modifierGroups, modifiers, products } from "@/db/schema";
 import { getSessionUser } from "@/lib/server/session";
+import { getShopSettings } from "@/lib/server/settings";
 import { ConsolePageShell } from "@/components/console/page-shell";
 import { ManualEntry, type ManualProduct } from "./manual-entry";
 
@@ -16,6 +17,7 @@ export const metadata = {
 export default async function NewOrderPage() {
   const user = await getSessionUser();
   if (!user) redirect("/console/login");
+  const shop = await getShopSettings();
 
   const rows = await db
     .select({
@@ -77,7 +79,11 @@ export default async function NewOrderPage() {
       title="طلب يدوي"
       description="طلبات الهاتف والمحل تمر بنفس خط الأسعار المحمي وإعادة المحاولة الآمنة."
     >
-      <ManualEntry products={catalog} ownerName={user.name} />
+      <ManualEntry
+        products={catalog}
+        ownerName={user.name}
+        paymentMethods={shop.paymentMethods}
+      />
     </ConsolePageShell>
   );
 }

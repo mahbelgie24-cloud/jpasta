@@ -13,6 +13,10 @@ import {
   type Minor,
 } from "@/lib/pricing";
 import { fetchDeliveryZones, placeConsoleOrder } from "@/app/actions/orders";
+import {
+  PAYMENT_METHOD_LABELS,
+  type PaymentMethod,
+} from "@/lib/domain/payment";
 import { arabicIncludes } from "@/lib/arabic";
 import { nextIdempotencyScope, type IdempotencyScope } from "@/lib/idempotency";
 
@@ -106,14 +110,18 @@ function missingRequiredGroups(
 export function ManualEntry({
   products,
   ownerName,
+  paymentMethods = ["cash", "cash_on_delivery", "card_terminal"],
 }: {
   products: ManualProduct[];
   ownerName: string;
+  /** Owner-configured methods; the server enforces the same list. */
+  paymentMethods?: PaymentMethod[];
 }) {
   const [lines, setLines] = useState<Line[]>([]);
   const [orderType, setOrderType] = useState<
     "takeaway" | "delivery" | "dine_in"
   >("takeaway");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -132,6 +140,19 @@ export function ManualEntry({
     feeMinor: number;
   }> | null>(null);
   const [zoneId, setZoneId] = useState("");
+  // Cash-on-delivery cannot pay for a pickup/dine-in order. Derive the
+  // effective method instead of syncing state, so switching channel can
+  // never leave an invisible, disabled method selected.
+  const availableMethods =
+    orderType === "delivery"
+      ? paymentMethods
+      : paymentMethods.filter((method) => method !== "cash_on_delivery");
+  const effectivePaymentMethod: PaymentMethod = availableMethods.includes(
+    paymentMethod,
+  )
+    ? paymentMethod
+    : (availableMethods[0] ?? "cash");
+  const noPaymentMethod = availableMethods.length === 0;
   // A retried submit must reuse its key; editing the order must not reuse it
   // with a different payload (the server binds the key to the payload hash).
   const idempotency = useRef<IdempotencyScope | null>(null);
@@ -277,11 +298,15 @@ export function ManualEntry({
         "لا توجد مناطق توصيل متاحة الآن — اختر الاستلام أو حاول لاحقاً.",
       );
     }
+    if (noPaymentMethod) {
+      return setError("لا توجد طريقة دفع متاحة لهذا النوع من الطلبات.");
+    }
     setError(null);
     setBusy(true);
     try {
       const payload = {
         channel: orderType,
+        paymentMethod: effectivePaymentMethod,
         ...(orderType === "delivery" ? { zoneId } : {}),
         customer: {
           name: name.trim(),
@@ -587,6 +612,51 @@ export function ManualEntry({
               </button>
             ))}
           </div>
+
+          {availableMethods.length > 1 && (
+            <fieldset>
+              <legend className="text-sm font-bold text-ink">
+                طريقة الدفع
+              </legend>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {availableMethods.map((method) => {
+                  const active = effectivePaymentMethod === method;
+                  return (
+                    <label
+                      key={method}
+                      className={
+                        active
+                          ? "flex min-h-11 cursor-pointer items-center justify-center rounded-md border-2 border-basil-700 bg-basil-50 px-2 text-center text-xs font-bold text-basil-800 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-basil-600"
+                          : "flex min-h-11 cursor-pointer items-center justify-center rounded-md border border-cream-300 bg-cream-100 px-2 text-center text-xs font-bold text-ink-soft has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-basil-600"
+                      }
+                    >
+                      <input
+                        type="radio"
+                        name="manual-payment-method"
+                        value={method}
+                        checked={active}
+                        onChange={() => setPaymentMethod(method)}
+                        className="sr-only"
+                      />
+                      {PAYMENT_METHOD_LABELS[method]}
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+          )}
+          {availableMethods.length === 1 && (
+            <p className="text-xs font-bold text-ink-soft">
+              طريقة الدفع: {PAYMENT_METHOD_LABELS[effectivePaymentMethod]}
+            </p>
+          )}
+          {noPaymentMethod && (
+            <p role="alert" className="text-xs font-bold text-terracotta">
+              لا توجد طريقة دفع متاحة لهذا النوع من الطلبات — عدّل الإعدادات
+              أولاً.
+            </p>
+          )}
+
           <input
             type="text"
             value={name}
@@ -685,6 +755,7 @@ export function ManualEntry({
             onClick={submit}
             disabled={
               busy ||
+              noPaymentMethod ||
               (orderType === "delivery" && (!zones || zones.length === 0))
             }
           >

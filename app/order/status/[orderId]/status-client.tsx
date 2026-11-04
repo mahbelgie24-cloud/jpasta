@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Price } from "@/components/ui/price";
 import { TwirlLoader } from "@/components/ui/twirl-loader";
+import { PAYMENT_METHOD_LABELS } from "@/lib/domain/payment";
 import { formatTimeAr, timeAgoAr } from "@/lib/format";
 import { fetchOrderStatus } from "@/app/actions/orders";
 import type { OrderStatusView } from "@/lib/server/orders";
@@ -22,6 +23,7 @@ export interface SerializableOrder {
   orderNumber: string;
   status: OrderStatusView["status"];
   channel: OrderStatusView["channel"];
+  paymentMethod: OrderStatusView["paymentMethod"];
   subtotalMinor: number;
   deliveryFeeMinor: number;
   zoneNameAr: string | null;
@@ -286,8 +288,14 @@ export function OrderStatusClient({
               </dd>
             </div>
           )}
+          <div className="flex justify-between">
+            <dt className="text-text-secondary">طريقة الدفع</dt>
+            <dd className="text-ink">
+              {PAYMENT_METHOD_LABELS[order.paymentMethod]}
+            </dd>
+          </div>
           <div className="flex justify-between pt-1 text-base font-bold">
-            <dt>الإجمالي (نقداً عند الاستلام)</dt>
+            <dt>الإجمالي</dt>
             <dd>
               <Price minor={order.totalMinor} className="text-basil-800" />
             </dd>

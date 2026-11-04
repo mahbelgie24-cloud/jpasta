@@ -18,6 +18,8 @@ export interface CustomerInfo {
   orderTypeAr: string; // "توصيل" | "استلام من المحل"
   address?: string;
   note?: string;
+  /** Owner-configured method; falls back to the old cash-on-pickup copy. */
+  paymentMethodAr?: string;
 }
 
 export function whatsappUrl(number: string, text: string): string {
@@ -56,7 +58,7 @@ export function buildOrderMessage(
       : null,
     customer.note ? `ملاحظات: ${customer.note}` : null,
     "",
-    `طريقة الدفع: نقداً عند الاستلام`,
+    `طريقة الدفع: ${customer.paymentMethodAr ?? "نقداً عند الاستلام"}`,
   ].filter((v): v is string => v !== null);
 
   return parts.join("\n");
