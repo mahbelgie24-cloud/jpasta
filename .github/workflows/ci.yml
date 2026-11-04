@@ -205,6 +205,11 @@ jobs:
       #  - desktop proves the code itself is lean: perf ≥ 0.95, LCP < 1.5s,
       #    CLS < 0.02, TBT < 200ms.
       # Chrome is preinstalled on GitHub runners; locally set CHROME_PATH.
+      # LHCI writes into these directories but does not create them on a
+      # fresh checkout; create them so the report artifact is never empty.
+      - name: Prepare Lighthouse report directories
+        run: mkdir -p .lighthouseci .lighthouseci-desktop
+
       - name: Lighthouse mobile budgets
         run: npm run test:lighthouse
 
@@ -216,5 +221,8 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: lighthouse-reports
-          path: .lighthouseci/
+          path: |
+            .lighthouseci/
+            .lighthouseci-desktop/
+          if-no-files-found: ignore
           retention-days: 7
