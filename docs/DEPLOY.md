@@ -85,7 +85,9 @@ DATABASE_URL="$NEON_POOLED_URL" npm run db:seed          # first install only
 DATABASE_URL="$NEON_POOLED_URL" npm run db:seed -- --provision
 ```
 
-`db:seed --force` is refused when `NODE_ENV=production` (it truncates orders).
+`db:seed --force` is refused when `NODE_ENV=production` **and** whenever the
+database host is not loopback (it truncates orders). The host guard is the
+reliable one because the deploy workflow does not export `NODE_ENV`.
 
 ### Menu catalog updates (no schema change)
 
@@ -173,6 +175,12 @@ DATABASE_URL="$NEON_POOLED_URL" node scripts/backup-db.mjs
 Compressed logical dump in `backups/` with 7-day retention. **Rehearse a
 restore into a scratch database before trusting it.** Neon PITR is the
 primary recovery path; the dump is the portable copy.
+
+The deploy workflow uploads the pre-migration dump as a GitHub artifact
+(GitHub encrypts artifacts at rest, but the archive itself is not
+client-side encrypted). If the repository's artifact access is broader than
+the owner, encrypt the dump (age/GPG) or store it in a private R2 bucket with
+a short lifecycle before relying on it.
 
 ---
 

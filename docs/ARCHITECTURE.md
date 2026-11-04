@@ -49,16 +49,20 @@ placeOrder(input, { source, actorId? })
   1. zod parse (client sends product/option KEYS only; provenance is a
      server argument, never part of the payload)
   2. sha256(stableStringify(input)) → payloadHash
-  3. BEGIN
-     a. replay by idempotencyKey; if found, assert payloadHash matches
+  3. replay by idempotencyKey; if found, assert payloadHash matches and
+     return the original order — BEFORE the ordering kill switch/payment
+     gates, so a lost response can always be retried
+  4. channel rules: COD is delivery-only; dine-in is console-only
+  5. BEGIN
+     a. replay check again (concurrent duplicate loses the unique race)
      b. load products + modifier groups/options from DB
      c. recompute every line price from DB
      d. delivery: validate zoneId (active) → fee from deliveryZones
      e. atomic daily counter → JP-YYMMDD-NNN
      f. insert order + items + status history (received)
      g. deduct recipes from stock (integer hundredths; floors at 0)
-  4. COMMIT
-  5. notifyOrdersChanged() → OrderFeed DO → every console/kitchen screen
+  6. COMMIT
+  7. notifyOrdersChanged() → OrderFeed DO → every console/kitchen screen
 ```
 
 Invariants:
@@ -69,6 +73,10 @@ Invariants:
 - Totals are CHECKed in Postgres: `total = subtotal + delivery_fee`.
 - Status transitions are conditional (`WHERE status = expected`) and audited.
 - Cancellation requires a reason; owner undo within 5 minutes.
+- Product prices, delivery-zone fees and inventory unit costs all leave
+  `price_changes` audit rows.
+- Dine-in is a console-only channel (spec §7); the storefront cannot create
+  one, and it never carries a delivery address/zone.
 
 ## 4. Realtime
 

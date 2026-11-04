@@ -13,6 +13,9 @@ Drizzle + Neon Postgres · **Cloudflare Workers** via
 - Design system: [`docs/DESIGN.md`](./docs/DESIGN.md) · brand: [`docs/brand/brand.md`](./docs/brand/brand.md)
 - Deploy runbook: [`docs/DEPLOY.md`](./docs/DEPLOY.md)
 - Audit (2026-11-02, honest findings + fixes): [`docs/AUDIT-2026-11-02.md`](./docs/AUDIT-2026-11-02.md)
+- **Latest audit (2026-11-04)**: [`docs/audit/03-final-report.md`](./docs/audit/03-final-report.md)
+  (findings: [`01`](./docs/audit/01-findings.md), baseline + roadmap:
+  [`00`](./docs/audit/00-project-understanding.md) / [`02`](./docs/audit/02-roadmap.md))
 - Menu photo prompts (18 dishes + logo prompt): [`docs/menu-photo-prompts.md`](./docs/menu-photo-prompts.md)
 - Handoff: [`docs/HANDOFF.md`](./docs/HANDOFF.md) · next-session prompt: [`docs/NEXT-SESSION-PROMPT.md`](./docs/NEXT-SESSION-PROMPT.md)
 
@@ -30,7 +33,7 @@ Drizzle + Neon Postgres · **Cloudflare Workers** via
   typography, the DishArt illustration system, dark editorial landing, live
   menu search, real zone fees in the cart, dark console, PWA shell + offline
   page, photo upload to R2.
-- **104 tests** (unit + integration + hardening regressions) plus a
+- **120 tests** (unit + integration + hardening regressions) plus a
   **49-test Playwright suite** (`npm run test:e2e`): real journeys, axe
   a11y gate (serious/critical = fail) and visual regression at
   375/768/1440.
@@ -62,6 +65,11 @@ Drizzle + Neon Postgres · **Cloudflare Workers** via
 - **Operational hygiene**: `/api/health` reports version/uptime, server errors
   emit structured `onRequestError` lines, and a daily Cron prunes expired
   sessions/old login attempts without touching the order audit trail.
+- **2026-11-04 hardening**: idempotent replay survives the ordering kill
+  switch, cash-on-delivery is delivery-only, dine-in is console-only (spec
+  §7), delivery-fee and inventory-cost changes are audited, archives export
+  PII-free by default, the service worker caches dish media and never caches
+  error pages, and CSV formula guards cover leading whitespace.
 - **CI** runs three jobs on every push/PR: `verify` (the full gate +
   OpenNext bundle), `e2e` (Playwright against a fresh build + Postgres),
   and `lighthouse` (budget assertions).
@@ -100,7 +108,7 @@ npm run preview        # local workerd
 npm run deploy         # check-env → build → wrangler deploy
 npm run typecheck      # next typegen + tsc
 npm run lint
-npm test               # vitest (104 tests)
+npm test               # vitest (120 tests)
 npm run test:e2e       # build + Playwright: journeys, axe, visual (port 3220)
 npm run test:lighthouse # LHCI budgets on / and /menu (set CHROME_PATH locally)
 npm run icons          # regenerate favicon/PWA/OG from public/brand/logo*.svg

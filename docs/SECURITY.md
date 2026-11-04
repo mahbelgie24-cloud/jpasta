@@ -1,7 +1,8 @@
 # JPasta v2 — Security & ASVS 5.0 L2 Mapping
 
 > Scope: storefront, owner console, server actions, database, R2 media,
-> realtime WebSocket, deploy pipeline. Last reviewed: 2026-10-28.
+> realtime WebSocket, deploy pipeline. Last reviewed: **2026-11-04**
+> (hardening pass: `docs/audit/03-final-report.md`).
 
 ## 1. Threat model (short)
 
@@ -88,10 +89,36 @@
 - **2026-11-03:** the daily prune route requires `CRON_SECRET` (constant-time
   bearer check) and only deletes expired sessions and login attempts older
   than 30 days.
+- **2026-11-04:** a payload-bound idempotent replay is resolved before the
+  ordering kill switch/payment gates, so a lost response never strands a
+  paid order. Cash-on-delivery is rejected outside delivery; dine-in is
+  accepted only from the authenticated console.
+- **2026-11-04:** delivery-fee changes and inventory unit-cost changes write
+  `price_changes`; zone deactivation/deletion is serialized with an advisory
+  lock, so the active-zone invariant cannot be raced to zero.
+- **2026-11-04:** CSV exports are PII-free by default in the archive UI; the
+  explicit PII link is audited with the owner id. Formula neutralisation now
+  covers leading spaces/NBSP and tab/CR prefixes.
+- **2026-11-04:** `isAuthorizedBroadcast` enforces a 32+ character secret;
+  push HTTP calls abort after 10s; stored PBKDF2 iterations are capped at 2M.
+- **2026-11-04:** the service worker caches public dish media and never
+  caches failed navigations; customer phone validation is shared by checkout
+  and owner settings (punctuation-only values are rejected in both).
+- **2026-11-04:** CSV/exports and media image metadata are validated at the
+  boundary; photo uploads persist their real pixel dimensions.
 - No WAF custom rules/turnstile on order intake yet; the rate limit +
   idempotency + server validation are the current controls.
 - No Sentry/APM; structured Workers logs + `/api/health` are the current
   observability.
+- **2026-11-04:** `npm audit --omit=dev` is clean; the full audit still
+  reports dev-toolchain findings (Lighthouse/Playwright transitive deps).
+  Upgrading `@lhci/cli` is a separate, breaking change.
+- **2026-11-04:** no automated order-retention/DSAR tool; the privacy page
+  promises deletion/anonymisation "when no longer needed". A retention
+  duration and an export/delete procedure are owner/accountant decisions.
+- **2026-11-04:** the offline order queue keeps the payload (including
+  customer contact fields) in IndexedDB until a successful send. It is
+  device-local and disclosed by the privacy page, but not encrypted.
 - ASVS mapping is implementation-level, not a third-party audit.
 
 ## 6. Security review checklist
