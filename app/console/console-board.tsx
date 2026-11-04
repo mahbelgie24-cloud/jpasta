@@ -12,6 +12,7 @@ import {
   LogOut,
   PackageCheck,
   Phone,
+  UtensilsCrossed,
   Volume2,
   VolumeX,
   Wifi,
@@ -238,6 +239,14 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
                             {o.channel === "delivery" ? (
                               <>
                                 <Bike className="size-3" aria-hidden /> توصيل
+                              </>
+                            ) : o.channel === "dine_in" ? (
+                              <>
+                                <UtensilsCrossed
+                                  className="size-3"
+                                  aria-hidden
+                                />{" "}
+                                داخل المحل
                               </>
                             ) : (
                               <>

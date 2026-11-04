@@ -32,6 +32,7 @@ import {
   zonedDayRange,
 } from "@/lib/domain/time";
 import { arabicIncludes } from "@/lib/arabic";
+import { isPlausiblePhone } from "@/lib/domain/phone";
 import { logEvent } from "@/lib/server/log";
 
 /**
@@ -59,7 +60,7 @@ export type OrderStatus =
 export const orderInputSchema = z
   .object({
     idempotencyKey: z.string().min(8).max(80),
-    channel: z.enum(["takeaway", "delivery"]),
+    channel: z.enum(["takeaway", "delivery", "dine_in"]),
     zoneId: z.string().uuid().optional(),
     customer: z.object({
       name: z.string().trim().min(2, "الاسم مطلوب").max(60),
@@ -69,11 +70,7 @@ export const orderInputSchema = z
         .trim()
         .min(9)
         .max(20)
-        .regex(/^[0-9+\-()\s]+$/, "رقم الهاتف غير صحيح")
-        .refine(
-          (value) => value.replace(/\D/g, "").length >= 9,
-          "رقم الهاتف غير صحيح",
-        ),
+        .refine((value) => isPlausiblePhone(value, 9), "رقم الهاتف غير صحيح"),
       address: z.string().trim().max(140),
     }),
     note: z.string().trim().max(200).optional(),
@@ -307,6 +304,41 @@ export async function placeOrder(
   }
   const input = parsed.data;
   const payloadHash = await payloadHashOf(input);
+
+  // (0) Idempotent replay is resolved BEFORE any operational gate. A
+  // customer who lost the response to a successful submit must be able to
+  // retry and receive the original order/access token even if the owner has
+  // paused ordering or disabled a payment method in the meantime. The
+  // payload hash still has to match, so this cannot expose another order.
+  try {
+    const existing = await findReplay(input.idempotencyKey);
+    if (existing) {
+      assertReplayMatches(existing, payloadHash);
+      return { ok: true, order: existing };
+    }
+  } catch (err) {
+    if (err instanceof OrderError) {
+      return { ok: false, error: err.message };
+    }
+    logEvent("error", "order.replay_lookup_failed", {
+      message: err instanceof Error ? err.message : "unknown",
+    });
+    return { ok: false, error: "الخدمة غير متاحة مؤقتاً — حاول بعد قليل." };
+  }
+
+  // Cash-on-delivery is a delivery-only method. A pickup/dine-in order that
+  // selected it would otherwise be accepted and reported as an uncollected
+  // cash sale at the door.
+  if (
+    input.paymentMethod === "cash_on_delivery" &&
+    input.channel !== "delivery"
+  ) {
+    return {
+      ok: false,
+      error: "الدفع عند التوصيل متاح لطلبات التوصيل فقط.",
+    };
+  }
+
   // Owner-configured minimum, read fresh (not the tag cache) so a raised
   // minimum takes effect immediately — and OUTSIDE the transaction so it
   // can never starve the pool it shares with the order transaction.
@@ -330,6 +362,14 @@ export async function placeOrder(
     return {
       ok: false,
       error: "الطلب المباشر غير متاح مؤقتاً — راسلنا على واتساب.",
+    };
+  }
+  // Dine-in has no table identifier and is entered by the owner from the
+  // console (spec §7); the public storefront cannot create one.
+  if (source === "storefront" && input.channel === "dine_in") {
+    return {
+      ok: false,
+      error: "طلبات داخل المحل تُسجَّل من الكونسول فقط.",
     };
   }
   // Same reasoning for the accepted payment methods: the checkout picker is

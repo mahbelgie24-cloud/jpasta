@@ -25,6 +25,7 @@ export interface DaySummary {
   cancelledMinor: number;
   deliveryCount: number;
   takeawayCount: number;
+  dineInCount: number;
   avgOrderMinor: number;
 }
 
@@ -43,6 +44,7 @@ const summarySelect = {
   cancelledMinor: sql<number>`coalesce(sum(total_minor) filter (where status = 'cancelled'), 0)::int`,
   deliveryCount: sql<number>`count(*) filter (where channel = 'delivery' and status != 'cancelled')::int`,
   takeawayCount: sql<number>`count(*) filter (where channel = 'takeaway' and status != 'cancelled')::int`,
+  dineInCount: sql<number>`count(*) filter (where channel = 'dine_in' and status != 'cancelled')::int`,
 };
 
 function finalize(
@@ -56,6 +58,7 @@ function finalize(
     cancelledMinor: 0,
     deliveryCount: 0,
     takeawayCount: 0,
+    dineInCount: 0,
   };
   return {
     date,

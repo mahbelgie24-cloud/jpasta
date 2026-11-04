@@ -9,6 +9,7 @@ import {
   History,
   Receipt,
   TrendingUp,
+  UtensilsCrossed,
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
@@ -21,11 +22,7 @@ import {
   getZSummary,
   todayLocal,
 } from "@/lib/server/reports";
-import {
-  addDays,
-  isValidDayString,
-  weekdayInShop,
-} from "@/lib/domain/time";
+import { addDays, isValidDayString, weekdayInShop } from "@/lib/domain/time";
 
 export const dynamic = "force-dynamic";
 
@@ -127,7 +124,7 @@ export default async function ReportsPage({
         </div>
 
         {/* summary cards */}
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
           <div className="rounded-card bg-cream-50 p-4 text-center shadow-card">
             <TrendingUp className="mx-auto size-5 text-basil-700" aria-hidden />
             <p className="mt-2 text-2xl font-extrabold text-ink tabular-nums">
@@ -159,6 +156,16 @@ export default async function ReportsPage({
               {summary.takeawayCount}
             </p>
             <p className="text-xs font-bold text-ink-soft">استلام</p>
+          </div>
+          <div className="rounded-card bg-cream-50 p-4 text-center shadow-card">
+            <UtensilsCrossed
+              className="mx-auto size-5 text-basil-700"
+              aria-hidden
+            />
+            <p className="mt-2 text-2xl font-extrabold text-ink tabular-nums">
+              {summary.dineInCount}
+            </p>
+            <p className="text-xs font-bold text-ink-soft">داخل المحل</p>
           </div>
         </div>
 

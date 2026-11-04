@@ -61,6 +61,19 @@ export function CartDrawer({
     paymentMethods && paymentMethods.length > 0 ? paymentMethods : ["cash"];
   const [orderType, setOrderType] = useState<OrderType>("delivery");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+  // Cash-on-delivery cannot pay for a pickup. Deriving the effective method
+  // (instead of syncing state in an effect) means switching to pickup can
+  // never leave an invisible, disabled method selected.
+  const availableMethods =
+    orderType === "delivery"
+      ? methods
+      : methods.filter((method) => method !== "cash_on_delivery");
+  const effectivePaymentMethod: PaymentMethod = availableMethods.includes(
+    paymentMethod,
+  )
+    ? paymentMethod
+    : (availableMethods[0] ?? "cash");
+  const noPaymentMethod = availableMethods.length === 0;
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -239,6 +252,10 @@ export function CartDrawer({
       setError(zonesError ?? "اختر منطقة التوصيل حتى نعرف رسم التوصيل.");
       return;
     }
+    if (noPaymentMethod) {
+      setError("لا توجد طريقة دفع متاحة لهذا النوع من الطلبات حالياً.");
+      return;
+    }
     setError(null);
     setBusy(true);
     const payload = {
@@ -247,9 +264,7 @@ export function CartDrawer({
           ? ("delivery" as const)
           : ("takeaway" as const),
       ...(orderType === "delivery" ? { zoneId } : {}),
-      paymentMethod: methods.includes(paymentMethod)
-        ? paymentMethod
-        : methods[0],
+      paymentMethod: effectivePaymentMethod,
       customer: {
         name: name.trim(),
         phone: phone.trim(),
@@ -490,14 +505,14 @@ export function CartDrawer({
           )}
 
           {/* payment — the owner configures the accepted methods */}
-          {methods.length > 1 ? (
+          {availableMethods.length > 1 ? (
             <fieldset>
               <legend className="text-sm font-bold text-ink">
                 طريقة الدفع
               </legend>
               <div className="mt-2.5 grid gap-2 sm:grid-cols-3">
-                {methods.map((method) => {
-                  const active = paymentMethod === method;
+                {availableMethods.map((method) => {
+                  const active = effectivePaymentMethod === method;
                   return (
                     <label
                       key={method}
@@ -657,6 +672,7 @@ export function CartDrawer({
               busy ||
               belowMinimum ||
               hasUnavailable ||
+              noPaymentMethod ||
               (orderType === "delivery" && (!zones || zones.length === 0))
             }
           >
@@ -705,9 +721,11 @@ export function CartDrawer({
             </button>
           </div>
           <p className="text-center text-xs text-ink-soft">
-            {methods.length > 1
+            {availableMethods.length > 1
               ? "الدفع عند الاستلام — بدون أي رسوم إضافية."
-              : "الدفع نقداً عند الاستلام — بدون أي رسوم إضافية."}
+              : availableMethods[0]
+                ? `${PAYMENT_METHOD_LABELS[availableMethods[0]]} — بدون أي رسوم إضافية.`
+                : "لا توجد طريقة دفع متاحة لهذا النوع من الطلبات."}
           </p>
         </form>
       )}

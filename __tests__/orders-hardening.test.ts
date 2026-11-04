@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { testDatabaseUrl } from "@/test/db";
 import { and, eq, sql } from "drizzle-orm";
 import { db, pool } from "@/lib/db";
-import { deliveryZones, orders, products } from "@/db/schema";
+import { deliveryZones, orders, products, settings } from "@/db/schema";
 import {
   placeOrder,
   transitionOrder,
@@ -105,6 +105,55 @@ d("orders — v2 hardening", () => {
     expect(row?.total).toBe((row?.subtotal ?? 0) + 700);
     expect(row?.fee).not.toBe(500); // the seeded cheapest zone
     expect(zoneA).not.toBe(zoneB);
+  });
+
+  it("rejects cash-on-delivery on a pickup order", async () => {
+    const result = await placeOrder(
+      baseInput("hardening-cod-pickup", {
+        paymentMethod: "cash_on_delivery",
+      }),
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("التوصيل");
+  });
+
+  it("accepts dine-in from the console but never from the storefront", async () => {
+    const storefront = await placeOrder(
+      baseInput("hardening-dine-storefront", { channel: "dine_in" }),
+      { source: "storefront" },
+    );
+    expect(storefront.ok).toBe(false);
+
+    const consoleOrder = await placeOrder(
+      baseInput("hardening-dine-console", { channel: "dine_in" }),
+      { source: "console" },
+    );
+    expect(consoleOrder.ok).toBe(true);
+    if (consoleOrder.ok) expect(consoleOrder.order.channel).toBe("dine_in");
+  });
+
+  it("replays a committed order even after the owner pauses ordering", async () => {
+    const input = baseInput("hardening-replay-after-pause");
+    const first = await placeOrder(input);
+    expect(first.ok).toBe(true);
+
+    await db
+      .update(settings)
+      .set({ value: "false" })
+      .where(eq(settings.key, "ordering_enabled"));
+    try {
+      const replay = await placeOrder(input, { source: "storefront" });
+      expect(replay.ok).toBe(true);
+      if (first.ok && replay.ok) {
+        expect(replay.order.id).toBe(first.order.id);
+        expect(replay.order.accessToken).toBe(first.order.accessToken);
+      }
+    } finally {
+      await db
+        .update(settings)
+        .set({ value: "true" })
+        .where(eq(settings.key, "ordering_enabled"));
+    }
   });
 
   it("rejects delivery without a zone", async () => {

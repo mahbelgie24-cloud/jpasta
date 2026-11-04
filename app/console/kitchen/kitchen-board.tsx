@@ -3,7 +3,14 @@
 import { arabicCount } from "@/lib/arabic";
 
 import { useEffect, useState } from "react";
-import { Bike, ChefHat, HandPlatter, Maximize2, Minimize2 } from "lucide-react";
+import {
+  Bike,
+  ChefHat,
+  HandPlatter,
+  Maximize2,
+  Minimize2,
+  UtensilsCrossed,
+} from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { TwirlLoader } from "@/components/ui/twirl-loader";
 import { useOrdersFeed, type FeedOrder } from "@/hooks/use-orders-feed";
@@ -75,6 +82,10 @@ function KitchenTicket({
             {order.channel === "delivery" ? (
               <>
                 <Bike className="size-5" aria-hidden /> توصيل
+              </>
+            ) : order.channel === "dine_in" ? (
+              <>
+                <UtensilsCrossed className="size-5" aria-hidden /> داخل المحل
               </>
             ) : (
               <>

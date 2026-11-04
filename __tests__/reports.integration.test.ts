@@ -145,4 +145,26 @@ d("reports — the manual-count DoD", () => {
       .where(eq(orders.status, "cancelled"));
     expect(cancelledToday[0]?.n).toBe(1);
   });
+
+  it("counts dine-in independently from takeaway and delivery", async () => {
+    const fettuccine = (await db.select().from(products)).find(
+      (p) => p.slug === "fettuccine-mushroom",
+    );
+    if (!fettuccine) throw new Error("seed missing");
+    const placed = await placeOrder(
+      {
+        idempotencyKey: `report-dine-in-${Date.now()}`,
+        channel: "dine_in",
+        customer: { name: "زبون المحل", phone: "0566064976", address: "" },
+        lines: [{ productId: fettuccine.id, quantity: 1, selections: [] }],
+      },
+      { source: "console" },
+    );
+    expect(placed.ok).toBe(true);
+
+    const summary = await getDaySummary(todayLocal());
+    expect(summary.dineInCount).toBe(1);
+    expect(summary.takeawayCount).toBe(3);
+    expect(summary.deliveryCount).toBe(2);
+  });
 });

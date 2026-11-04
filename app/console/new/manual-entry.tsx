@@ -111,9 +111,9 @@ export function ManualEntry({
   ownerName: string;
 }) {
   const [lines, setLines] = useState<Line[]>([]);
-  const [orderType, setOrderType] = useState<"takeaway" | "delivery">(
-    "takeaway",
-  );
+  const [orderType, setOrderType] = useState<
+    "takeaway" | "delivery" | "dine_in"
+  >("takeaway");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -560,7 +560,7 @@ export function ManualEntry({
       {lines.length > 0 && (
         <div className="space-y-3 rounded-card bg-cream-50 p-4 shadow-card">
           <div
-            className="grid grid-cols-2 gap-2"
+            className="grid grid-cols-3 gap-2"
             role="radiogroup"
             aria-label="نوع الطلب"
           >
@@ -568,6 +568,7 @@ export function ManualEntry({
               [
                 { id: "takeaway", label: "استلام" },
                 { id: "delivery", label: "توصيل" },
+                { id: "dine_in", label: "داخل المحل" },
               ] as const
             ).map((o) => (
               <button

@@ -47,6 +47,7 @@ export async function GET(request: Request) {
         ["cancelled_ils", formatPrice(summary.cancelledMinor)],
         ["delivery_count", summary.deliveryCount],
         ["takeaway_count", summary.takeawayCount],
+        ["dine_in_count", summary.dineInCount],
         ["avg_order_ils", formatPrice(summary.avgOrderMinor)],
         ["cash_ils", formatPrice(z.cashMinor)],
         ["cash_count", z.cashCount],

@@ -9,6 +9,7 @@ import {
   Clock,
   HandPlatter,
   PackageCheck,
+  UtensilsCrossed,
   XCircle,
 } from "lucide-react";
 import { Price } from "@/components/ui/price";
@@ -73,6 +74,10 @@ export function OrderStatusClient({
   useEffect(() => {
     if (terminal) return;
     const poll = async () => {
+      // A hidden tab must not keep hitting the server every 4 seconds for
+      // the whole delivery window (battery + needless DB reads). The
+      // visibility listener catches up as soon as the customer returns.
+      if (document.hidden) return;
       try {
         const fresh = await fetchOrderStatus(orderId, token);
         if (fresh) {
@@ -86,9 +91,14 @@ export function OrderStatusClient({
         // transient network error — the next tick retries
       }
     };
+    const onVisibility = () => {
+      if (!document.hidden) void poll();
+    };
     timer.current = setInterval(poll, 4000);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       if (timer.current) clearInterval(timer.current);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [orderId, token, terminal]);
 
@@ -131,6 +141,10 @@ export function OrderStatusClient({
             {order.channel === "delivery" ? (
               <>
                 <Bike className="size-3.5" aria-hidden /> توصيل
+              </>
+            ) : order.channel === "dine_in" ? (
+              <>
+                <UtensilsCrossed className="size-3.5" aria-hidden /> داخل المحل
               </>
             ) : (
               <>
