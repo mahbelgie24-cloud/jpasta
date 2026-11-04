@@ -100,6 +100,19 @@ export async function setProductImage(
       if (image.alt !== undefined && image.alt.length > 140) {
         return { ok: false, error: "وصف الصورة طويل جداً." };
       }
+      const validDimension = (value: number | undefined) =>
+        value === undefined ||
+        (Number.isInteger(value) && value > 0 && value <= 6000);
+      if (!validDimension(image.width) || !validDimension(image.height)) {
+        return { ok: false, error: "أبعاد الصورة غير صحيحة." };
+      }
+      if (
+        image.color !== undefined &&
+        image.color !== null &&
+        !/^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(image.color)
+      ) {
+        return { ok: false, error: "لون خلفية الصورة غير صحيح." };
+      }
     }
 
     const rows = await db

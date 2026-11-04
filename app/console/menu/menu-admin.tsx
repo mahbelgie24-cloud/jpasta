@@ -18,6 +18,21 @@ import { uploadProductImage } from "@/app/actions/media";
  * writes an audited price_changes row server-side (old → new, who, when).
  */
 
+/** Read the real pixel size before the upload so the DB never guesses 4:3. */
+async function readImageSize(
+  file: File,
+): Promise<{ width: number; height: number } | null> {
+  if (typeof createImageBitmap !== "function") return null;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const size = { width: bitmap.width, height: bitmap.height };
+    bitmap.close();
+    return size;
+  } catch {
+    return null;
+  }
+}
+
 export function MenuAdmin() {
   const [rows, setRows] = useState<AdminProduct[] | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -96,6 +111,7 @@ export function MenuAdmin() {
 
   async function uploadImage(row: AdminProduct, file: File) {
     setBusyId(row.id);
+    const size = await readImageSize(file);
     const form = new FormData();
     form.set("file", file);
     const uploaded = await uploadProductImage(form);
@@ -107,6 +123,7 @@ export function MenuAdmin() {
     const res = await setProductImage(row.id, {
       key: uploaded.key,
       alt: row.nameAr,
+      ...(size ?? {}),
     });
     setBusyId(null);
     setNotice(
