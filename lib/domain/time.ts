@@ -74,6 +74,18 @@ export function addDays(dateStr: string, days: number): string {
   ).padStart(2, "0")}`;
 }
 
+/** True only for a real calendar date in YYYY-MM-DD form. */
+export function isValidDayString(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year = 0, month = 0, day = 0] = value.split("-").map(Number);
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  return (
+    probe.getUTCFullYear() === year &&
+    probe.getUTCMonth() === month - 1 &&
+    probe.getUTCDate() === day
+  );
+}
+
 /** Offset of `tz` at `date`, in milliseconds east of UTC. */
 function offsetMs(date: Date, tz: string): number {
   const p = zonedParts(date, tz);
@@ -115,6 +127,25 @@ export function zonedDayRange(
     start: zonedTimeToUtc(`${dateStr}T00:00:00`, tz),
     end: zonedTimeToUtc(`${addDays(dateStr, 1)}T00:00:00`, tz),
   };
+}
+
+/**
+ * Weekday name (Arabic) for a shop calendar day. The date is anchored at
+ * noon in the shop timezone, so the process timezone can never shift it to
+ * the wrong day (Cloudflare Workers run in UTC; the business does not).
+ */
+const weekdayFormatters = new Map<string, Intl.DateTimeFormat>();
+
+export function weekdayInShop(dateStr: string, tz = SHOP_TZ): string {
+  let formatter = weekdayFormatters.get(tz);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("ar-PS", {
+      timeZone: tz,
+      weekday: "long",
+    });
+    weekdayFormatters.set(tz, formatter);
+  }
+  return formatter.format(zonedTimeToUtc(`${dateStr}T12:00:00`, tz));
 }
 
 /** Deterministic Arabic time-of-day, safe on server and client. */

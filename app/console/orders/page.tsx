@@ -21,6 +21,7 @@ import {
   addDays,
   formatDateInShop,
   formatTimeInShop,
+  isValidDayString,
   todayInShop,
   zonedTimeToUtc,
 } from "@/lib/domain/time";
@@ -61,9 +62,7 @@ export default async function OrdersArchivePage({
   const params = await searchParams;
   const today = todayInShop();
   const date =
-    params.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date)
-      ? params.date
-      : today;
+    params.date && isValidDayString(params.date) ? params.date : today;
   const status =
     params.status && STATUSES.has(params.status) ? params.status : "all";
   const query = (params.q ?? "").slice(0, 80);
@@ -105,11 +104,18 @@ export default async function OrdersArchivePage({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <a
-            href={`/console/reports/export?date=${date}&kind=orders&pii=1`}
+            href={`/console/reports/export?date=${date}&kind=orders`}
             className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border-strong bg-surface-raised px-4 text-sm font-bold text-text-secondary hover:text-text-primary"
           >
             <Download className="size-4" aria-hidden />
             تصدير CSV
+          </a>
+          <a
+            href={`/console/reports/export?date=${date}&kind=orders&pii=1`}
+            title="يتضمن اسم الزبون وهاتفه وعنوانه — يُسجَّل هذا التصدير في سجل التدقيق"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border-strong bg-surface-raised px-4 text-xs font-bold text-text-secondary hover:text-text-primary"
+          >
+            مع بيانات الزبائن
           </a>
           <Link
             href={hrefFor(today, status, query)}

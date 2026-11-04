@@ -3,12 +3,10 @@ import { getOrdersForDay } from "@/lib/server/orders";
 import { getDaySummary, getZSummary, todayLocal } from "@/lib/server/reports";
 import { formatPrice } from "@/lib/pricing";
 import { toCsvWithBom } from "@/lib/csv";
-import { formatTimeInShop24 } from "@/lib/domain/time";
+import { formatTimeInShop24, isValidDayString } from "@/lib/domain/time";
 import { logEvent } from "@/lib/server/log";
 
 export const dynamic = "force-dynamic";
-
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * Owner-only accounting export. Default is PII-free; `pii=1` includes the
@@ -16,15 +14,19 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
  * Every cell is formula-injection-safe (lib/csv.ts).
  */
 export async function GET(request: Request) {
+  let owner;
   try {
-    await requireOwner();
+    owner = await requireOwner();
   } catch {
     return new Response("unauthorized", { status: 401 });
   }
 
   const url = new URL(request.url);
   const dateParam = url.searchParams.get("date");
-  const date = dateParam && DATE_RE.test(dateParam) ? dateParam : todayLocal();
+  if (dateParam !== null && !isValidDayString(dateParam)) {
+    return new Response("invalid date", { status: 400 });
+  }
+  const date = dateParam ?? todayLocal();
   const kind = url.searchParams.get("kind") === "z" ? "z" : "orders";
   const includePii = url.searchParams.get("pii") === "1";
 
@@ -100,6 +102,7 @@ export async function GET(request: Request) {
         logEvent("info", "reports.export_pii", {
           date,
           rows: orders.length,
+          actorId: owner.id,
         });
       }
     }

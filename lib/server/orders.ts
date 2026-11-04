@@ -26,7 +26,11 @@ import { decryptPii, encryptPii } from "@/lib/server/pii";
 import { readShopSettings, type ShopSettings } from "@/lib/server/settings";
 import { deductForOrder } from "@/lib/server/inventory";
 import { sha256Hex, stableStringify } from "@/lib/domain/hash";
-import { todayInShop, zonedDayRange } from "@/lib/domain/time";
+import {
+  isValidDayString,
+  todayInShop,
+  zonedDayRange,
+} from "@/lib/domain/time";
 import { arabicIncludes } from "@/lib/arabic";
 import { logEvent } from "@/lib/server/log";
 
@@ -970,19 +974,7 @@ export async function getOrdersForDay(
   dateStr: string,
   options: { status?: OrderStatus | "all"; query?: string } = {},
 ): Promise<ArchiveOrder[]> {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return [];
-  const [year, month, day] = dateStr.split("-").map(Number);
-  const probe = new Date(Date.UTC(year ?? 0, (month ?? 0) - 1, day ?? 0));
-  if (
-    !year ||
-    !month ||
-    !day ||
-    probe.getUTCFullYear() !== year ||
-    probe.getUTCMonth() !== month - 1 ||
-    probe.getUTCDate() !== day
-  ) {
-    return [];
-  }
+  if (!isValidDayString(dateStr)) return [];
   const { start, end } = zonedDayRange(dateStr);
   const filters = [gte(orders.createdAt, start), lt(orders.createdAt, end)];
   if (options.status && options.status !== "all") {

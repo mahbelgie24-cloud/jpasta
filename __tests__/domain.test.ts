@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   addDays,
+  isValidDayString,
   shopOpenState,
   toDayString,
   todayInShop,
+  weekdayInShop,
   zonedDayRange,
   zonedTimeToUtc,
 } from "@/lib/domain/time";
@@ -32,6 +34,22 @@ describe("shop time — Asia/Hebron", () => {
   it("crosses month and year boundaries", () => {
     expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
     expect(addDays("2026-03-01", -1)).toBe("2026-02-28");
+  });
+
+  it("validates real calendar days only", () => {
+    expect(isValidDayString("2026-01-15")).toBe(true);
+    expect(isValidDayString("2026-02-29")).toBe(false);
+    expect(isValidDayString("2026-13-01")).toBe(false);
+    expect(isValidDayString("2026-1-5")).toBe(false);
+    expect(isValidDayString("")).toBe(false);
+  });
+
+  it("derives the Arabic weekday from the shop calendar, not the process TZ", () => {
+    expect(weekdayInShop("2026-01-15")).toBe("الخميس");
+    expect(weekdayInShop("2026-01-16")).toBe("الجمعة");
+    // 00:30 local on the 17th is still the 16th in UTC; the helper anchors
+    // at local noon, so the weekday must follow the shop day.
+    expect(weekdayInShop("2026-01-17")).toBe("السبت");
   });
 
   it("handles the 13:00 → 01:00 opening window", () => {

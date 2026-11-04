@@ -8,6 +8,7 @@ import {
   todayLocal,
 } from "@/lib/server/reports";
 import { requireOwner } from "@/lib/server/session";
+import { isValidDayString } from "@/lib/domain/time";
 
 export interface ReportData {
   date: string;
@@ -27,8 +28,7 @@ export async function fetchReport(
   } catch {
     return { ok: false, error: "التقارير للمالك فقط." };
   }
-  const date =
-    dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? dateStr : todayLocal();
+  const date = dateStr && isValidDayString(dateStr) ? dateStr : todayLocal();
   const [summary, week, bestSellers, z] = await Promise.all([
     getDaySummary(date),
     getRecentDays(7, date),

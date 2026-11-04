@@ -21,6 +21,11 @@ import {
   getZSummary,
   todayLocal,
 } from "@/lib/server/reports";
+import {
+  addDays,
+  isValidDayString,
+  weekdayInShop,
+} from "@/lib/domain/time";
 
 export const dynamic = "force-dynamic";
 
@@ -28,29 +33,6 @@ export const metadata = {
   title: "التقارير",
   robots: { index: false, follow: false },
 };
-
-function shiftDay(dateStr: string, delta: number): string {
-  const parts = dateStr.split("-").map((n) => Number.parseInt(n, 10));
-  const d = new Date(
-    parts[0] ?? 1970,
-    (parts[1] ?? 1) - 1,
-    (parts[2] ?? 1) + delta,
-  );
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-const DAY_NAMES = [
-  "الأحد",
-  "الاثنين",
-  "الثلاثاء",
-  "الأربعاء",
-  "الخميس",
-  "الجمعة",
-  "السبت",
-];
 
 export default async function ReportsPage({
   searchParams,
@@ -63,9 +45,7 @@ export default async function ReportsPage({
 
   const params = await searchParams;
   const date =
-    params.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date)
-      ? params.date
-      : todayLocal();
+    params.date && isValidDayString(params.date) ? params.date : todayLocal();
 
   const [summary, week, bestSellers, z] = await Promise.all([
     getDaySummary(date),
@@ -75,7 +55,7 @@ export default async function ReportsPage({
   ]);
 
   const maxRevenue = Math.max(...week.map((d) => d.revenueMinor), 1);
-  const dayName = DAY_NAMES[new Date(`${date}T12:00:00`).getDay()] ?? "";
+  const dayName = weekdayInShop(date);
 
   return (
     <div className="min-h-dvh bg-cream-100">
@@ -92,7 +72,7 @@ export default async function ReportsPage({
         {/* date navigation */}
         <div className="mt-4 flex items-center justify-between gap-2 rounded-card bg-cream-50 p-3 shadow-card">
           <Link
-            href={`/console/reports?date=${shiftDay(date, -1)}`}
+            href={`/console/reports?date=${addDays(date, -1)}`}
             className="inline-flex min-h-11 items-center gap-1 rounded-full px-4 text-sm font-bold text-basil-700 hover:bg-basil-50"
           >
             <ArrowRight className="size-4" aria-hidden />
@@ -114,7 +94,7 @@ export default async function ReportsPage({
             </span>
           ) : (
             <Link
-              href={`/console/reports?date=${shiftDay(date, 1)}`}
+              href={`/console/reports?date=${addDays(date, 1)}`}
               className="inline-flex min-h-11 items-center gap-1 rounded-full px-4 text-sm font-bold text-basil-700 hover:bg-basil-50"
             >
               اليوم التالي
@@ -236,7 +216,7 @@ export default async function ReportsPage({
                 aria-current={d.date === date ? "date" : undefined}
               >
                 <span className="w-16 shrink-0 text-xs font-bold text-ink-soft">
-                  {DAY_NAMES[new Date(`${d.date}T12:00:00`).getDay()]}
+                  {weekdayInShop(d.date)}
                 </span>
                 <div className="h-6 flex-1 overflow-hidden rounded-full bg-cream-200">
                   <div
