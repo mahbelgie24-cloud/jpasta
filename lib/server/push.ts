@@ -62,7 +62,6 @@ async function sendEmptyPush(
       authorization,
       ttl: "120",
       urgency: "high",
-      "content-length": "0",
     },
   });
 
