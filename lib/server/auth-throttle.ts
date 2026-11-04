@@ -74,11 +74,12 @@ export async function recordLoginFailure(keys: string[]): Promise<void> {
         .for("update");
 
       const now = Date.now();
-      const lockExpired = row?.lockedUntil
-        ? row.lockedUntil.getTime() <= now
-        : true;
-      // A lock that has expired resets the ladder: the next failure starts a
-      // fresh 1-minute window instead of instantly re-locking for an hour.
+      // A row with no lock is a ladder in progress — keep counting. Only an
+      // expired lock resets it: the next failure then starts a fresh
+      // 1-minute window instead of instantly re-locking for an hour.
+      const lockExpired = Boolean(
+        row?.lockedUntil && row.lockedUntil.getTime() <= now,
+      );
       const nextCount = !row || lockExpired ? 1 : row.failedCount + 1;
       const threshold =
         key === "global" ? GLOBAL_MAX_FAILS : MAX_FAILS_BEFORE_LOCK;
