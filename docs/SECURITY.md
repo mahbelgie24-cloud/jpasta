@@ -106,6 +106,15 @@
   and owner settings (punctuation-only values are rejected in both).
 - **2026-11-04:** CSV/exports and media image metadata are validated at the
   boundary; photo uploads persist their real pixel dimensions.
+- **2026-11-04 (production-readiness pass):** the login throttle ladder now
+  actually locks (the previous `lockExpired` reset made the lockout dead
+  code); stored scrypt costs are capped like PBKDF2; public cart-quote /
+  status / zone reads carry a 240/min edge limit (`READ_LIMIT`); invalid
+  status links return a real 404; console manual entry records the chosen
+  payment method and the status page shows it; staff no longer see
+  owner-only export links; pre-deploy dumps can be AES-256-CBC encrypted
+  before upload (`BACKUP_ENCRYPTION_KEY`). See
+  `docs/audit/04-production-readiness-2026-11-04.md`.
 - No WAF custom rules/turnstile on order intake yet; the rate limit +
   idempotency + server validation are the current controls.
 - No Sentry/APM; structured Workers logs + `/api/health` are the current

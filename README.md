@@ -13,9 +13,12 @@ Drizzle + Neon Postgres · **Cloudflare Workers** via
 - Design system: [`docs/DESIGN.md`](./docs/DESIGN.md) · brand: [`docs/brand/brand.md`](./docs/brand/brand.md)
 - Deploy runbook: [`docs/DEPLOY.md`](./docs/DEPLOY.md)
 - Audit (2026-11-02, honest findings + fixes): [`docs/AUDIT-2026-11-02.md`](./docs/AUDIT-2026-11-02.md)
-- **Latest audit (2026-11-04)**: [`docs/audit/03-final-report.md`](./docs/audit/03-final-report.md)
-  (findings: [`01`](./docs/audit/01-findings.md), baseline + roadmap:
-  [`00`](./docs/audit/00-project-understanding.md) / [`02`](./docs/audit/02-roadmap.md))
+- **Latest audit (2026-11-04, production-readiness pass)**:
+  [`docs/audit/04-production-readiness-2026-11-04.md`](./docs/audit/04-production-readiness-2026-11-04.md).
+  Earlier passes: [`01` findings](./docs/audit/01-findings.md),
+  [`00` baseline](./docs/audit/00-project-understanding.md),
+  [`02` roadmap](./docs/audit/02-roadmap.md),
+  [`03` report](./docs/audit/03-final-report.md)
 - Menu photo prompts (18 dishes + logo prompt): [`docs/menu-photo-prompts.md`](./docs/menu-photo-prompts.md)
 - Handoff: [`docs/HANDOFF.md`](./docs/HANDOFF.md) · next-session prompt: [`docs/NEXT-SESSION-PROMPT.md`](./docs/NEXT-SESSION-PROMPT.md)
 
@@ -33,7 +36,7 @@ Drizzle + Neon Postgres · **Cloudflare Workers** via
   typography, the DishArt illustration system, dark editorial landing, live
   menu search, real zone fees in the cart, dark console, PWA shell + offline
   page, photo upload to R2.
-- **120 tests** (unit + integration + hardening regressions) plus a
+- **123 tests** (unit + integration + hardening regressions) plus a
   **49-test Playwright suite** (`npm run test:e2e`): real journeys, axe
   a11y gate (serious/critical = fail) and visual regression at
   375/768/1440.
@@ -70,6 +73,13 @@ Drizzle + Neon Postgres · **Cloudflare Workers** via
   §7), delivery-fee and inventory-cost changes are audited, archives export
   PII-free by default, the service worker caches dish media and never caches
   error pages, and CSV formula guards cover leading whitespace.
+- **2026-11-04 production-readiness pass**: the login throttle now actually
+  locks after the failure ladder (the previous reset made lockout dead
+  code), manual console entry records the chosen payment method, the status
+  page shows the real method instead of "cash on pickup", invalid status
+  links return a real 404, public read actions carry a 240/min edge limit,
+  backups can be AES-encrypted before upload, sessions are request-memoized,
+  and the dependency set was upgraded (production audit stays at 0).
 - **CI** runs three jobs on every push/PR: `verify` (the full gate +
   OpenNext bundle), `e2e` (Playwright against a fresh build + Postgres),
   and `lighthouse` (budget assertions).
@@ -108,7 +118,7 @@ npm run preview        # local workerd
 npm run deploy         # check-env → build → wrangler deploy
 npm run typecheck      # next typegen + tsc
 npm run lint
-npm test               # vitest (120 tests)
+npm test               # vitest (123 tests)
 npm run test:e2e       # build + Playwright: journeys, axe, visual (port 3220)
 npm run test:lighthouse # LHCI budgets on / and /menu (set CHROME_PATH locally)
 npm run icons          # regenerate favicon/PWA/OG from public/brand/logo*.svg
@@ -156,7 +166,10 @@ worker.ts            custom Cloudflare entry
 node scripts/backup-db.mjs   # compressed dump → backups/ (7-day retention)
 ```
 
-Cron it daily; verify a restore into a scratch DB before trusting it.
+Cron it daily; verify a restore into a scratch DB before trusting it. Set
+`BACKUP_ENCRYPTION_KEY` (32+ chars) to have the script write an
+OpenSSL-encrypted `.sql.gz.enc` before the dump is uploaded as a deploy
+artifact.
 Security posture: nonce CSP (`strict-dynamic`) via `proxy.ts`, static
 hardening headers in `next.config.ts`, and the ASVS 5.0 L2 mapping in
 [`docs/SECURITY.md`](./docs/SECURITY.md).

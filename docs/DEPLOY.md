@@ -55,22 +55,25 @@ npx wrangler secret put AUTH_PEPPER       # openssl rand -hex 32
 npx wrangler secret put REALTIME_SECRET   # openssl rand -hex 32
 npx wrangler secret put PII_ENCRYPTION_KEY # openssl rand -hex 32 (64 hex)
 npx wrangler secret put CRON_SECRET        # openssl rand -hex 32 (optional)
+# BACKUP_ENCRYPTION_KEY is a GitHub Actions secret (not a Worker secret):
+# it encrypts the pre-deploy dump before it is uploaded as an artifact.
 npx wrangler secret put VAPID_PRIVATE_KEY  # npm run vapid (optional)
 npx wrangler secret put VAPID_PUBLIC_KEY   # npm run vapid (optional)
 npx wrangler secret put VAPID_SUBJECT      # https://jpasta.ps (optional)
 ```
 
-| Secret               | Purpose                                                 |
-| -------------------- | ------------------------------------------------------- |
-| `DATABASE_URL`       | Node fallback connection (Workers use Hyperdrive first) |
-| `JPASTA_OWNER_PIN`   | provisioning the owner account                          |
-| `AUTH_PEPPER`        | O(1) PIN lookup HMAC (must stay stable)                 |
-| `REALTIME_SECRET`    | signs 2-minute WebSocket tokens                         |
-| `PII_ENCRYPTION_KEY` | AES-256-GCM for customer PII at rest (required in prod) |
-| `CRON_SECRET`        | authorises the daily prune route (optional)             |
-| `VAPID_PRIVATE_KEY`  | Web Push signing key (`npm run vapid`, optional)        |
-| `VAPID_PUBLIC_KEY`   | browser subscription key (`npm run vapid`, optional)    |
-| `VAPID_SUBJECT`      | VAPID contact URI (https or mailto)                     |
+| Secret                  | Purpose                                                                          |
+| ----------------------- | -------------------------------------------------------------------------------- |
+| `DATABASE_URL`          | Node fallback connection (Workers use Hyperdrive first)                          |
+| `JPASTA_OWNER_PIN`      | provisioning the owner account                                                   |
+| `AUTH_PEPPER`           | O(1) PIN lookup HMAC (must stay stable)                                          |
+| `REALTIME_SECRET`       | signs 2-minute WebSocket tokens                                                  |
+| `PII_ENCRYPTION_KEY`    | AES-256-GCM for customer PII at rest (required in prod)                          |
+| `CRON_SECRET`           | authorises the daily prune route (optional)                                      |
+| `BACKUP_ENCRYPTION_KEY` | GitHub Actions secret: client-side encryption of the pre-deploy dump (32+ chars) |
+| `VAPID_PRIVATE_KEY`     | Web Push signing key (`npm run vapid`, optional)                                 |
+| `VAPID_PUBLIC_KEY`      | browser subscription key (`npm run vapid`, optional)                             |
+| `VAPID_SUBJECT`         | VAPID contact URI (https or mailto)                                              |
 
 `NEXT_PUBLIC_*` values are **build-time**; export them in the deploy shell.
 
@@ -176,11 +179,18 @@ Compressed logical dump in `backups/` with 7-day retention. **Rehearse a
 restore into a scratch database before trusting it.** Neon PITR is the
 primary recovery path; the dump is the portable copy.
 
-The deploy workflow uploads the pre-migration dump as a GitHub artifact
-(GitHub encrypts artifacts at rest, but the archive itself is not
-client-side encrypted). If the repository's artifact access is broader than
-the owner, encrypt the dump (age/GPG) or store it in a private R2 bucket with
-a short lifecycle before relying on it.
+The deploy workflow uploads the pre-migration dump as a GitHub artifact.
+Set the `BACKUP_ENCRYPTION_KEY` Actions secret (32+ characters) and the
+script writes an OpenSSL AES-256-CBC/PBKDF2 `.sql.gz.enc` instead; the key
+never appears in the process list or the artifact. Without it, the script
+warns and uploads the dump unencrypted (GitHub encrypts artifacts at rest,
+but the archive itself is not client-side encrypted). Restore an encrypted
+dump with the printed command:
+
+```bash
+openssl enc -d -aes-256-cbc -pbkdf2 -pass env:BACKUP_ENCRYPTION_KEY \
+  -in backups/jpasta_<stamp>.sql.gz.enc | gunzip -c | psql "$DATABASE_URL"
+```
 
 ---
 
