@@ -117,8 +117,8 @@ export async function Visit() {
 
             <div className="mt-auto border-t border-border-soft pt-5">
               <p className="text-xs leading-relaxed text-text-secondary">
-                التوصيل متاح داخل قلقيلية. الدفع نقداً عند الاستلام — بدون أي
-                رسوم خفية. للطلبات الكبيرة، اتصل قبل الموعد بساعة.
+                التوصيل متاح داخل قلقيلية. الدفع عند الاستلام — بدون أي رسوم
+                خفية. للطلبات الكبيرة، اتصل قبل الموعد بساعة.
               </p>
             </div>
           </div>

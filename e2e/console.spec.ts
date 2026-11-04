@@ -44,13 +44,20 @@ test.describe("console command palette", () => {
   test("navigates by keyboard", async ({ page }) => {
     await loginAsOwner(page);
     await page.goto("/console");
-    // Wait for hydration: the shortcut listener mounts in an effect.
-    await page.getByRole("button", { name: /بحث سريع/ }).waitFor();
-
-    await page.keyboard.press("Control+k");
+    // The SSR button exists before hydration. The feed badge only changes
+    // after its effect runs, so it is a real hydration signal.
     await expect(
-      page.getByRole("dialog", { name: "لوحة الأوامر" }),
+      page.getByText(/مباشر|تحديث دوري|غير متصل/).first(),
     ).toBeVisible();
+
+    // The global shortcut mounts in an effect. Retry the press instead of
+    // racing hydration on a slow CI worker.
+    await expect(async () => {
+      await page.keyboard.press("ControlOrMeta+k");
+      await expect(
+        page.getByRole("dialog", { name: "لوحة الأوامر" }),
+      ).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 15_000 });
     await page.getByRole("combobox", { name: "بحث الأوامر" }).fill("المطبخ");
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/console\/kitchen$/);

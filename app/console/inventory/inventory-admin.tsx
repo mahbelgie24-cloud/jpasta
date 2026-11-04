@@ -62,10 +62,11 @@ export function InventoryAdmin() {
     if (res.ok) {
       setIngredients(res.ingredients);
       setProducts(res.products);
-      if (!selectedProduct && res.products[0])
-        setSelectedProduct(res.products[0].id);
+      // Functional update keeps this initializer independent of the current
+      // selection — otherwise every product change reloads the whole panel.
+      setSelectedProduct((current) => current || res.products[0]?.id || "");
     }
-  }, [selectedProduct]);
+  }, []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data load

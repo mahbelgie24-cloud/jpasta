@@ -38,7 +38,7 @@ export function DishMedia({
       >
         <Image
           src={`/api/media/${product.image.key}`}
-          alt={product.image.alt || product.nameAr}
+          alt={decorative ? "" : product.image.alt || product.nameAr}
           width={product.image.width}
           height={product.image.height}
           sizes={sizes}

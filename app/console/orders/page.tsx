@@ -103,20 +103,26 @@ export default async function OrdersArchivePage({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <a
-            href={`/console/reports/export?date=${date}&kind=orders`}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border-strong bg-surface-raised px-4 text-sm font-bold text-text-secondary hover:text-text-primary"
-          >
-            <Download className="size-4" aria-hidden />
-            تصدير CSV
-          </a>
-          <a
-            href={`/console/reports/export?date=${date}&kind=orders&pii=1`}
-            title="يتضمن اسم الزبون وهاتفه وعنوانه — يُسجَّل هذا التصدير في سجل التدقيق"
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border-strong bg-surface-raised px-4 text-xs font-bold text-text-secondary hover:text-text-primary"
-          >
-            مع بيانات الزبائن
-          </a>
+          {/* Exports are owner-only server-side; staff must not be invited to
+              a link that can only answer 401. */}
+          {user.role === "owner" && (
+            <>
+              <a
+                href={`/console/reports/export?date=${date}&kind=orders`}
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border-strong bg-surface-raised px-4 text-sm font-bold text-text-secondary hover:text-text-primary"
+              >
+                <Download className="size-4" aria-hidden />
+                تصدير CSV
+              </a>
+              <a
+                href={`/console/reports/export?date=${date}&kind=orders&pii=1`}
+                title="يتضمن اسم الزبون وهاتفه وعنوانه — يُسجَّل هذا التصدير في سجل التدقيق"
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border-strong bg-surface-raised px-4 text-xs font-bold text-text-secondary hover:text-text-primary"
+              >
+                مع بيانات الزبائن
+              </a>
+            </>
+          )}
           <Link
             href={hrefFor(today, status, query)}
             className="inline-flex min-h-11 items-center rounded-full border border-border-strong bg-surface-raised px-4 text-sm font-bold text-text-secondary hover:text-text-primary"
