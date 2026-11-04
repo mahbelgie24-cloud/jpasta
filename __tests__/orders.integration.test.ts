@@ -142,6 +142,8 @@ d("placeOrder — order pipeline", () => {
     if (first.ok && second.ok) {
       expect(second.order.id).toBe(first.order.id);
       expect(second.order.totalMinor).toBe(first.order.totalMinor);
+      // The internal idempotency hash is not part of the public contract.
+      expect(Object.keys(second.order)).not.toContain("payloadHash");
     }
     const [row] = await db
       .select({ n: sql<number>`count(*)::int` })

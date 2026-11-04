@@ -276,6 +276,21 @@ async function findReplay(
   return row ?? null;
 }
 
+/** Strip the internal payload hash from the public order result. */
+function toPlacedOrder(
+  row: PlacedOrder & { payloadHash?: string },
+): PlacedOrder {
+  return {
+    id: row.id,
+    orderNumber: row.orderNumber,
+    accessToken: row.accessToken,
+    status: row.status,
+    totalMinor: row.totalMinor,
+    channel: row.channel,
+    createdAt: row.createdAt,
+  };
+}
+
 function assertReplayMatches(
   existing: { payloadHash: string },
   incomingHash: string,
@@ -314,7 +329,7 @@ export async function placeOrder(
     const existing = await findReplay(input.idempotencyKey);
     if (existing) {
       assertReplayMatches(existing, payloadHash);
-      return { ok: true, order: existing };
+      return { ok: true, order: toPlacedOrder(existing) };
     }
   } catch (err) {
     if (err instanceof OrderError) {
@@ -400,7 +415,7 @@ export async function placeOrder(
         .limit(1);
       if (existing) {
         assertReplayMatches(existing, payloadHash);
-        return { ok: true as const, order: existing };
+        return { ok: true as const, order: toPlacedOrder(existing) };
       }
 
       // (2) load the requested catalog rows
@@ -576,7 +591,7 @@ export async function placeOrder(
             return { ok: false as const, error: conflict.message };
           throw conflict;
         }
-        return { ok: true as const, order: replay };
+        return { ok: true as const, order: toPlacedOrder(replay) };
       }
     }
     logEvent("error", "order.place_failed", {

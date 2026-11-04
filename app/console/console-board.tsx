@@ -27,8 +27,9 @@ import { useOrdersFeed } from "@/hooks/use-orders-feed";
 import { advanceOrder, consoleLogout } from "@/app/actions/console";
 
 /**
- * Live orders board — SSE push (~0ms after commit) with a 5s polling
- * fallback (Phase 2 DoD: ticket latency < 2s). New orders chime.
+ * Live orders board — Durable Object WebSocket push (~ms after commit) with
+ * an 8-second visibility-aware polling fallback while the socket is down.
+ * New orders chime. (Ticket latency DoD: < 2s.)
  */
 
 const COLUMNS = [
