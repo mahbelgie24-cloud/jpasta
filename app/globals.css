@@ -218,6 +218,30 @@
   line-height: 1.55;
 }
 
+/* KDS scale — sized for a two-metre viewing distance (brand.md §7). */
+@utility type-kds-number {
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 1.2rem + 1.5vw, 2.5rem);
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+@utility type-kds-title {
+  font-size: clamp(1.3rem, 1.1rem + 0.7vw, 1.75rem);
+  line-height: 1.2;
+  font-weight: 700;
+}
+@utility type-kds-item {
+  font-size: clamp(1.3rem, 1.15rem + 0.65vw, 1.75rem);
+  line-height: 1.35;
+  font-weight: 700;
+}
+@utility type-kds-meta {
+  font-size: clamp(1rem, 0.95rem + 0.25vw, 1.2rem);
+  line-height: 1.45;
+  font-weight: 600;
+}
+
 @utility glass-bar {
   background: color-mix(in oklab, var(--color-surface) 86%, transparent);
   backdrop-filter: blur(16px) saturate(1.15);

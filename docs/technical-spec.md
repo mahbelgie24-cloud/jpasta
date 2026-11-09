@@ -209,8 +209,10 @@ data path as the orders board.
 
 Placeholder catalog (beautiful, realistic, owner-reviewable) is seeded in
 Phase 0 and **replaced by the real menu via the admin UI or a JSON ingest**
-(`docs/menu-template.json` + ingest script, Phase 1). Photos go to R2 with
-generated illustrations as the fallback placeholder — never a broken image.
+(`docs/menu-template.json` + ingest script, Phase 1). Curated dish photos are
+optimized into `public/media/products/` and seeded with the catalog; owner
+replacements go to R2. Generated illustrations remain the fallback
+placeholder — never a broken image.
 
 ### 8.5 Identity & Access
 
@@ -342,11 +344,11 @@ field are one asset — never retype or redraw them in component code.
 
 ### 11.5 Imagery & Illustration
 
-Until real photography arrives: a flat **illustration system**
-(`components/brand/dish-illustration.tsx`) renders stylized bowls/pasta with
-per-dish sauce and topping variations — appetizing, consistent, on-brand.
-Real photos (Phase 1+) replace illustrations per product; illustrations
-remain the empty/fallback state.
+The catalog ships curated photography: 4:3, 1600×1200 WebP derivatives under
+`public/media/products/`, attached per product by slug through
+`lib/dish-photos.generated.ts`. The flat **illustration system**
+(`components/brand/dish-art.tsx`) remains the empty/fallback state for any
+product without a photo, so a missing asset is never a broken image.
 
 ---
 

@@ -9,6 +9,7 @@ import { Stepper } from "@/components/ui/stepper";
 import { useCart } from "@/components/menu/cart-context";
 import { addMinor, multiplyMinor, type Minor } from "@/lib/pricing";
 import type { ModifierGroup, Product } from "@/lib/menu-data";
+import { cn } from "@/lib/utils";
 
 /**
  * Item customization sheet — per-product modifier groups (sauce / pasta type
@@ -218,7 +219,12 @@ export function ItemSheet({
       >
         <div className="flex items-start gap-4">
           <div className="w-32 shrink-0 overflow-hidden rounded-xl bg-cream-100">
-            <DishMedia product={product} decorative className="w-full" />
+            <DishMedia
+              product={product}
+              decorative
+              sizes="128px"
+              className={cn("w-full", product.image && "aspect-[4/3]")}
+            />
           </div>
           <p className="pt-1 text-sm leading-relaxed text-ink-soft">
             {product.descAr}

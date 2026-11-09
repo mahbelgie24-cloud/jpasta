@@ -7,6 +7,7 @@ import { getCatalog } from "@/lib/server/catalog";
 import { getShopSettings } from "@/lib/server/settings";
 import { SITE } from "@/lib/site";
 import { formatPrice } from "@/lib/pricing";
+import { productImageSrc } from "@/lib/menu-data";
 import { serializeJsonLd } from "@/lib/json-ld";
 
 export const metadata: Metadata = {
@@ -51,6 +52,9 @@ export default async function MenuPage() {
           "@type": "MenuItem",
           name: p.nameAr,
           description: p.descAr,
+          ...(p.image
+            ? { image: `${SITE.url}${productImageSrc(p.image)}` }
+            : {}),
           offers: {
             "@type": "Offer",
             price: formatPrice(p.basePriceMinor),

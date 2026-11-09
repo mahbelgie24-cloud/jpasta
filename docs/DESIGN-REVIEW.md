@@ -31,8 +31,10 @@
 - **RTL.** Arabic-first with logical properties everywhere; the new lint rule
   keeps it that way. `dir="ltr"` islands (phone numbers, order numbers) are
   deliberate.
-- **Imagery.** DishArt illustrations are the placeholder system until real
-  photography lands (owner task) — never a broken image, never stock photos.
+- **Imagery.** All 12 launch dishes ship curated photography as 4:3 WebP
+  under `public/media/products/`, with blur-up placeholders and full-bleed
+  cards; DishArt remains the fallback for any dish without a photo — never a
+  broken image, never stock photos.
 - **Type.** Fluid ladder only (`type-display … type-micro`), Amiri for Arabic
   display, Alexandria for UI/body, Fraunces for Latin accents, Arabic gets
   zero letter-spacing. The logo wordmark is part of the supplied SVG, never

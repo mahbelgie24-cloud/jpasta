@@ -1,5 +1,5 @@
 /* JPasta service worker — app shell, offline ordering, push-ready. */
-const VERSION = "jpasta-v4";
+const VERSION = "jpasta-v5";
 const SHELL = `${VERSION}-shell`;
 const MEDIA = `${VERSION}-media`;
 
@@ -45,10 +45,18 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Product media is public and immutable; it must be handled BEFORE the
-  // authenticated-API skip below, otherwise this branch is unreachable and
+  // Product media is public: bundled photos under /media/ and owner uploads
+  // under /api/media/. Optimized variants arrive as /_next/image?url=…, so
+  // match the source in that query too. This must run BEFORE the
+  // authenticated-API skip below, otherwise the branch is unreachable and
   // dish photos never survive an offline visit.
-  if (url.pathname.startsWith("/api/media/")) {
+  const mediaSrc =
+    url.pathname === "/_next/image"
+      ? url.searchParams.get("url") || ""
+      : url.pathname;
+  const isMedia =
+    mediaSrc.startsWith("/media/") || mediaSrc.startsWith("/api/media/");
+  if (isMedia) {
     event.respondWith(
       caches.open(MEDIA).then(async (cache) => {
         const cached = await cache.match(request);

@@ -8,6 +8,7 @@ import { Price } from "@/components/ui/price";
 import { ItemSheet } from "@/components/menu/item-sheet";
 import { useCart } from "@/components/menu/cart-context";
 import type { Product } from "@/lib/menu-data";
+import { cn } from "@/lib/utils";
 
 /** Heat level — icon + count (never emoji, never color alone). */
 function HeatLevel({ level }: { level: number }) {
@@ -70,7 +71,12 @@ export function ProductCard({
           <DishMedia
             product={product}
             decorative
-            className="w-full max-w-52 transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, calc(100vw - 4rem)"
+            className={cn(
+              "w-full transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100",
+              // Photos are full-bleed 4:3; illustrations keep their plate size.
+              product.image ? "aspect-[4/3]" : "max-w-52",
+            )}
           />
         </button>
         <div className="pointer-events-none absolute start-2 top-2 flex flex-wrap gap-1.5">

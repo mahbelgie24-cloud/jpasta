@@ -8,6 +8,7 @@
  *   - pasta : optional single choice on crunchy cheese pasta (default fettuccine)
  *   - extras: optional paid chicken add-on on pasta dishes
  */
+import { DISH_PHOTOS } from "./dish-photos.generated";
 import { toMinorUnits } from "./pricing";
 
 export type SauceKind =
@@ -40,11 +41,24 @@ export interface ModifierGroup {
 }
 
 export interface ProductImage {
+  /**
+   * Media key. `media/...` is a bundled photo served from public/; anything
+   * else is an owner upload in R2, served through /api/media.
+   */
   key: string;
   alt: string;
   width: number;
   height: number;
   color?: string;
+  /** Inline LQIP for bundled photos; owner uploads fall back to `color`. */
+  blurDataURL?: string;
+}
+
+/** Resolve a media key to a public URL (bundled asset vs R2 route). */
+export function productImageSrc(image: ProductImage): string {
+  return image.key.startsWith("media/")
+    ? `/${image.key}`
+    : `/api/media/${image.key}`;
 }
 
 export interface Product {
@@ -62,7 +76,7 @@ export interface Product {
   /** Curated homepage feature — independent of the bestseller badge. */
   featured?: boolean;
   groups: ModifierGroup[];
-  /** Real photography (R2). Absent → DishArt renders the illustration. */
+  /** Curated photo (bundled or R2). Absent → DishArt renders the illustration. */
   image?: ProductImage;
 }
 
@@ -132,7 +146,7 @@ const PASTA_TYPE: ModifierGroup = {
   ],
 };
 
-export const PRODUCTS: Product[] = [
+const BASE_PRODUCTS: Product[] = [
   // ── الباستا ──────────────────────────────────────────────────────────
   {
     id: "fettuccine-mushroom",
@@ -309,6 +323,18 @@ export const PRODUCTS: Product[] = [
     groups: [NUGGET_SAUCE],
   },
 ];
+
+/**
+ * The catalog with bundled photography attached by slug. `npm run photos`
+ * owns the manifest, so replacing a source image never requires editing a
+ * product by hand. Products without an entry keep the DishArt fallback.
+ */
+export const PRODUCTS: Product[] = BASE_PRODUCTS.map((product) => {
+  const photo = DISH_PHOTOS[product.slug];
+  return photo
+    ? { ...product, image: { ...photo, alt: product.nameAr } }
+    : product;
+});
 
 /** Flat delivery fee placeholder — replaced by delivery_zones in Phase 2 (spec §16.2). */
 export const PLACEHOLDER_DELIVERY_FEE_MINOR = toMinorUnits("5");

@@ -19,6 +19,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "icons": "node scripts/generate-icons.mjs",
+    "photos": "node scripts/import-dish-photos.mjs",
     "vapid": "node scripts/generate-vapid-keys.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
     "verify": "npm run format:check && npm run lint && npm run check:contrast && npm run typecheck && npm test && npm run build",

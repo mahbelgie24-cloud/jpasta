@@ -16,12 +16,19 @@ const sw = readFileSync(
 );
 
 describe("service worker caching rules", () => {
-  it("handles public media before skipping /api traffic", () => {
-    const media = sw.indexOf('url.pathname.startsWith("/api/media/")');
+  it("handles public and optimized media before skipping /api traffic", () => {
+    const media = sw.indexOf("const isMedia =");
     const apiSkip = sw.indexOf('url.pathname.startsWith("/api/")');
     expect(media).toBeGreaterThan(-1);
     expect(apiSkip).toBeGreaterThan(-1);
     expect(media).toBeLessThan(apiSkip);
+  });
+
+  it("covers bundled photos, R2 uploads, and their optimized variants", () => {
+    expect(sw).toContain('mediaSrc.startsWith("/media/")');
+    expect(sw).toContain('mediaSrc.startsWith("/api/media/")');
+    expect(sw).toContain('url.pathname === "/_next/image"');
+    expect(sw).toContain('url.searchParams.get("url")');
   });
 
   it("never replaces the offline shell with an error navigation", () => {

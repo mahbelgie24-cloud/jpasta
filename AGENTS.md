@@ -106,8 +106,10 @@ intercepts `/api/realtime` before Next.js.
   hundredths), not floats.
 - **Realtime is a Durable Object**, not an in-process bus. Keep
   `notifyOrdersChanged()` after commit.
-- **Photos** live in R2; `DishMedia` falls back to `DishArt` — never a
-  broken image.
+- **Photos**: curated catalog photos are committed WebP derivatives under
+  `public/media/products/` (seeded as `media/products/<slug>.webp`); owner
+  replacements live in R2. `DishMedia` handles both and falls back to
+  `DishArt` — never a broken image.
 - **Console uses the dark `theme-console` tokens**; the KDS uses
   `theme-kitchen`. New console code must use semantic tokens directly.
 

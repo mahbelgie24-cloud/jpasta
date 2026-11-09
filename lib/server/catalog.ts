@@ -4,6 +4,7 @@ import { unstable_cache } from "next/cache";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { categories, modifierGroups, modifiers, products } from "@/db/schema";
+import { DISH_PHOTOS_BY_KEY } from "@/lib/dish-photos.generated";
 import {
   CATEGORIES,
   PRODUCTS,
@@ -92,6 +93,7 @@ const getCatalogFromDb = unstable_cache(
               width: p.imageWidth ?? 1200,
               height: p.imageHeight ?? 900,
               color: p.imageColor ?? undefined,
+              blurDataURL: DISH_PHOTOS_BY_KEY[p.imageKey]?.blurDataURL,
             },
           }
         : {}),

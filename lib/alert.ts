@@ -9,16 +9,43 @@
  */
 
 let muted = false;
+let soundLoaded = false;
+const soundListeners = new Set<() => void>();
 
 export function loadSoundPreference(): boolean {
   if (typeof window === "undefined") return true;
   muted = window.localStorage.getItem("jpasta.sound") === "off";
+  soundLoaded = true;
   return !muted;
 }
 
 export function setSoundPreference(enabled: boolean): void {
   muted = !enabled;
+  if (typeof window === "undefined") return;
   window.localStorage.setItem("jpasta.sound", enabled ? "on" : "off");
+  for (const listener of soundListeners) listener();
+}
+
+/** Subscribe for useSyncExternalStore (hydration-safe UI toggles). */
+export function subscribeSoundPreference(listener: () => void): () => void {
+  soundListeners.add(listener);
+  return () => {
+    soundListeners.delete(listener);
+  };
+}
+
+/** Client snapshot — reads localStorage once, then mirrors the module flag. */
+export function getSoundPreference(): boolean {
+  if (!soundLoaded && typeof window !== "undefined") {
+    muted = window.localStorage.getItem("jpasta.sound") === "off";
+    soundLoaded = true;
+  }
+  return !muted;
+}
+
+/** Server/hydration snapshot — sound is on until the client store is read. */
+export function getServerSoundPreference(): boolean {
+  return true;
 }
 
 let audioCtx: AudioContext | null = null;

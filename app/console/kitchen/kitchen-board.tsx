@@ -1,151 +1,289 @@
 "use client";
 
-import { arabicCount } from "@/lib/arabic";
-
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
-  Bike,
   ChefHat,
-  HandPlatter,
+  CircleCheck,
+  Inbox,
+  LoaderCircle,
   Maximize2,
   Minimize2,
-  UtensilsCrossed,
+  RefreshCw,
+  TriangleAlert,
+  Volume2,
+  VolumeX,
+  Wifi,
+  WifiOff,
+  type LucideIcon,
 } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
-import { TwirlLoader } from "@/components/ui/twirl-loader";
-import { useOrdersFeed, type FeedOrder } from "@/hooks/use-orders-feed";
+import { arabicCount } from "@/lib/arabic";
+import {
+  getServerSoundPreference,
+  getSoundPreference,
+  setSoundPreference,
+  subscribeSoundPreference,
+} from "@/lib/alert";
+import { formatTimeAr } from "@/lib/format";
+import {
+  useOrdersFeed,
+  type FeedConnection,
+  type FeedOrder,
+} from "@/hooks/use-orders-feed";
 import { advanceOrder } from "@/app/actions/console";
+import { cn } from "@/lib/utils";
+import { KitchenTicket } from "./kitchen-ticket";
 
 /**
- * Kitchen display (Phase 2) — reading-at-a-distance sizing: huge order
- * numbers, large item text, elapsed-time chips that shift color as a
- * ticket ages (< 5min basil, 5–10 bronze, 10+ terracotta). Tap advances
- * received → preparing → ready. No cancel here: cancellations belong to
- * the console board where the customer conversation happens.
+ * Kitchen display (KDS) — the kitchen's command surface.
+ *
+ * Readable from two metres: huge order numbers, a shared aging clock,
+ * three explicit swimlanes, and one-tap advancement. Aging escalates at
+ * five and ten minutes with icon + label + colour (never colour alone).
+ *
+ * The feed is WebSocket-first with an 8-second visibility-aware polling
+ * fallback; the sound toggle shares the persisted preference with the
+ * orders board so one mute covers the whole shop.
  */
 
-const STEP_LABEL: Record<string, string> = {
-  received: "ابدأ التحضير",
-  preparing: "جاهز ✓",
+type LaneStatus = "received" | "preparing" | "ready";
+
+interface Lane {
+  status: LaneStatus;
+  label: string;
+  icon: LucideIcon;
+  tint: string;
+  count: string;
+  empty: string;
+}
+
+const LANES: Lane[] = [
+  {
+    status: "received",
+    label: "جديدة",
+    icon: Inbox,
+    tint: "bg-brand/15 text-brand",
+    count: "bg-brand/10 text-brand ring-brand/25",
+    empty: "التذاكر الجديدة تظهر هنا فور وصولها",
+  },
+  {
+    status: "preparing",
+    label: "قيد التحضير",
+    icon: ChefHat,
+    tint: "bg-warning/15 text-warning",
+    count: "bg-warning/10 text-warning ring-warning/25",
+    empty: "التذاكر التي تبدأ تحضيرها تظهر هنا",
+  },
+  {
+    status: "ready",
+    label: "جاهزة للتسليم",
+    icon: CircleCheck,
+    tint: "bg-success/15 text-success",
+    count: "bg-success/10 text-success ring-success/25",
+    empty: "التذاكر الجاهزة بانتظار التسليم تظهر هنا",
+  },
+];
+
+const CONNECTION: Record<
+  FeedConnection,
+  { label: string; icon: LucideIcon; className: string }
+> = {
+  live: {
+    label: "مباشر",
+    icon: Wifi,
+    className: "bg-success/10 text-success ring-success/25",
+  },
+  polling: {
+    label: "تحديث دوري",
+    icon: RefreshCw,
+    className: "bg-warning/10 text-warning ring-warning/25",
+  },
+  offline: {
+    label: "غير متصل",
+    icon: WifiOff,
+    className: "bg-danger/10 text-danger ring-danger/25",
+  },
+  connecting: {
+    label: "جارٍ الاتصال…",
+    icon: LoaderCircle,
+    className: "bg-surface-raised text-text-secondary ring-line",
+  },
 };
 
-function elapsedMinutes(createdAt: string): number {
-  return Math.max(
-    0,
-    Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000),
+const controlClass =
+  "inline-flex min-h-11 items-center gap-2 rounded-full bg-surface-raised px-3.5 type-caption font-bold text-text-secondary ring-1 ring-line transition-colors hover:bg-surface-sunken hover:text-text-primary";
+
+function KitchenClock() {
+  const [label, setLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    const tick = () => setLabel(formatTimeAr(new Date()));
+    tick();
+    const timer = setInterval(tick, 30_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return <span className="tabular-nums">{label ?? "—"}</span>;
+}
+
+function Lane({
+  lane,
+  tickets,
+  now,
+  busyId,
+  onMove,
+}: {
+  lane: Lane;
+  tickets: FeedOrder[];
+  now: number;
+  busyId: string | null;
+  onMove: (id: string, next: "preparing" | "ready") => Promise<void>;
+}) {
+  const Icon = lane.icon;
+  const next =
+    lane.status === "received"
+      ? ("preparing" as const)
+      : lane.status === "preparing"
+        ? ("ready" as const)
+        : null;
+
+  return (
+    <section
+      aria-labelledby={`lane-${lane.status}`}
+      className="overflow-hidden rounded-card bg-surface/60 ring-1 ring-line/60"
+    >
+      <header className="flex items-center justify-between gap-3 border-b border-line/60 px-4 py-3.5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span
+            className={cn(
+              "grid size-9 shrink-0 place-items-center rounded-full",
+              lane.tint,
+            )}
+          >
+            <Icon className="size-5" aria-hidden />
+          </span>
+          <h2
+            id={`lane-${lane.status}`}
+            className="truncate font-display-ar type-kds-title text-text-primary"
+          >
+            {lane.label}
+          </h2>
+        </div>
+        <span
+          className={cn(
+            "inline-flex min-w-9 shrink-0 items-center justify-center rounded-full px-2.5 py-1 type-kds-meta tabular-nums ring-1",
+            lane.count,
+          )}
+        >
+          {tickets.length}
+        </span>
+      </header>
+
+      <div className="space-y-3 p-3 sm:p-4">
+        {tickets.length === 0 ? (
+          <div className="flex min-h-32 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-line/70 bg-surface-sunken/50 px-4 py-6 text-center">
+            <Icon className="size-6 text-text-secondary/50" aria-hidden />
+            <p className="type-kds-meta text-text-secondary">
+              لا تذاكر في هذه المرحلة
+            </p>
+            <p className="type-micro text-text-secondary/70">{lane.empty}</p>
+          </div>
+        ) : (
+          tickets.map((order) => (
+            <KitchenTicket
+              key={order.id}
+              order={order}
+              now={now}
+              busy={busyId === order.id}
+              onAdvance={next ? () => void onMove(order.id, next) : undefined}
+            />
+          ))
+        )}
+      </div>
+    </section>
   );
 }
 
-function chipClass(minutes: number): string {
-  if (minutes >= 10) return "bg-terracotta text-cream-50";
-  // Bronze/cream is 3.3:1. The chip is rendered at 20px bold (>= 14pt bold
-  // = WCAG large text), where 3:1 is the AA requirement — the 18px version
-  // was just under the large-text threshold and failed.
-  if (minutes >= 5) return "bg-bronze text-cream-50";
-  return "bg-basil-100 text-basil-800";
+function BoardSkeleton() {
+  return (
+    <div
+      className="mt-5 grid gap-4 lg:grid-cols-3"
+      role="status"
+      aria-label="جارٍ تحميل تذاكر المطبخ"
+    >
+      {LANES.map((lane) => (
+        <div
+          key={lane.status}
+          className="overflow-hidden rounded-card bg-surface/60 ring-1 ring-line/60"
+        >
+          <div className="flex items-center justify-between border-b border-line/60 px-4 py-3.5">
+            <div className="flex items-center gap-2.5">
+              <span className="size-9 animate-pulse rounded-full bg-surface-raised motion-reduce:animate-none" />
+              <span className="h-6 w-28 animate-pulse rounded-full bg-surface-raised motion-reduce:animate-none" />
+            </div>
+            <span className="size-8 animate-pulse rounded-full bg-surface-raised motion-reduce:animate-none" />
+          </div>
+          <div className="space-y-3 p-3 sm:p-4">
+            {[0, 1].map((index) => (
+              <div
+                key={index}
+                className="h-40 animate-pulse rounded-card bg-surface-raised motion-reduce:animate-none"
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
-function KitchenTicket({
-  order,
-  busy,
-  onAdvance,
-}: {
-  order: FeedOrder;
-  busy: boolean;
-  /** Omitted for the "ready" lane, which waits for the pass. */
-  onAdvance?: () => void;
-}) {
-  const minutes = elapsedMinutes(order.createdAt);
-  const [, forceTick] = useState(0);
-
-  // re-render every 30s so elapsed chips stay honest without a feed event
-  useEffect(() => {
-    const t = setInterval(() => forceTick((n) => n + 1), 30000);
-    return () => clearInterval(t);
-  }, []);
-
-  const nextLabel = STEP_LABEL[order.status] ?? "ابدأ التحضير";
-
+function BoardError({ onRetry }: { onRetry: () => void }) {
   return (
-    <article className="rounded-[28px] border-4 border-cream-200 bg-cream-50 p-6 shadow-lift">
-      <div className="flex items-start justify-between gap-3">
-        <p className="font-display text-5xl font-bold text-basil-800" dir="ltr">
-          {order.orderNumber}
-        </p>
-        <div className="flex flex-col items-end gap-2">
-          <span
-            className={`rounded-full px-4 py-1.5 text-xl font-bold tabular-nums ${chipClass(minutes)}`}
-          >
-            {minutes === 0 ? "الآن" : `قبل ${minutes} د`}
-          </span>
-          <span className="inline-flex items-center gap-1.5 text-base font-bold text-ink-soft">
-            {order.channel === "delivery" ? (
-              <>
-                <Bike className="size-5" aria-hidden /> توصيل
-              </>
-            ) : order.channel === "dine_in" ? (
-              <>
-                <UtensilsCrossed className="size-5" aria-hidden /> داخل المحل
-              </>
-            ) : (
-              <>
-                <HandPlatter className="size-5" aria-hidden /> استلام
-              </>
-            )}
-          </span>
-        </div>
-      </div>
-
-      <ul className="mt-5 space-y-3 border-t-4 border-cream-200 pt-5">
-        {order.items.map((it, i) => (
-          <li key={i}>
-            <p className="text-3xl leading-snug font-extrabold text-ink">
-              {it.quantity} × {it.nameAr}
-            </p>
-            {it.detailAr && (
-              <p className="mt-0.5 text-xl font-bold text-basil-700">
-                {it.detailAr}
-              </p>
-            )}
-            {it.note && (
-              <p className="mt-1 text-xl font-bold text-warning">✎ {it.note}</p>
-            )}
-          </li>
-        ))}
-      </ul>
-
-      {order.customerNote && (
-        <p className="mt-4 rounded-xl bg-bronze/10 px-4 py-3 text-xl font-bold text-warning">
-          ✎ {order.customerNote}
-        </p>
-      )}
-
-      {onAdvance && (
-        <button
-          type="button"
-          onClick={onAdvance}
-          disabled={busy}
-          className="mt-6 flex min-h-16 w-full items-center justify-center gap-3 rounded-full bg-basil-700 text-2xl font-extrabold text-cream-50 shadow-card transition-colors hover:bg-basil-600 active:scale-[0.99] disabled:opacity-50"
-        >
-          {busy ? (
-            <TwirlLoader className="size-9" label="جارٍ التحديث…" />
-          ) : (
-            <ChefHat className="size-7" aria-hidden />
-          )}
-          {nextLabel}
-        </button>
-      )}
-    </article>
+    <div
+      role="alert"
+      className="mt-5 flex flex-col items-center gap-3 rounded-card bg-surface/60 px-5 py-16 text-center ring-1 ring-line/60"
+    >
+      <span className="grid size-14 place-items-center rounded-full bg-danger/10 text-danger ring-1 ring-danger/25">
+        <WifiOff className="size-7" aria-hidden />
+      </span>
+      <p className="type-kds-title text-text-primary">
+        تعذر تحميل تذاكر المطبخ
+      </p>
+      <p className="max-w-md type-kds-meta text-text-secondary">
+        تحقق من اتصال الجهاز ثم أعد المحاولة — التذاكر محفوظة في الخادم.
+      </p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-full bg-action px-5 type-kds-meta text-action-text transition-colors hover:bg-action-hover"
+      >
+        <RefreshCw className="size-4" aria-hidden />
+        إعادة المحاولة
+      </button>
+    </div>
   );
 }
 
 export function KitchenBoard() {
-  const { orders, connection, refresh } = useOrdersFeed({
+  const { orders, connection, lastUpdated, refresh } = useOrdersFeed({
     alertOnNew: true,
   });
   const [busyId, setBusyId] = useState<string | null>(null);
   const [lastActionError, setLastActionError] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+  const boardRef = useRef<HTMLDivElement>(null);
+  const soundEnabled = useSyncExternalStore(
+    subscribeSoundPreference,
+    getSoundPreference,
+    getServerSoundPreference,
+  );
+
+  // One shared clock for every ticket; no per-ticket intervals.
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 15_000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const onChange = () => setFullscreen(Boolean(document.fullscreenElement));
@@ -153,12 +291,33 @@ export function KitchenBoard() {
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
 
+  const connectionView = CONNECTION[connection];
+  const ConnectionIcon = connectionView.icon;
+  const tickets = orders ?? [];
+  const openCount = tickets.length;
+  const initialError = orders === null && connection === "offline";
+  const summary = initialError
+    ? "تعذر تحميل التذاكر"
+    : orders === null
+      ? "جارٍ تحميل التذاكر…"
+      : arabicCount(openCount, {
+          zero: "لا تذاكر مفتوحة",
+          one: "تذكرة واحدة مفتوحة",
+          two: "تذكرتان مفتوحتان",
+          few: "تذاكر مفتوحة",
+          many: "تذكرة مفتوحة",
+        });
+
+  function toggleSound() {
+    setSoundPreference(!soundEnabled);
+  }
+
   async function toggleFullscreen() {
     try {
       if (document.fullscreenElement) {
         await document.exitFullscreen();
-      } else {
-        await document.documentElement.requestFullscreen();
+      } else if (boardRef.current) {
+        await boardRef.current.requestFullscreen();
       }
     } catch {
       setFullscreen(Boolean(document.fullscreenElement));
@@ -166,17 +325,19 @@ export function KitchenBoard() {
   }
 
   async function move(id: string, next: "preparing" | "ready") {
-    const current = orders?.find((o) => o.id === id);
-    if (!current) return;
+    const current = orders?.find((order) => order.id === id);
+    if (!current) {
+      await refresh();
+      return;
+    }
+
     setBusyId(id);
     setLastActionError(null);
     try {
-      const res = await advanceOrder(id, next, current.status);
-      if (!res.ok) {
-        setLastActionError(res.error ?? "تعذر التحديث");
-      } else {
-        await refresh();
-      }
+      const result = await advanceOrder(id, next, current.status);
+      if (!result.ok) setLastActionError(result.error ?? "تعذر تحديث الطلب.");
+      // Refresh on both outcomes: a conflict means this screen is stale.
+      await refresh();
     } catch {
       setLastActionError("تعذر التحديث — تحقق من الاتصال.");
     } finally {
@@ -184,154 +345,136 @@ export function KitchenBoard() {
     }
   }
 
-  const tickets = (orders ?? []).filter(
-    (o) =>
-      o.status === "received" ||
-      o.status === "preparing" ||
-      o.status === "ready",
-  );
-
-  const lanes = [
-    { status: "received" as const, label: "جديدة" },
-    { status: "preparing" as const, label: "قيد التحضير" },
-    { status: "ready" as const, label: "جاهزة للتسليم" },
-  ];
-
   return (
-    <div className="min-h-dvh bg-cream-100">
-      <div className="mx-auto max-w-6xl px-4 pt-5 pb-10 sm:px-6">
-        <header className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <LogoMark className="size-12" />
-            <div>
-              <h1 className="font-display-ar text-2xl font-semibold text-basil-800">
+    <div
+      ref={boardRef}
+      data-fullscreen={fullscreen}
+      className="relative min-h-dvh overflow-x-hidden bg-canvas data-[fullscreen=true]:h-dvh data-[fullscreen=true]:overflow-y-auto"
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-80"
+        style={{
+          background:
+            "radial-gradient(75% 100% at 50% 0%, color-mix(in oklab, var(--color-brand) 12%, transparent) 0%, transparent 72%)",
+        }}
+      />
+
+      <div className="relative mx-auto w-full max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
+        <header className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-line/60 py-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <LogoMark className="size-11 shrink-0" />
+            <div className="min-w-0">
+              <h1 className="font-display-ar type-kds-title text-text-primary">
                 شاشة المطبخ
               </h1>
-              <p className="text-sm text-ink-soft">
-                {arabicCount(tickets.length, {
-                  zero: "لا تذاكر مفتوحة",
-                  one: "تذكرة واحدة مفتوحة",
-                  two: "تذكرتان مفتوحتان",
-                  few: "تذاكر مفتوحة",
-                  many: "تذكرة مفتوحة",
-                })}
+              <p className="flex flex-wrap items-center gap-x-2 type-kds-meta text-text-secondary">
+                <span>{summary}</span>
+                <span aria-hidden className="text-text-secondary/40">
+                  ·
+                </span>
+                <KitchenClock />
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="ms-auto flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleSound}
+              aria-label="كتم صوت التنبيه"
+              aria-pressed={!soundEnabled}
+              className={controlClass}
+            >
+              {soundEnabled ? (
+                <Volume2 className="size-4" aria-hidden />
+              ) : (
+                <VolumeX className="size-4" aria-hidden />
+              )}
+              <span className="hidden sm:inline">
+                {soundEnabled ? "الصوت مفعّل" : "الصوت مكتوم"}
+              </span>
+            </button>
+
             <button
               type="button"
               onClick={() => void toggleFullscreen()}
               aria-pressed={fullscreen}
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-cream-300 px-3 text-sm font-bold text-ink-soft hover:bg-cream-200"
+              aria-label={fullscreen ? "إنهاء ملء الشاشة" : "ملء الشاشة"}
+              className={controlClass}
             >
               {fullscreen ? (
                 <Minimize2 className="size-4" aria-hidden />
               ) : (
                 <Maximize2 className="size-4" aria-hidden />
               )}
-              {fullscreen ? "إنهاء ملء الشاشة" : "ملء الشاشة"}
+              <span className="hidden sm:inline">
+                {fullscreen ? "إنهاء ملء الشاشة" : "ملء الشاشة"}
+              </span>
             </button>
+
             <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold ${
-                connection === "live"
-                  ? "bg-basil-100 text-basil-800"
-                  : connection === "offline"
-                    ? "bg-terracotta/10 text-terracotta"
-                    : "bg-bronze/15 text-warning"
-              }`}
-              aria-live="polite"
+              role="status"
+              title={
+                lastUpdated
+                  ? `آخر تحديث ${formatTimeAr(new Date(lastUpdated))}`
+                  : undefined
+              }
+              className={cn(
+                "inline-flex min-h-9 items-center gap-2 rounded-full px-3.5 type-caption font-bold ring-1",
+                connectionView.className,
+              )}
             >
-              <span
-                className={`size-2.5 rounded-full ${
-                  connection === "live"
-                    ? "bg-basil-600"
-                    : connection === "offline"
-                      ? "bg-terracotta"
-                      : "bg-bronze"
-                }`}
+              <ConnectionIcon
+                className={cn(
+                  "size-4",
+                  connection === "connecting" && "motion-safe:animate-spin",
+                )}
                 aria-hidden
               />
-              {connection === "live"
-                ? "مباشر"
-                : connection === "polling"
-                  ? "تحديث دوري"
-                  : connection === "offline"
-                    ? "غير متصل"
-                    : "جارٍ الاتصال…"}
+              {connectionView.label}
             </span>
           </div>
         </header>
 
         {lastActionError && (
-          <p
+          <div
             role="alert"
-            className="mt-4 rounded-xl bg-terracotta/10 px-4 py-3 text-center font-bold text-terracotta"
+            className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-danger/10 px-4 py-3 text-danger ring-1 ring-danger/25"
           >
-            {lastActionError}
-          </p>
+            <span className="inline-flex items-center gap-2 type-kds-meta">
+              <TriangleAlert className="size-5 shrink-0" aria-hidden />
+              {lastActionError}
+            </span>
+            <button
+              type="button"
+              onClick={() => void refresh()}
+              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-surface-raised px-4 type-caption font-bold text-text-primary ring-1 ring-line transition-colors hover:bg-surface-sunken"
+            >
+              <RefreshCw className="size-4" aria-hidden />
+              تحديث الشاشة
+            </button>
+          </div>
         )}
 
-        {orders === null ? (
-          <div className="flex items-center justify-center gap-3 py-24 text-ink-soft">
-            <TwirlLoader className="size-8" label="جارٍ تحميل التذاكر…" />
-            جارٍ التحميل…
-          </div>
-        ) : tickets.length === 0 ? (
-          <div className="mt-10 rounded-card border-4 border-dashed border-cream-300 py-20 text-center">
-            <p className="text-3xl font-extrabold text-ink">لا تذاكر الآن</p>
-            <p className="mt-2 text-xl text-ink-soft">استمتع بالهدوء 🍃</p>
-          </div>
+        {initialError ? (
+          <BoardError onRetry={() => void refresh()} />
+        ) : orders === null ? (
+          <BoardSkeleton />
         ) : (
-          <div className="mt-6 grid gap-4 lg:grid-cols-3">
-            {lanes.map((lane) => {
-              const laneTickets = tickets.filter(
-                (o) => o.status === lane.status,
-              );
-              return (
-                <section
-                  key={lane.status}
-                  aria-labelledby={`lane-${lane.status}`}
-                  className="rounded-card border border-cream-200 bg-cream-50/40 p-3"
-                >
-                  <h2
-                    id={`lane-${lane.status}`}
-                    className="flex items-center justify-between px-1 pb-2 font-display-ar text-xl font-bold text-basil-800"
-                  >
-                    {lane.label}
-                    <span className="rounded-full bg-basil-100 px-2.5 py-0.5 text-sm font-bold text-basil-800 tabular-nums">
-                      {laneTickets.length}
-                    </span>
-                  </h2>
-                  <div className="space-y-4">
-                    {laneTickets.length === 0 ? (
-                      <p className="py-6 text-center text-sm text-ink-soft">
-                        لا تذاكر
-                      </p>
-                    ) : (
-                      laneTickets.map((o) => (
-                        <KitchenTicket
-                          key={o.id}
-                          order={o}
-                          busy={busyId === o.id}
-                          onAdvance={
-                            lane.status === "ready"
-                              ? undefined
-                              : () =>
-                                  void move(
-                                    o.id,
-                                    lane.status === "received"
-                                      ? "preparing"
-                                      : "ready",
-                                  )
-                          }
-                        />
-                      ))
-                    )}
-                  </div>
-                </section>
-              );
-            })}
+          <div className="mt-5 grid gap-4 lg:grid-cols-3 lg:items-start">
+            {LANES.map((lane) => (
+              <Lane
+                key={lane.status}
+                lane={lane}
+                tickets={tickets.filter(
+                  (order) => order.status === lane.status,
+                )}
+                now={now}
+                busyId={busyId}
+                onMove={move}
+              />
+            ))}
           </div>
         )}
       </div>

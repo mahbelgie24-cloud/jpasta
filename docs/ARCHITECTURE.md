@@ -157,10 +157,16 @@ Never use `new Date(y, m, d)` or the process timezone for business days.
 
 ## 8. Media
 
-- Photos live in R2 (`MEDIA`), served via `/api/media/[...key]` with
-  `immutable` caching (or a public R2 custom domain later).
+- Curated catalog photography is committed as optimized WebP under
+  `public/media/products/` (1600×1200, 4:3) and seeded into
+  `products.image_key` as `media/products/<slug>.webp`. `npm run photos`
+  regenerates the derivatives and `lib/dish-photos.generated.ts` from the
+  git-ignored `menu/` originals.
+- Owner replacements live in R2 (`MEDIA`), served via `/api/media/[...key]`
+  with immutable caching (or a public R2 custom domain later).
 - Upload is an owner-only server action (8 MB, MIME-validated).
-- Products without a photo render the deterministic `DishArt` system —
+- `DishMedia` resolves both namespaces, uses the bundled LQIP for blur-up,
+  and products without a photo render the deterministic `DishArt` system —
   never a broken image.
 
 ## 9. PWA / offline

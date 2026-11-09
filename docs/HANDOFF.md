@@ -37,7 +37,7 @@ v2 rebuilt the v1 platform in place:
   high-contrast KDS.
 - **Deploy-ready:** `npm run verify`, `npm run build:cf`, and
   `npx wrangler deploy --dry-run` are green. Only account resources, secrets,
-  real menu data, and photography remain.
+  recipes/ingredients, and owner sign-off remain.
 
 **Read this whole file before changing code.** Then read, in order:
 
@@ -61,7 +61,7 @@ v2 rebuilt the v1 platform in place:
 | Hosting   | Cloudflare Workers via `@opennextjs/cloudflare`                                          |
 | Realtime  | `OrderFeed` Durable Object + hibernatable WebSockets                                     |
 | Cache     | R2 incremental + regional + DO queue + D1 tag cache                                      |
-| Media     | R2 + `/api/media/[...key]` + `DishArt` fallback                                          |
+| Media     | bundled `public/media/products/` WebP + R2 uploads + `DishArt` fallback                  |
 | Auth      | PIN + PBKDF2 (WebCrypto) + HMAC lookup + DB throttle                                     |
 | PWA       | `public/sw.js`, offline page, manifest, PNG/maskable icons                               |
 | Tests     | **70/70** unit/integration + **44/44** E2E (`e2e/`, Playwright)                          |
@@ -154,7 +154,7 @@ Hard invariants:
 8. Order numbers are gap-free per local day.
 9. Stock never goes negative (`lib/domain/qty.ts`).
 10. Realtime is a DO; notify after commit.
-11. Photos fall back to `DishArt`; never a broken image.
+11. Bundled/R2 photos resolve through `DishMedia`; `DishArt` is the fallback — never a broken image.
 12. Console uses `theme-console` / `theme-kitchen`; new code uses semantic tokens.
 
 ---
@@ -319,7 +319,7 @@ photography. (Playwright E2E, axe automation and visual baselines shipped
 5. Set secrets: `DATABASE_URL`, `JPASTA_OWNER_PIN`, `AUTH_PEPPER`, `REALTIME_SECRET`.
 6. `db:migrate` + `db:seed` on production.
 7. Domain + `NEXT_PUBLIC_SITE_URL`; deploy; run `docs/DEPLOY.md` §5.
-8. Real menu, photos (R2), recipes/ingredients.
+8. Real menu + bundled photos are seeded; recipes/ingredients and optional R2 replacements remain.
 9. One-week parallel run before cutover.
 
 ### Engineering (can start now, no accounts)
@@ -359,9 +359,10 @@ photography. (Playwright E2E, axe automation and visual baselines shipped
 4. ~~Web Push~~ **done (2026-11-03)**: WebCrypto VAPID, per-device toggle in
    `/console/settings`, empty tickles on new orders, endpoint allowlist and
    automatic 404/410 pruning. Remaining: enable it on the owner's real phone.
-5. ~~Console polish~~ **done (2026-11-03)**: KDS swimlanes + fullscreen wall
-   mode, ⌘/Ctrl+K command palette, server-re-priced cart. Remaining: an
-   explicit offline badge in the console chrome.
+5. ~~Console polish~~ **done (2026-11-03, KDS refresh 2026-11-08)**: KDS
+   swimlanes, shared aging clock, sound toggle, fullscreen wall mode,
+   ⌘/Ctrl+K command palette, server-re-priced cart. Remaining: an explicit
+   offline badge in the console chrome.
 6. ~~Order history page + receipt/print view~~ **done (2026-11-02)**:
    `/console/orders` (local-day archive, status filter, order/name/phone/item
    search, revenue summary), `/console/orders/[id]` (items + audit history +

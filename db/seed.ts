@@ -125,6 +125,11 @@ async function seedCatalog(tx: Tx): Promise<number> {
         badges: p.badges,
         isFeatured: p.featured ?? false,
         sortOrder: i,
+        imageKey: p.image?.key ?? null,
+        imageAlt: p.image?.alt ?? null,
+        imageWidth: p.image?.width ?? null,
+        imageHeight: p.image?.height ?? null,
+        imageColor: p.image?.color ?? null,
       })
       .returning({ id: products.id });
     if (!prod) throw new Error(`product ${p.slug} insert failed`);

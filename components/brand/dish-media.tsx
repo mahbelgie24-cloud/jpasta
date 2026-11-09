@@ -1,29 +1,37 @@
 import Image from "next/image";
 import { DishArt } from "./dish-art";
-import type { Product, SauceKind, ToppingKind } from "@/lib/menu-data";
+import {
+  productImageSrc,
+  type Product,
+  type SauceKind,
+  type ToppingKind,
+} from "@/lib/menu-data";
 import { cn } from "@/lib/utils";
 
 /**
  * DishMedia — the photo/illustration switch.
  *
- * A product with an R2 image renders optimized photography; otherwise the
+ * A product with a photo renders optimized photography; otherwise the
  * DishArt system renders a deterministic, dish-specific illustration. The
- * fallback is permanent (never a broken image), and the owner can replace
- * any dish with a photo from /console/menu.
+ * fallback is permanent (never a broken image).
+ *
+ * Two photo sources share this component:
+ *   - `media/...`  curated photos committed under public/ (seeded catalog)
+ *   - anything else  owner uploads in R2, served through /api/media
  */
 export function DishMedia({
   product,
   variant = "card",
   className,
   sizes = "(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw",
-  priority = false,
+  preload = false,
   decorative = false,
 }: {
   product: Pick<Product, "slug" | "sauce" | "toppings" | "image" | "nameAr">;
   variant?: "card" | "hero" | "tile" | "dark";
   className?: string;
   sizes?: string;
-  priority?: boolean;
+  preload?: boolean;
   decorative?: boolean;
 }) {
   if (product.image) {
@@ -37,12 +45,14 @@ export function DishMedia({
         }
       >
         <Image
-          src={`/api/media/${product.image.key}`}
+          src={productImageSrc(product.image)}
           alt={decorative ? "" : product.image.alt || product.nameAr}
           width={product.image.width}
           height={product.image.height}
           sizes={sizes}
-          priority={priority}
+          preload={preload}
+          placeholder={product.image.blurDataURL ? "blur" : "empty"}
+          blurDataURL={product.image.blurDataURL}
           className="h-full w-full object-cover"
         />
       </div>

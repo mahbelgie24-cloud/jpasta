@@ -50,6 +50,10 @@ Fluid ladder (only these sizes on brand surfaces):
 `type-display` · `type-hero` · `type-section` · `type-title` · `type-body` ·
 `type-caption` · `type-micro`.
 
+The kitchen display adds a dedicated two-metre scale — `type-kds-number`,
+`type-kds-title`, `type-kds-item`, `type-kds-meta` — used only under
+`.theme-kitchen`.
+
 Arabic never gets letter-spacing. Latin display accents may.
 
 ## 4. Layout

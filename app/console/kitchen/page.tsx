@@ -13,7 +13,7 @@ export default async function KitchenPage() {
   const user = await getSessionUser();
   if (!user) redirect("/console/login");
   return (
-    <div className="theme-kitchen min-h-dvh bg-surface">
+    <div className="theme-kitchen min-h-dvh">
       <KitchenBoard />
     </div>
   );

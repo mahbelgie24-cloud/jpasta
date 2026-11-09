@@ -46,8 +46,21 @@ export async function Featured() {
               variant="dark"
               decorative
               sizes="(min-width: 1024px) 50vw, 100vw"
-              className="absolute inset-x-0 top-0 mx-auto w-full max-w-md transition-transform duration-700 ease-out group-hover:scale-[1.03] motion-reduce:transition-none"
+              className={cn(
+                "transition-transform duration-700 ease-out group-hover:scale-[1.03] motion-reduce:transition-none",
+                lead.image
+                  ? // A signature dish gets a full-bleed plate; the gradient
+                    // below keeps the copy legible over the photograph.
+                    "absolute inset-0"
+                  : "absolute inset-x-0 top-0 mx-auto w-full max-w-md",
+              )}
             />
+            {lead.image && (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 bg-gradient-to-t from-brand-deep via-brand-deep/35 to-transparent"
+              />
+            )}
             <div className="relative mt-auto">
               <div className="flex flex-wrap gap-1.5">
                 {lead.badges.slice(0, 2).map((b) => (
@@ -88,7 +101,11 @@ export async function Featured() {
               <DishMedia
                 product={p}
                 decorative
-                className="w-full max-w-48 transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transition-none"
+                sizes="288px"
+                className={cn(
+                  "w-full transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transition-none",
+                  p.image ? "aspect-[4/3] max-w-72" : "max-w-48",
+                )}
               />
               <div className="absolute start-2 top-2 flex flex-wrap gap-1.5">
                 {p.badges.slice(0, 1).map((b) => (

@@ -47,3 +47,7 @@ yarn-error.log*
 /design-lab/_baseline/
 /design-lab/screenshots/
 /design-lab/publish/
+
+# source dish photography (≈100 MB of PNGs); committed derivatives live in
+# public/media/products/ and are regenerated with `npm run photos`
+/menu/

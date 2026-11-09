@@ -117,8 +117,8 @@ npx wrangler deploy --dry-run      # تحقق من الـbindings
 3. Web Push: VAPID + اشتراك في /console/settings + إرسال عند طلب جديد.
 4. تفعيل settings-driven behavior (الساعات، الحد الأدنى، طرق الدفع، feature flags)
    عبر إنشاء lib/server/settings.ts وقراءة جدول settings مع cache tag.
-5. صقل الكونسول: swimlanes في KDS + مفتاح صوت + command palette + offline badge
-   + بحث/سجل للطلبات المكتملة والملغاة.
+5. صقل الكونسول: swimlanes في KDS + مفتاح صوت + command palette **تم**؛
+   المتبقي: offline badge في شريط الكونسول + بحث/سجل للطلبات المكتملة والملغاة.
 6. صفحة سجل الطلبات + عرض/طباعة الإيصال.
 7. بعد الاستقرار: spike لـ Cache Components/PPR، ثم spike لـ vinext.
 

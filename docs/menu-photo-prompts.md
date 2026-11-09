@@ -79,6 +79,42 @@ The subject is what changes; the set, light, lens and grade stay identical.
   in R2. Dishes without a photo keep the DishArt illustration (never broken).
 - Write the alt text as the dish name (e.g., «فيتوتشيني مع فطر»).
 
+## Bundled catalog pipeline (the 12 launch photos)
+
+The launch photos ship **inside the repo**, not as console uploads:
+
+1. Put the high-resolution originals in `menu/` using the Arabic dish names
+   below. The folder is git-ignored (≈100 MB); only the derivatives are
+   committed.
+2. Run `npm run photos`. It writes
+   `public/media/products/<slug>.webp` (1600×1200, 4:3, WebP, metadata
+   stripped, under 500 KB), samples the edge tone, generates a 24 px inline
+   LQIP, and refreshes `lib/dish-photos.generated.ts`.
+3. Run `npm run db:menu` (or `npm run db:seed` on first provision) to attach
+   `image_key`, `image_alt`, `image_width`, `image_height` and `image_color`
+   to every product. Re-running `--catalog` re-attaches them automatically.
+4. `DishMedia` serves bundled keys from `/media/...` and owner uploads from
+   `/api/media/...`; the seed/test suite fails if a manifest entry has no
+   matching file.
+
+Mapping used by `scripts/import-dish-photos.mjs` (the source filenames are
+not always identical to the seeded Arabic name):
+
+| Source in `menu/`     | Slug / output               |
+| --------------------- | --------------------------- |
+| فيتوتشيني مع فطر.png  | `fettuccine-mushroom.webp`  |
+| بيني بيستو.png        | `penne-pesto.webp`          |
+| فيتوتشيني الفريدو.png | `fettuccine-alfredo.webp`   |
+| سموكد باستا.png       | `smoked-pasta.webp`         |
+| سترجنانوف باستا.png   | `stroganoff-pasta.webp`     |
+| باستا ليمون.png       | `lemon-pasta.webp`          |
+| كرانشي تشيز باستا.png | `crunchy-cheese-pasta.webp` |
+| فيتوتشيني بيستو.png   | `fettuccine-pesto.webp`     |
+| موزاريلا باستا.png    | `mozzarella-pasta.webp`     |
+| بيني الفريدو.png      | `penne-alfredo.webp`        |
+| سلطة تبولة.png        | `tabbouleh.webp`            |
+| ناجتس الدجاج.png      | `chicken-nuggets.webp`      |
+
 ## Logo — official asset only
 
 The identity is the supplied **JPasta roundel** (green field, double cream

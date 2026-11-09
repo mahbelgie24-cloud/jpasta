@@ -107,8 +107,9 @@ DATABASE_URL="$NEON_POOLED_URL" npm run db:menu
   keep their `name_ar`/`detail_ar`/price snapshots; their `product_id`
   becomes `NULL`.
 - Recipes attached to removed products are deleted (cascade). Old product
-  photos are removed with their rows; new products render the DishArt
-  illustration until the owner uploads photos from `/console/menu`.
+  photos are removed with their rows; the reseed re-attaches the bundled
+  catalog photos, and products without one render the DishArt illustration
+  until the owner uploads a photo from `/console/menu`.
 - The catalog cache has a 5-minute bound (`unstable_cache`); allow up to five
   minutes for the storefront to show the new menu.
 - Never use `db:seed --force` against production — it truncates orders.
@@ -150,7 +151,8 @@ for i in $(seq 1 20); do curl -s -o /dev/null -w "%{http_code}\n" https://jpasta
 
 # 5. reports: place an order at 00:30 local and check the Z report.
 
-# 6. media: upload a dish photo from /console/menu and confirm it renders.
+# 6. media: confirm the bundled dish photos render on /menu, then upload a
+#    photo from /console/menu and confirm the R2 replacement also renders.
 
 # 7. backup + restore rehearsal (see §7).
 ```

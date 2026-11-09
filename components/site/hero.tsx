@@ -1,20 +1,29 @@
 import Link from "next/link";
 import { ArrowLeft, ChefHat, Clock, MapPin, MessageCircle } from "lucide-react";
 import { buttonStyles } from "@/components/ui/button";
-import { DishArt } from "@/components/brand/dish-art";
+import { DishMedia } from "@/components/brand/dish-media";
+import { getProduct } from "@/lib/menu-data";
+import { getCatalog } from "@/lib/server/catalog";
 import { getShopSettings } from "@/lib/server/settings";
 import { SITE } from "@/lib/site";
+import { cn } from "@/lib/utils";
 import { whatsappUrl } from "@/lib/whatsapp";
 
 /**
  * Hero — a dark editorial plate.
  *
- * The page opens like a menu cover: deep basil, a hand-drawn dish, and
- * Arabic display type (Amiri) against Alexandria body copy. The twirl ring
- * is the only ambient motion and stops under prefers-reduced-motion.
+ * The page opens like a menu cover: deep basil, a circular dish photograph,
+ * and Arabic display type (Amiri) against Alexandria body copy. The twirl
+ * ring is the only ambient motion and stops under prefers-reduced-motion.
  */
 export async function Hero() {
-  const shop = await getShopSettings();
+  const [shop, catalog] = await Promise.all([getShopSettings(), getCatalog()]);
+  // Keep the copy and the plate in sync: if the live catalog no longer has
+  // the pesto dish, fall back to the bundled product (same sauce/toppings)
+  // rather than showing an unrelated dish under pesto labels.
+  const heroProduct =
+    catalog.products.find((product) => product.slug === "fettuccine-pesto") ??
+    getProduct("fettuccine-pesto");
   return (
     <section
       className="relative overflow-hidden bg-brand-deep text-cream-50"
@@ -122,20 +131,23 @@ export async function Hero() {
             aria-hidden
             className="absolute inset-0 rounded-full border border-wheat-300/15 motion-safe:animate-[twirl_28s_linear_infinite]"
           />
-          <div
-            aria-hidden
-            className="absolute inset-10 rounded-full bg-[radial-gradient(circle_at_42%_32%,oklch(0.97_0.02_88)_0%,oklch(0.92_0.03_86)_55%,oklch(0.84_0.04_86)_100%)] shadow-[0_30px_80px_-30px_oklch(0_0_0_/_0.8)]"
-          />
-          <div className="relative animate-fade-up px-3 pt-8 pb-6 [animation-delay:120ms]">
-            <DishArt
-              seed="fettuccine-mushroom-hero"
-              sauce="alfredo"
-              toppings={["mushroom", "cheese", "basil"]}
-              variant="hero"
-              decorative
-              className="mx-auto w-full max-w-sm drop-shadow-[0_18px_30px_rgba(12,36,25,0.28)]"
-            />
-          </div>
+          {heroProduct && (
+            <div className="relative animate-fade-up px-3 pt-8 pb-6 [animation-delay:120ms]">
+              <DishMedia
+                product={heroProduct}
+                variant="hero"
+                decorative
+                preload
+                sizes="(min-width: 640px) 448px, calc(100vw - 3rem)"
+                className={cn(
+                  "mx-auto w-full max-w-md",
+                  heroProduct.image
+                    ? "aspect-square rounded-full shadow-[0_30px_80px_-30px_oklch(0_0_0_/_0.85)] ring-1 ring-cream-50/15"
+                    : "max-w-sm drop-shadow-[0_18px_30px_rgba(12,36,25,0.28)]",
+                )}
+              />
+            </div>
+          )}
 
           {/* floating ingredient labels */}
           <span className="absolute start-0 top-10 inline-flex -rotate-3 items-center gap-2 rounded-full border border-cream-50/15 bg-brand-deep/80 px-3.5 py-2 text-xs font-bold text-cream-100 shadow-lift backdrop-blur">
@@ -147,18 +159,21 @@ export async function Hero() {
           </span>
           <span className="absolute end-0 top-1/3 inline-flex rotate-2 items-center gap-2 rounded-full border border-cream-50/15 bg-brand-deep/80 px-3.5 py-2 text-xs font-bold text-cream-100 shadow-lift backdrop-blur">
             <span className="size-1.5 rounded-full bg-wheat-300" aria-hidden />
-            صلصة ألفريدو
+            صلصة بيستو
           </span>
           <span className="absolute end-8 bottom-8 inline-flex -rotate-2 items-center gap-2 rounded-full border border-cream-50/15 bg-brand-deep/80 px-3.5 py-2 text-xs font-bold text-cream-100 shadow-lift backdrop-blur">
-            <span className="size-1.5 rounded-full bg-tomato-500" aria-hidden />
-            فطر طازج
+            <span
+              className="size-1.5 rounded-full bg-pistachio-400"
+              aria-hidden
+            />
+            بارميزان
           </span>
 
           <p
             className="mt-6 text-center font-display text-sm font-semibold tracking-wide text-cream-100/60"
             dir="ltr"
           >
-            Fettuccine Mushroom — the one everyone orders
+            Fettuccine Pesto — fresh basil, toasted pine nuts
           </p>
         </div>
       </div>
