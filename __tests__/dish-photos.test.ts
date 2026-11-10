@@ -58,6 +58,9 @@ describe("bundled dish photography", () => {
         `/media/products/${product.slug}.webp`,
       );
     }
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+    const r2Path =
+      "/api/media/products/2f4c1a7e-9d1c-4b5e-8a91-0d2c3b4a5e6f.webp";
     expect(
       productImageSrc({
         key: "products/2f4c1a7e-9d1c-4b5e-8a91-0d2c3b4a5e6f.webp",
@@ -65,6 +68,6 @@ describe("bundled dish photography", () => {
         width: 1600,
         height: 1200,
       }),
-    ).toBe("/api/media/products/2f4c1a7e-9d1c-4b5e-8a91-0d2c3b4a5e6f.webp");
+    ).toBe(siteUrl ? `${siteUrl}${r2Path}` : r2Path);
   });
 });
