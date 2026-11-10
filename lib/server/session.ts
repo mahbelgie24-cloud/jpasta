@@ -4,13 +4,8 @@ import { cookies } from "next/headers";
 import { and, eq, gt, like } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { sessions, users } from "@/db/schema";
-import {
-  hashPin,
-  hashToken,
-  newSessionToken,
-  pinLookup,
-  verifyPin,
-} from "./pin";
+import { hashToken, newSessionToken, pinLookup, verifyPin } from "./pin";
+import { hashPinStored, verifyPinStored } from "./pin-bcrypt";
 import {
   checkLoginThrottle,
   clearLoginFailures,
@@ -150,7 +145,7 @@ export async function loginWithPin(
     }
     if (match) {
       try {
-        const upgradedHash = await hashPin(normalized);
+        const upgradedHash = await hashPinStored(normalized);
         await db
           .update(users)
           .set({ pinLookup: lookup, pinHash: upgradedHash })
@@ -163,7 +158,7 @@ export async function loginWithPin(
     }
   }
 
-  const pinOk = user ? await verifyPin(normalized, user.pinHash) : false;
+  const pinOk = user ? await verifyPinStored(normalized, user.pinHash) : false;
   if (!user || !pinOk) {
     await recordLoginFailure(throttleKeys);
     return { ok: false, error: "الرمز غير صحيح." };

@@ -1,0 +1,59 @@
+name: Backup (Neon → R2)
+
+on:
+  schedule:
+    # Daily at 02:00 UTC (04:00/05:00 Asia/Hebron).
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-production
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Direct endpoint: pg_dump must not run through PgBouncer.
+      DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}
+      BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      JPASTA_BACKUP_MODE: remote
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Create encrypted dump
+        run: npm run db:backup
+
+      - name: Upload to R2 (encrypted)
+        run: |
+          set -euo pipefail
+          BACKUP=$(ls -1t backups/*.sql.gz.enc | head -1)
+          NAME=$(basename "$BACKUP")
+          npx wrangler r2 object put "jpasta-media/backups/$NAME" \
+            --file "$BACKUP" --remote --content-type application/octet-stream
+          npx wrangler r2 object get "jpasta-media/backups/$NAME" \
+            --file "/tmp/$NAME" --remote
+          test "$(sha256sum "$BACKUP" | cut -d' ' -f1)" = \
+               "$(sha256sum "/tmp/$NAME" | cut -d' ' -f1)"
+          echo "✓ R2 backup verified: jpasta-media/backups/$NAME"
+
+      - name: Keep a short-lived workflow artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: db-backup
+          path: backups/*.enc
+          retention-days: 7
+
+      # R2 lifecycle rule backups-expire-30 removes these after 30 days.

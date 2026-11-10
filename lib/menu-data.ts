@@ -54,11 +54,21 @@ export interface ProductImage {
   blurDataURL?: string;
 }
 
-/** Resolve a media key to a public URL (bundled asset vs R2 route). */
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+
+/**
+ * Resolve a media key to a public URL (bundled asset vs R2 route).
+ *
+ * R2 keys use an absolute same-origin URL: OpenNext's image optimizer
+ * forwards relative URLs to the static-assets binding, which 404s for
+ * `/api/media/*`. An absolute URL goes through the remote-image path (the
+ * host is allowed in next.config's remotePatterns) and still hits our own
+ * media route.
+ */
 export function productImageSrc(image: ProductImage): string {
-  return image.key.startsWith("media/")
-    ? `/${image.key}`
-    : `/api/media/${image.key}`;
+  if (image.key.startsWith("media/")) return `/${image.key}`;
+  const path = `/api/media/${image.key}`;
+  return SITE_URL ? `${SITE_URL}${path}` : path;
 }
 
 export interface Product {

@@ -16,7 +16,8 @@ import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq, sql } from "drizzle-orm";
 import { CATEGORIES, PRODUCTS } from "../lib/menu-data";
-import { hashPin, pinLookup } from "../lib/server/pin";
+import { hmacSha256Hex } from "../lib/domain/hash";
+import { pinLookup } from "../lib/server/pin";
 import {
   categories,
   deliveryZones,
@@ -83,6 +84,32 @@ if (catalogOnly && (force || provisionOnly)) {
 }
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+/**
+ * Workers Free rejects PBKDF2 above 100k iterations, so production stores a
+ * bcrypt hash of a peppered HMAC of the PIN. The raw PIN never reaches the
+ * database, and AUTH_PEPPER remains required to verify it.
+ */
+async function hashPinForStorage(pin: string): Promise<string> {
+  const pepper = process.env.AUTH_PEPPER;
+  if (!pepper || pepper.length < 32) {
+    throw new Error(
+      "AUTH_PEPPER must be set to 32+ characters to hash the owner PIN",
+    );
+  }
+  const input = await hmacSha256Hex(`bcrypt:${pin}`, pepper);
+  const result = await pool.query<{ hash: string }>(
+    "select crypt($1, gen_salt('bf', 12)) as hash",
+    [input],
+  );
+  const hash = result.rows[0]?.hash;
+  if (!hash) {
+    throw new Error(
+      "bcrypt hashing failed — is the pgcrypto extension installed?",
+    );
+  }
+  return `bcrypt:${hash}`;
+}
 const db = drizzle(pool);
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -264,20 +291,20 @@ async function main() {
     await db.insert(users).values({
       name: "المالك",
       role: "owner",
-      pinHash: await hashPin(ownerPin),
+      pinHash: await hashPinForStorage(ownerPin),
       pinLookup: lookup,
     });
   } else if (
     owner.pinLookup !== lookup ||
-    !owner.pinHash.startsWith("pbkdf2:")
+    !owner.pinHash.startsWith("bcrypt:")
   ) {
-    // Rotate when the PIN changed, or upgrade a legacy scrypt hash to
-    // PBKDF2 (Workers-native). A routine deploy with an unchanged PIN does
-    // not invalidate the owner's live session.
+    // Rotate when the PIN changed, or upgrade a legacy scrypt/PBKDF2 hash to
+    // bcrypt (Workers Free caps WebCrypto PBKDF2 at 100k iterations). A
+    // routine deploy with an unchanged PIN does not invalidate the session.
     await db
       .update(users)
       .set({
-        pinHash: await hashPin(ownerPin),
+        pinHash: await hashPinForStorage(ownerPin),
         pinLookup: lookup,
         sessionVersion: sql`${users.sessionVersion} + 1`,
       })

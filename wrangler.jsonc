@@ -39,7 +39,7 @@
     {
       "binding": "NEXT_TAG_CACHE_D1",
       "database_name": "jpasta-tags",
-      "database_id": "REPLACE_WITH_REAL_D1_ID",
+      "database_id": "316b5ade-ab85-4bb2-99e3-c9f0853727c6",
     },
   ],
   // Durable Objects: the order feed + the OpenNext revalidation queue.
@@ -86,7 +86,7 @@
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
-      "id": "REPLACE_WITH_REAL_HYPERDRIVE_ID",
+      "id": "dcda6b90ce1a48f8aba8f8d59e1cfd61",
       "localConnectionString": "postgres://jpasta:jpasta@127.0.0.1:54330/jpasta",
     },
   ],

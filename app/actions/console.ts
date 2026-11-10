@@ -68,6 +68,10 @@ export async function consoleLogin(pin: string): Promise<{
     }
     return { ok: true };
   } catch (err) {
+    console.error(
+      "consoleLogin error:",
+      err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+    );
     return { ok: false, error: userMessageOf(err, "تعذر تسجيل الدخول.") };
   }
 }

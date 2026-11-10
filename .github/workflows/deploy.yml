@@ -22,6 +22,7 @@ jobs:
     environment: production
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}
       JPASTA_OWNER_PIN: ${{ secrets.JPASTA_OWNER_PIN }}
       AUTH_PEPPER: ${{ secrets.AUTH_PEPPER }}
       REALTIME_SECRET: ${{ secrets.REALTIME_SECRET }}
@@ -37,6 +38,13 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
+      # Production only. The environment also requires manual approval.
+      - name: Enforce main branch
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF}" = "refs/heads/main"
+          test "${{ inputs.ref }}" = "main"
+
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ inputs.ref }}
@@ -64,6 +72,8 @@ jobs:
       - name: Back up production database
         env:
           JPASTA_BACKUP_MODE: remote
+          # pg_dump must use the direct endpoint (not the PgBouncer pool).
+          DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}
         run: npm run db:backup
 
       - name: Upload database backup
@@ -75,9 +85,13 @@ jobs:
           retention-days: 7
 
       - name: Migrate production database
+        env:
+          DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}
         run: npm run db:migrate
 
       - name: Provision owner/settings (no catalog reset)
+        env:
+          DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}
         run: npm run db:seed -- --provision
 
       - name: Deploy

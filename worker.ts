@@ -13,6 +13,7 @@
 // scripts/ensure-opennext-stub.mjs so tsc/next build work on a clean clone.
 import handler from "./.open-next/worker.js";
 import { OrderFeed } from "./durable-objects/order-feed";
+import { withDbRequest } from "./lib/db/request-context";
 
 export { OrderFeed };
 
@@ -37,7 +38,9 @@ export default {
       const stub = env.ORDER_FEED.get(env.ORDER_FEED.idFromName("jpasta"));
       return stub.fetch(request);
     }
-    return handler.fetch(request, env, ctx);
+    // A fresh DB client per request: a pooled Postgres socket cannot cross
+    // request boundaries on Workers (see lib/db/request-context.ts).
+    return withDbRequest(() => handler.fetch(request, env, ctx));
   },
 
   // Daily housekeeping via the Cron Trigger in wrangler.jsonc. Calling our

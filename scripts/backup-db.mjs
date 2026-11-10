@@ -53,29 +53,32 @@ args.push("-d", DB);
 
 let dump;
 if (process.env.JPASTA_BACKUP_MODE === "remote") {
-  // CI/production path: the postgres:17 image guarantees a pg_dump that
-  // matches a Neon 17 server, without installing a client on the runner.
-  // pg_dump accepts the connection URI as its dbname argument.
+  // CI/production path: match the Neon server major (18), without installing
+  // a client on the runner. pg_dump accepts the connection URI as its dbname
+  // argument.
   dump = execFileSync(
     "docker",
-    ["run", "--rm", "postgres:17", "pg_dump", url],
+    ["run", "--rm", "postgres:18", "pg_dump", "--no-owner", "--no-acl", url],
     {
       maxBuffer: 256 * 1024 * 1024,
     },
   );
 } else if (process.env.JPASTA_USE_PG_DUMP === "1") {
-  // host path: connect over TCP with the mapped host/port
-  const hostArgs = parsed.hostname ? ["-h", parsed.hostname] : [];
-  const portArgs = parsed.port ? ["-p", parsed.port] : [];
-  dump = execFileSync("pg_dump", [...args, ...hostArgs, ...portArgs], {
+  // host path: the URI carries the password/sslmode, so no PGPASSWORD or
+  // separate host/port flags are needed.
+  dump = execFileSync("pg_dump", ["--no-owner", "--no-acl", url], {
     maxBuffer: 256 * 1024 * 1024,
   });
 } else {
   // container path: pg_dump runs INSIDE the container — unix socket, no
   // host/port mapping (the mapped :54330 only exists on the host).
-  dump = execFileSync("docker", ["exec", CONTAINER, "pg_dump", ...args], {
-    maxBuffer: 256 * 1024 * 1024,
-  });
+  dump = execFileSync(
+    "docker",
+    ["exec", CONTAINER, "pg_dump", "--no-owner", "--no-acl", ...args],
+    {
+      maxBuffer: 256 * 1024 * 1024,
+    },
+  );
 }
 
 // gzip via node zlib (no shell pipeline)

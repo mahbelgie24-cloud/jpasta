@@ -29,6 +29,13 @@
       "when": 1793746628502,
       "tag": "0003_integrity_hardening",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794309253668,
+      "tag": "0004_pgcrypto",
+      "breakpoints": true
     }
   ]
 }

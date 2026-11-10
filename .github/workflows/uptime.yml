@@ -1,0 +1,30 @@
+name: Uptime (production)
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Health, DB, menu, CSP
+        env:
+          SITE_URL: ${{ vars.SITE_URL || 'https://jpasta.mahbelgie24.workers.dev' }}
+        run: |
+          set -euo pipefail
+
+          body=$(curl -fsS --max-time 20 "$SITE_URL/api/health")
+          echo "$body"
+          echo "$body" | grep -q '"ok":true'
+          echo "$body" | grep -q '"db":"up"'
+
+          test "$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$SITE_URL/menu")" = "200"
+          curl -sSI --max-time 20 "$SITE_URL/" | tr -d '\r' | grep -qi '^content-security-policy:'
+          curl -sSI --max-time 20 "$SITE_URL/" | tr -d '\r' | grep -qi '^strict-transport-security:'
+
+          echo "✓ production health OK"

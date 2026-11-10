@@ -32,6 +32,21 @@ const securityHeaders = [
     : []),
 ];
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+const mediaRemotePatterns = siteUrl
+  ? (() => {
+      const url = new URL(siteUrl);
+      return [
+        {
+          protocol: url.protocol.replace(":", "") as "http" | "https",
+          hostname: url.hostname,
+          ...(url.port ? { port: url.port } : {}),
+          pathname: "/api/media/**",
+        },
+      ];
+    })()
+  : [];
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
@@ -41,6 +56,9 @@ const nextConfig: NextConfig = {
   // (Phase 5). Standard `next build`/`next start` stays the local baseline.
   images: {
     formats: ["image/avif", "image/webp"],
+    // R2 uploads are addressed as absolute same-origin URLs so the optimizer
+    // treats them as remote images instead of handing them to ASSETS.
+    remotePatterns: mediaRemotePatterns,
   },
   // Subresource Integrity on emitted scripts: the static-route CSP tier
   // (proxy.ts) allows same-origin scripts — integrity attributes pin them
