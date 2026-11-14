@@ -42,7 +42,11 @@ export async function Hero() {
       />
 
       <div className="relative container-page grid items-center gap-12 pt-14 pb-20 sm:pt-20 lg:grid-cols-[1.02fr_0.98fr] lg:gap-8 lg:pt-24 lg:pb-28">
-        <div className="animate-fade-up text-center lg:text-start">
+        {/* No entrance animation here: elements at opacity:0 are not LCP
+            candidates, so a fade-in deferred the recorded LCP to the first
+            main-thread idle window (~4.6s throttled). The plate paints as
+            soon as its preloaded image does. */}
+        <div className="text-center lg:text-start">
           <p className="inline-flex items-center gap-2 rounded-full border border-cream-50/15 bg-surface/5 px-4 py-1.5 text-sm font-bold text-cream-100 backdrop-blur">
             صلصة بيتية · تُحضّر طازجة يومياً
           </p>
@@ -132,7 +136,7 @@ export async function Hero() {
             className="absolute inset-0 rounded-full border border-wheat-300/15 motion-safe:animate-[twirl_28s_linear_infinite]"
           />
           {heroProduct && (
-            <div className="relative animate-fade-up px-3 pt-8 pb-6 [animation-delay:120ms]">
+            <div className="relative px-3 pt-8 pb-6">
               <DishMedia
                 product={heroProduct}
                 variant="hero"

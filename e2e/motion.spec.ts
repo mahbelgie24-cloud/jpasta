@@ -8,7 +8,10 @@ import { expect, test } from "@playwright/test";
 
 const ANIMATED_SELECTORS = [
   { name: "ambient marquee", selector: ".animate-marquee" },
-  { name: "hero entrance", selector: ".animate-fade-up" },
+  // The hero no longer entrance-animates by design: elements at opacity:0
+  // are not LCP candidates, so the fade-in deferred the recorded LCP to the
+  // first main-thread idle window (~4.6s throttled). Reveal-on-scroll keeps
+  // the entrance feel on below-fold sections instead.
 ];
 
 test.describe("prefers-reduced-motion: reduce", () => {

@@ -185,7 +185,7 @@ export function OrderStatusClient({
           />
           <span
             aria-hidden
-            className="bg-action absolute start-[21px] top-3 w-0.5 rounded-full transition-all duration-500 motion-reduce:transition-none"
+            className="absolute start-[21px] top-3 w-0.5 rounded-full bg-action transition-all duration-500 motion-reduce:transition-none"
             style={{
               height: `calc(${(Math.max(currentIndex, 0) / (STEPS.length - 1)) * 100}% - 12px)`,
             }}

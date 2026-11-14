@@ -51,6 +51,10 @@ export function DishMedia({
           height={product.image.height}
           sizes={sizes}
           preload={preload}
+          // React 19 native attribute: the preload <link> alone still left
+          // the decode/paint deprioritized, which deferred the / LCP paint
+          // past the main-thread idle window under simulated mobile.
+          fetchPriority={preload ? "high" : undefined}
           placeholder={product.image.blurDataURL ? "blur" : "empty"}
           blurDataURL={product.image.blurDataURL}
           className="h-full w-full object-cover"

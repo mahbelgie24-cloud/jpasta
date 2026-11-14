@@ -360,8 +360,8 @@ export function CartDrawer({
             طلبك محفوظ وسيتولى الإرسال
           </h3>
           <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-text-secondary">
-            الشبكة منقطعة الآن — عند عودة الاتصال يُرسل طلبك تلقائياً وبنفس الرقم،
-            بدون تكرار
+            الشبكة منقطعة الآن — عند عودة الاتصال يُرسل طلبك تلقائياً وبنفس
+            الرقم، بدون تكرار
             {offlineQueued > 1 ? ` (${offlineQueued} طلبات بالانتظار)` : ""}.
           </p>
           <div className="mt-6">

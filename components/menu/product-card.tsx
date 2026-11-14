@@ -1,14 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { Flame, Plus } from "lucide-react";
 import { DishMedia } from "@/components/brand/dish-media";
 import { ProductBadge } from "@/components/ui/badge";
 import { Price } from "@/components/ui/price";
-import { ItemSheet } from "@/components/menu/item-sheet";
+import { SheetSkeleton } from "@/components/ui/sheet";
 import { useCart } from "@/components/menu/cart-context";
 import type { Product } from "@/lib/menu-data";
 import { cn } from "@/lib/utils";
+
+// Customization sheets ship on first use, not with the /menu payload —
+// twelve hidden sheet trees were the largest avoidable interaction cost.
+const ItemSheet = dynamic(
+  () => import("@/components/menu/item-sheet").then((m) => m.ItemSheet),
+  { ssr: false, loading: () => <SheetSkeleton /> },
+);
 
 /** Heat level — icon + count (never emoji, never color alone). */
 function HeatLevel({ level }: { level: number }) {
@@ -29,9 +37,12 @@ function HeatLevel({ level }: { level: number }) {
 export function ProductCard({
   product,
   orderingEnabled = true,
+  eager = false,
 }: {
   product: Product;
   orderingEnabled?: boolean;
+  /** Above-the-fold photo: preload the image (LCP candidate). */
+  eager?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const cart = useCart();
@@ -65,12 +76,15 @@ export function ProductCard({
         <button
           type="button"
           onClick={() => setOpen(true)}
+          onMouseEnter={() => void import("@/components/menu/item-sheet")}
+          onFocus={() => void import("@/components/menu/item-sheet")}
           className="relative flex min-h-36 w-full items-center justify-center overflow-hidden rounded-xl bg-[radial-gradient(85%_75%_at_50%_20%,var(--color-cream-50)_0%,var(--color-cream-100)_100%)]"
           aria-label={`تخصيص ${product.nameAr}`}
         >
           <DishMedia
             product={product}
             decorative
+            preload={eager}
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, calc(100vw - 4rem)"
             className={cn(
               "w-full transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100",
