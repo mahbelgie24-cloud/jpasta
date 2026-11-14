@@ -126,14 +126,14 @@ export function OrderStatusClient({
       <div className="relative overflow-hidden rounded-card border border-border-soft bg-surface-raised p-6 text-center shadow-card">
         <div
           aria-hidden
-          className="pointer-events-none absolute start-1/2 -top-16 size-40 -translate-x-1/2 rounded-full bg-basil-50 blur-2xl"
+          className="pointer-events-none absolute start-1/2 -top-16 size-40 -translate-x-1/2 rounded-full bg-brand-subtle blur-2xl"
         />
         <p className="relative text-sm font-bold text-text-secondary">
           طلب رقم
         </p>
         <p
           data-testid="status-order-number"
-          className="relative font-display text-4xl font-bold text-basil-800"
+          className="relative font-display text-4xl font-bold text-brand-strong"
           dir="ltr"
         >
           {order.orderNumber}
@@ -167,10 +167,10 @@ export function OrderStatusClient({
 
       {/* journey — connected rail with the twirl as the live marker */}
       {cancelled ? (
-        <div className="mt-6 flex items-center gap-3 rounded-card border border-terracotta/25 bg-terracotta/8 p-5">
-          <XCircle className="size-7 shrink-0 text-terracotta" aria-hidden />
+        <div className="mt-6 flex items-center gap-3 rounded-card border border-danger/25 bg-danger/8 p-5">
+          <XCircle className="size-7 shrink-0 text-danger" aria-hidden />
           <div>
-            <p className="font-bold text-terracotta">تم إلغاء هذا الطلب</p>
+            <p className="font-bold text-danger">تم إلغاء هذا الطلب</p>
             <p className="text-sm text-text-secondary">
               للاستفسار تواصل مع المحل.
             </p>
@@ -185,7 +185,7 @@ export function OrderStatusClient({
           />
           <span
             aria-hidden
-            className="absolute start-[21px] top-3 w-0.5 rounded-full bg-basil-500 transition-all duration-500 motion-reduce:transition-none"
+            className="bg-action absolute start-[21px] top-3 w-0.5 rounded-full transition-all duration-500 motion-reduce:transition-none"
             style={{
               height: `calc(${(Math.max(currentIndex, 0) / (STEPS.length - 1)) * 100}% - 12px)`,
             }}
@@ -202,10 +202,10 @@ export function OrderStatusClient({
                 <span
                   className={
                     done
-                      ? "relative z-10 flex size-11 shrink-0 items-center justify-center rounded-full bg-basil-600 text-cream-50"
+                      ? "relative z-10 flex size-11 shrink-0 items-center justify-center rounded-full bg-action text-action-text"
                       : current
-                        ? "relative z-10 flex size-11 shrink-0 items-center justify-center rounded-full bg-basil-700 text-cream-50 shadow-lift"
-                        : "relative z-10 flex size-11 shrink-0 items-center justify-center rounded-full border-2 border-border-strong bg-surface-raised text-ink-soft/50"
+                        ? "relative z-10 flex size-11 shrink-0 items-center justify-center rounded-full bg-action text-action-text shadow-lift"
+                        : "relative z-10 flex size-11 shrink-0 items-center justify-center rounded-full border-2 border-border-strong bg-surface-raised text-text-secondary/50"
                   }
                 >
                   {done ? (
@@ -223,10 +223,10 @@ export function OrderStatusClient({
                   <p
                     className={
                       current
-                        ? "type-title text-basil-800"
+                        ? "type-title text-brand-strong"
                         : done
-                          ? "font-bold text-ink"
-                          : "font-bold text-ink-soft/50"
+                          ? "font-bold text-text-primary"
+                          : "font-bold text-text-secondary/50"
                     }
                   >
                     {step.label}
@@ -238,7 +238,7 @@ export function OrderStatusClient({
                   )}
                 </div>
                 {ready && current && (
-                  <span className="ms-auto inline-flex animate-pop items-center gap-1.5 self-center rounded-full bg-wheat-300 px-3.5 py-1.5 text-xs font-bold text-basil-950 motion-reduce:animate-none">
+                  <span className="ms-auto inline-flex animate-pop items-center gap-1.5 self-center rounded-full bg-wheat-300 px-3.5 py-1.5 text-xs font-bold text-text-primary motion-reduce:animate-none">
                     <ChefHat className="size-3.5" aria-hidden />
                     جاهزة للاستلام
                   </span>
@@ -251,7 +251,7 @@ export function OrderStatusClient({
 
       {/* items + total */}
       <div className="mt-6 rounded-card border border-border-soft bg-surface-raised p-5">
-        <h2 className="text-sm font-bold text-ink">تفاصيل الطلب</h2>
+        <h2 className="text-sm font-bold text-text-primary">تفاصيل الطلب</h2>
         <ul className="mt-3 space-y-2.5">
           {order.items.map((it, i) => (
             <li
@@ -259,7 +259,7 @@ export function OrderStatusClient({
               className="flex items-start justify-between gap-3 text-sm"
             >
               <div>
-                <p className="font-bold text-ink">
+                <p className="font-bold text-text-primary">
                   {it.nameAr}{" "}
                   <span className="text-text-secondary">× {it.quantity}</span>
                 </p>
@@ -267,7 +267,10 @@ export function OrderStatusClient({
                   <p className="text-xs text-text-secondary">{it.detailAr}</p>
                 )}
               </div>
-              <Price minor={it.lineTotalMinor} className="shrink-0 text-ink" />
+              <Price
+                minor={it.lineTotalMinor}
+                className="shrink-0 text-text-primary"
+              />
             </li>
           ))}
         </ul>
@@ -290,14 +293,14 @@ export function OrderStatusClient({
           )}
           <div className="flex justify-between">
             <dt className="text-text-secondary">طريقة الدفع</dt>
-            <dd className="text-ink">
+            <dd className="text-text-primary">
               {PAYMENT_METHOD_LABELS[order.paymentMethod]}
             </dd>
           </div>
           <div className="flex justify-between pt-1 text-base font-bold">
             <dt>الإجمالي</dt>
             <dd>
-              <Price minor={order.totalMinor} className="text-basil-800" />
+              <Price minor={order.totalMinor} className="text-brand-strong" />
             </dd>
           </div>
         </dl>

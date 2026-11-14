@@ -51,3 +51,10 @@ yarn-error.log*
 # source dish photography (≈100 MB of PNGs); committed derivatives live in
 # public/media/products/ and are regenerated with `npm run photos`
 /menu/
+.neon
+
+# Local agent/tooling workspaces
+.agents/
+.commandcode/
+.zcode/
+skills-lock.json

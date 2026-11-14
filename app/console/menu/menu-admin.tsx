@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Price } from "@/components/ui/price";
+import { Switch } from "@/components/ui/switch";
+import { TextField } from "@/components/ui/field";
 import { formatPrice, tryToMinorUnits } from "@/lib/pricing";
 import {
   fetchAdminProducts,
@@ -131,23 +134,20 @@ export function MenuAdmin() {
     );
   }
 
-  const inputClass =
-    "min-h-11 w-full rounded-md border border-cream-300 bg-cream-50 px-3 text-sm outline-none transition-colors focus:border-basil-500";
-
   return (
     <div className="mt-4 space-y-3">
       {notice && (
         <p
           role="status"
           aria-live="polite"
-          className="rounded-md bg-basil-100 px-4 py-3 text-sm font-bold text-basil-800"
+          className="rounded-md bg-brand-subtle px-4 py-3 text-sm font-bold text-brand-strong"
         >
           {notice}
         </p>
       )}
 
       {rows === null ? (
-        <div className="flex items-center justify-center gap-2 py-16 text-ink-soft">
+        <div className="flex items-center justify-center gap-2 py-16 text-text-secondary">
           <Loader2 className="size-5 animate-spin" aria-hidden />
           جارٍ التحميل…
         </div>
@@ -155,41 +155,29 @@ export function MenuAdmin() {
         rows.map((row) => (
           <div
             key={row.id}
-            className="rounded-card border border-cream-200 bg-cream-50 p-4 shadow-card"
+            className="rounded-card border border-border-soft bg-surface p-4 shadow-card"
           >
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="truncate font-bold text-ink">{row.nameAr}</p>
-                <p className="text-xs text-ink-soft">{row.categoryNameAr}</p>
+                <p className="truncate font-bold text-text-primary">
+                  {row.nameAr}
+                </p>
+                <p className="text-xs text-text-secondary">
+                  {row.categoryNameAr}
+                </p>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={row.isAvailable}
-                aria-label={`${row.isAvailable ? "إخفاء" : "إظهار"} ${row.nameAr}`}
+              <Switch
+                checked={row.isAvailable}
+                onCheckedChange={() => void toggle(row)}
+                label={row.nameAr}
                 disabled={busyId === row.id}
-                onClick={() => void toggle(row)}
-                className={`relative h-11 w-16 shrink-0 rounded-full transition-colors ${
-                  row.isAvailable ? "bg-basil-600" : "bg-cream-400"
-                }`}
-              >
-                <span
-                  className={`absolute top-2 size-7 rounded-full bg-cream-50 shadow transition-all ${
-                    row.isAvailable ? "start-7" : "start-2"
-                  }`}
-                />
-              </button>
+              />
             </div>
             <div className="mt-3 flex items-end gap-2">
               <div className="w-32">
-                <label
-                  htmlFor={`price-${row.id}`}
-                  className="text-xs font-bold text-ink-soft"
-                >
-                  السعر (₪)
-                </label>
-                <input
+                <TextField
                   id={`price-${row.id}`}
+                  label="السعر (₪)"
                   type="text"
                   inputMode="decimal"
                   dir="ltr"
@@ -197,34 +185,33 @@ export function MenuAdmin() {
                   onChange={(e) =>
                     setDrafts((d) => ({ ...d, [row.id]: e.target.value }))
                   }
-                  className={`mt-1 ${inputClass} font-bold tabular-nums`}
+                  className="min-h-11 px-3 font-bold tabular-nums"
                   maxLength={8}
                 />
               </div>
-              <button
-                type="button"
+              <Button
                 onClick={() => void savePrice(row)}
                 disabled={busyId === row.id}
-                className="inline-flex min-h-11 items-center rounded-full bg-basil-700 px-4 text-sm font-bold text-cream-50 disabled:opacity-50"
+                className="min-h-11 px-4"
               >
                 {busyId === row.id ? (
                   <Loader2 className="size-4 animate-spin" aria-hidden />
                 ) : (
                   "حفظ"
                 )}
-              </button>
-              <div className="ms-auto text-xs text-ink-soft">
+              </Button>
+              <div className="ms-auto pb-1 text-xs text-text-secondary">
                 الحالي:{" "}
                 <Price
                   minor={row.basePriceMinor}
-                  className="font-bold text-ink"
+                  className="font-bold text-text-primary"
                 />
               </div>
             </div>
-            <div className="mt-3 flex items-center gap-3 border-t border-cream-200 pt-3">
+            <div className="mt-3 flex items-center gap-3 border-t border-border-soft pt-3">
               <label
                 htmlFor={`image-${row.id}`}
-                className="inline-flex min-h-11 cursor-pointer items-center rounded-full border border-cream-300 px-4 text-xs font-bold text-ink-soft transition-colors hover:border-basil-400 hover:text-ink"
+                className="inline-flex min-h-11 cursor-pointer items-center rounded-full border border-line px-4 text-xs font-bold text-text-secondary transition-colors hover:border-brand-soft hover:text-text-primary"
               >
                 رفع صورة الطبق
               </label>
@@ -240,7 +227,7 @@ export function MenuAdmin() {
                   event.target.value = "";
                 }}
               />
-              <span className="text-[11px] text-ink-soft">
+              <span className="text-[11px] text-text-secondary">
                 JPG / PNG / WebP — حتى 8MB
               </span>
             </div>

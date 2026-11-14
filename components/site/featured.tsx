@@ -113,7 +113,7 @@ export async function Featured() {
                 ))}
               </div>
             </div>
-            <h3 className="mt-4 type-title text-ink">{p.nameAr}</h3>
+            <h3 className="mt-4 type-title text-text-primary">{p.nameAr}</h3>
             <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-text-secondary">
               {p.descAr}
             </p>

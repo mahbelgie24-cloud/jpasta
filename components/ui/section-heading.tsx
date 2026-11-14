@@ -53,13 +53,13 @@ export function SectionHeading({
         className={cn(
           "flex items-center gap-3 text-sm font-bold tracking-wide",
           align === "center" && "justify-center",
-          tone === "light" ? "text-wheat-300" : "text-basil-600",
+          tone === "light" ? "text-wheat-300" : "text-brand",
         )}
       >
         <span
           className={cn(
             "h-px w-8",
-            tone === "light" ? "bg-cream-50/30" : "bg-basil-300",
+            tone === "light" ? "bg-surface/30" : "bg-brand-soft",
           )}
           aria-hidden
         />
@@ -70,7 +70,7 @@ export function SectionHeading({
         <span
           className={cn(
             "h-px w-8",
-            tone === "light" ? "bg-cream-50/30" : "bg-basil-300",
+            tone === "light" ? "bg-surface/30" : "bg-brand-soft",
           )}
           aria-hidden
         />
@@ -79,7 +79,7 @@ export function SectionHeading({
         id={id}
         className={cn(
           "mt-3 font-display-ar type-section text-balance",
-          tone === "light" ? "text-cream-50" : "text-ink",
+          tone === "light" ? "text-cream-50" : "text-text-primary",
         )}
       >
         {title}
@@ -88,7 +88,7 @@ export function SectionHeading({
         <p
           className={cn(
             "mt-3 type-body text-pretty",
-            tone === "light" ? "text-cream-100/80" : "text-ink-soft",
+            tone === "light" ? "text-cream-100/80" : "text-text-secondary",
           )}
         >
           {sub}

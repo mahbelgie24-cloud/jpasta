@@ -1,0 +1,5 @@
+# Local agent/tooling workspaces — not project source, never formatted.
+.agents/
+.zcode/
+.commandcode/
+skills-lock.json

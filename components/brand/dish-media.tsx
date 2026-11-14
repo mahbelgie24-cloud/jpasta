@@ -37,7 +37,7 @@ export function DishMedia({
   if (product.image) {
     return (
       <div
-        className={cn("relative overflow-hidden bg-cream-200", className)}
+        className={cn("relative overflow-hidden bg-surface-sunken", className)}
         style={
           product.image.color
             ? { backgroundColor: product.image.color }

@@ -15,7 +15,7 @@ function HeatLevel({ level }: { level: number }) {
   return (
     <span
       role="img"
-      className="inline-flex items-center gap-0.5 rounded-full bg-terracotta/10 px-2 py-0.5 text-terracotta"
+      className="inline-flex items-center gap-0.5 rounded-full bg-danger/10 px-2 py-0.5 text-danger"
       aria-label={`مستوى حرارة ${level} من 3`}
     >
       {Array.from({ length: level }, (_, i) => (
@@ -87,7 +87,7 @@ export function ProductCard({
       </div>
 
       <div className="mt-4 flex items-start justify-between gap-2">
-        <h3 className="type-title text-ink">{product.nameAr}</h3>
+        <h3 className="type-title text-text-primary">{product.nameAr}</h3>
         {product.heat > 0 && <HeatLevel level={product.heat} />}
       </div>
       <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-text-secondary">
@@ -98,7 +98,7 @@ export function ProductCard({
         <div>
           <Price
             minor={product.basePriceMinor}
-            className="text-lg font-extrabold text-basil-800"
+            className="text-lg font-extrabold text-brand-strong"
           />
           <span className="block text-xs text-text-secondary">
             {hasPriceVariation ? "يبدأ من" : "السعر"}

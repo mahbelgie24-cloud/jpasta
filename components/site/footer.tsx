@@ -33,7 +33,7 @@ export async function Footer() {
               className={buttonStyles(
                 "primary",
                 "lg",
-                "bg-wheat-300 text-basil-950 hover:bg-wheat-400",
+                "bg-wheat-300 text-text-primary hover:bg-wheat-400",
               )}
             >
               اطلب الآن

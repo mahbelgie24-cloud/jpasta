@@ -23,7 +23,7 @@ export default function ErrorPage({
       className="flex min-h-dvh flex-col items-center justify-center bg-canvas px-4 text-center"
     >
       <LogoMark className="size-20" />
-      <h1 className="mt-6 font-display-ar type-section text-ink">
+      <h1 className="mt-6 font-display-ar type-section text-text-primary">
         صار في مشكلة
       </h1>
       <p className="mt-3 max-w-sm type-body text-text-secondary">

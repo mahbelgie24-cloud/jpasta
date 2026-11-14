@@ -24,7 +24,7 @@ export function Stepper({
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border border-cream-300 bg-cream-50 p-1",
+        "inline-flex items-center gap-1 rounded-full border border-line bg-surface p-1",
         className,
       )}
       role="group"
@@ -35,7 +35,7 @@ export function Stepper({
         onClick={() => onChange(Math.max(min, value - 1))}
         disabled={value <= min}
         aria-label={`إنقاص ${label}`}
-        className="flex size-11 items-center justify-center rounded-full text-basil-800 transition-colors hover:bg-cream-200 disabled:opacity-40"
+        className="flex size-11 items-center justify-center rounded-full text-brand-strong transition-colors hover:bg-surface-sunken disabled:opacity-40"
       >
         <Minus className="size-4" aria-hidden />
       </button>
@@ -50,7 +50,7 @@ export function Stepper({
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={value >= max}
         aria-label={`زيادة ${label}`}
-        className="flex size-11 items-center justify-center rounded-full text-basil-800 transition-colors hover:bg-cream-200 disabled:opacity-40"
+        className="flex size-11 items-center justify-center rounded-full text-brand-strong transition-colors hover:bg-surface-sunken disabled:opacity-40"
       >
         <Plus className="size-4" aria-hidden />
       </button>

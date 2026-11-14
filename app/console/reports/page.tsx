@@ -55,36 +55,36 @@ export default async function ReportsPage({
   const dayName = weekdayInShop(date);
 
   return (
-    <div className="min-h-dvh bg-cream-100">
+    <div className="min-h-dvh bg-surface-raised">
       <div className="mx-auto max-w-3xl px-4 pt-5 pb-16 sm:px-6">
         <Link
           href="/console"
-          className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-basil-700 hover:text-basil-600"
+          className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-brand hover:text-brand-strong"
         >
           <ArrowRight className="size-4" aria-hidden />
           رجوع للوحة
         </Link>
-        <h1 className="mt-4 type-section text-ink">التقارير</h1>
+        <h1 className="mt-4 type-section text-text-primary">التقارير</h1>
 
         {/* date navigation */}
-        <div className="mt-4 flex items-center justify-between gap-2 rounded-card bg-cream-50 p-3 shadow-card">
+        <div className="mt-4 flex items-center justify-between gap-2 rounded-card bg-surface p-3 shadow-card">
           <Link
             href={`/console/reports?date=${addDays(date, -1)}`}
-            className="inline-flex min-h-11 items-center gap-1 rounded-full px-4 text-sm font-bold text-basil-700 hover:bg-basil-50"
+            className="inline-flex min-h-11 items-center gap-1 rounded-full px-4 text-sm font-bold text-brand hover:bg-brand-subtle"
           >
             <ArrowRight className="size-4" aria-hidden />
             اليوم السابق
           </Link>
           <div className="text-center">
-            <p className="font-bold text-ink">{dayName}</p>
-            <p dir="ltr" className="text-sm text-ink-soft tabular-nums">
+            <p className="font-bold text-text-primary">{dayName}</p>
+            <p dir="ltr" className="text-sm text-text-secondary tabular-nums">
               {date}
             </p>
           </div>
           {date >= todayLocal() ? (
             <span
               aria-disabled="true"
-              className="inline-flex min-h-11 items-center gap-1 rounded-full px-4 text-sm font-bold text-ink-soft opacity-30"
+              className="inline-flex min-h-11 items-center gap-1 rounded-full px-4 text-sm font-bold text-text-secondary opacity-30"
             >
               اليوم التالي
               <ArrowLeft className="size-4" aria-hidden />
@@ -92,7 +92,7 @@ export default async function ReportsPage({
           ) : (
             <Link
               href={`/console/reports?date=${addDays(date, 1)}`}
-              className="inline-flex min-h-11 items-center gap-1 rounded-full px-4 text-sm font-bold text-basil-700 hover:bg-basil-50"
+              className="inline-flex min-h-11 items-center gap-1 rounded-full px-4 text-sm font-bold text-brand hover:bg-brand-subtle"
             >
               اليوم التالي
               <ArrowLeft className="size-4" aria-hidden />
@@ -103,21 +103,21 @@ export default async function ReportsPage({
         <div className="mt-2 flex flex-wrap items-center justify-end gap-x-4 gap-y-1">
           <Link
             href={`/console/orders?date=${date}`}
-            className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-basil-700 hover:text-basil-600"
+            className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-brand hover:text-brand-strong"
           >
             <History className="size-4" aria-hidden />
             عرض طلبات هذا اليوم
           </Link>
           <a
             href={`/console/reports/export?date=${date}&kind=orders`}
-            className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-basil-700 hover:text-basil-600"
+            className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-brand hover:text-brand-strong"
           >
             <Download className="size-4" aria-hidden />
             تصدير الطلبات CSV
           </a>
           <a
             href={`/console/reports/export?date=${date}&kind=z`}
-            className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-basil-700 hover:text-basil-600"
+            className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-brand hover:text-brand-strong"
           >
             <Download className="size-4" aria-hidden />Z CSV
           </a>
@@ -125,87 +125,84 @@ export default async function ReportsPage({
 
         {/* summary cards */}
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
-          <div className="rounded-card bg-cream-50 p-4 text-center shadow-card">
-            <TrendingUp className="mx-auto size-5 text-basil-700" aria-hidden />
-            <p className="mt-2 text-2xl font-extrabold text-ink tabular-nums">
+          <div className="rounded-card bg-surface p-4 text-center shadow-card">
+            <TrendingUp className="mx-auto size-5 text-brand" aria-hidden />
+            <p className="mt-2 text-2xl font-extrabold text-text-primary tabular-nums">
               {summary.orderCount}
             </p>
-            <p className="text-xs font-bold text-ink-soft">طلب</p>
+            <p className="text-xs font-bold text-text-secondary">طلب</p>
           </div>
-          <div className="rounded-card bg-cream-50 p-4 text-center shadow-card">
-            <Banknote className="mx-auto size-5 text-basil-700" aria-hidden />
+          <div className="rounded-card bg-surface p-4 text-center shadow-card">
+            <Banknote className="mx-auto size-5 text-brand" aria-hidden />
             <Price
               minor={summary.revenueMinor}
-              className="mt-2 text-lg font-extrabold text-basil-800"
+              className="mt-2 text-lg font-extrabold text-brand-strong"
             />
-            <p className="text-xs font-bold text-ink-soft">الإيراد</p>
+            <p className="text-xs font-bold text-text-secondary">الإيراد</p>
           </div>
-          <div className="rounded-card bg-cream-50 p-4 text-center shadow-card">
-            <Bike className="mx-auto size-5 text-basil-700" aria-hidden />
-            <p className="mt-2 text-2xl font-extrabold text-ink tabular-nums">
+          <div className="rounded-card bg-surface p-4 text-center shadow-card">
+            <Bike className="mx-auto size-5 text-brand" aria-hidden />
+            <p className="mt-2 text-2xl font-extrabold text-text-primary tabular-nums">
               {summary.deliveryCount}
             </p>
-            <p className="text-xs font-bold text-ink-soft">توصيل</p>
+            <p className="text-xs font-bold text-text-secondary">توصيل</p>
           </div>
-          <div className="rounded-card bg-cream-50 p-4 text-center shadow-card">
-            <HandPlatter
-              className="mx-auto size-5 text-basil-700"
-              aria-hidden
-            />
-            <p className="mt-2 text-2xl font-extrabold text-ink tabular-nums">
+          <div className="rounded-card bg-surface p-4 text-center shadow-card">
+            <HandPlatter className="mx-auto size-5 text-brand" aria-hidden />
+            <p className="mt-2 text-2xl font-extrabold text-text-primary tabular-nums">
               {summary.takeawayCount}
             </p>
-            <p className="text-xs font-bold text-ink-soft">استلام</p>
+            <p className="text-xs font-bold text-text-secondary">استلام</p>
           </div>
-          <div className="rounded-card bg-cream-50 p-4 text-center shadow-card">
+          <div className="rounded-card bg-surface p-4 text-center shadow-card">
             <UtensilsCrossed
-              className="mx-auto size-5 text-basil-700"
+              className="mx-auto size-5 text-brand"
               aria-hidden
             />
-            <p className="mt-2 text-2xl font-extrabold text-ink tabular-nums">
+            <p className="mt-2 text-2xl font-extrabold text-text-primary tabular-nums">
               {summary.dineInCount}
             </p>
-            <p className="text-xs font-bold text-ink-soft">داخل المحل</p>
+            <p className="text-xs font-bold text-text-secondary">داخل المحل</p>
           </div>
         </div>
 
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {/* Z summary */}
-          <div className="rounded-card border border-basil-200 bg-basil-50 p-5">
-            <h2 className="flex items-center gap-2 font-bold text-basil-800">
+          <div className="rounded-card border border-brand-soft bg-brand-subtle p-5">
+            <h2 className="flex items-center gap-2 font-bold text-brand-strong">
               <Receipt className="size-4" aria-hidden />
               جردة نهاية اليوم (Z)
             </h2>
-            <p className="mt-3 text-3xl font-extrabold text-basil-800 tabular-nums">
+            <p className="mt-3 text-3xl font-extrabold text-brand-strong tabular-nums">
               <Price minor={z.cashMinor} />
             </p>
-            <p className="mt-1 text-sm text-ink-soft">
+            <p className="mt-1 text-sm text-text-secondary">
               نقداً من {z.cashCount} طلب — قارنها مع عدّ الدرج يدوياً
             </p>
-            <p className="mt-2 text-xs text-ink-soft">
+            <p className="mt-2 text-xs text-text-secondary">
               منها رسوم توصيل:{" "}
               <Price minor={z.deliveryFeesMinor} className="font-bold" />
             </p>
           </div>
 
           {/* cancelled */}
-          <div className="rounded-card border border-cream-200 bg-cream-50 p-5 shadow-card">
-            <h2 className="flex items-center gap-2 font-bold text-ink">
-              <XCircle className="size-4 text-terracotta" aria-hidden />
+          <div className="rounded-card border border-border-soft bg-surface p-5 shadow-card">
+            <h2 className="flex items-center gap-2 font-bold text-text-primary">
+              <XCircle className="size-4 text-danger" aria-hidden />
               الملغاة
             </h2>
-            <p className="mt-3 text-3xl font-extrabold text-ink tabular-nums">
+            <p className="mt-3 text-3xl font-extrabold text-text-primary tabular-nums">
               {summary.cancelledCount}
             </p>
-            <p className="mt-1 text-sm text-ink-soft">
+            <p className="mt-1 text-sm text-text-secondary">
               بقيمة{" "}
               <Price
                 minor={summary.cancelledMinor}
-                className="font-bold text-ink"
+                className="font-bold text-text-primary"
               />{" "}
               (خارج الإيراد)
             </p>
-            <p className="mt-2 text-xs text-ink-soft">
+            <p className="mt-2 text-xs text-text-secondary">
               متوسط الطلب:{" "}
               <Price minor={summary.avgOrderMinor} className="font-bold" />
             </p>
@@ -213,8 +210,8 @@ export default async function ReportsPage({
         </div>
 
         {/* 7-day bars */}
-        <div className="mt-4 rounded-card bg-cream-50 p-5 shadow-card">
-          <h2 className="font-bold text-ink">آخر ٧ أيام</h2>
+        <div className="mt-4 rounded-card bg-surface p-5 shadow-card">
+          <h2 className="font-bold text-text-primary">آخر ٧ أيام</h2>
           <ul className="mt-4 space-y-2.5">
             {week.map((d) => (
               <li
@@ -222,15 +219,15 @@ export default async function ReportsPage({
                 className="flex items-center gap-3"
                 aria-current={d.date === date ? "date" : undefined}
               >
-                <span className="w-16 shrink-0 text-xs font-bold text-ink-soft">
+                <span className="w-16 shrink-0 text-xs font-bold text-text-secondary">
                   {weekdayInShop(d.date)}
                 </span>
-                <div className="h-6 flex-1 overflow-hidden rounded-full bg-cream-200">
+                <div className="h-6 flex-1 overflow-hidden rounded-full bg-surface-sunken">
                   <div
                     className={`h-full rounded-full ${
                       d.date === date
-                        ? "bg-basil-700 ring-2 ring-basil-900 ring-offset-2 ring-offset-cream-50"
-                        : "bg-basil-400"
+                        ? "bg-action ring-2 ring-brand-deep ring-offset-2 ring-offset-surface"
+                        : "bg-brand-soft"
                     }`}
                     style={{
                       width: `${Math.round((d.revenueMinor / maxRevenue) * 100)}%`,
@@ -243,7 +240,7 @@ export default async function ReportsPage({
                 </div>
                 <Price
                   minor={d.revenueMinor}
-                  className="w-20 shrink-0 justify-end text-xs font-bold text-ink"
+                  className="w-20 shrink-0 justify-end text-xs font-bold text-text-primary"
                 />
               </li>
             ))}
@@ -251,24 +248,26 @@ export default async function ReportsPage({
         </div>
 
         {/* best sellers */}
-        <div className="mt-4 rounded-card bg-cream-50 p-5 shadow-card">
-          <h2 className="font-bold text-ink">الأكثر مبيعاً اليوم</h2>
+        <div className="mt-4 rounded-card bg-surface p-5 shadow-card">
+          <h2 className="font-bold text-text-primary">الأكثر مبيعاً اليوم</h2>
           {bestSellers.length === 0 ? (
-            <p className="mt-3 text-sm text-ink-soft">
+            <p className="mt-3 text-sm text-text-secondary">
               لا مبيعات في هذا اليوم بعد.
             </p>
           ) : (
             <ol className="mt-3 space-y-2">
               {bestSellers.map((b, i) => (
                 <li key={b.nameAr} className="flex items-center gap-3 text-sm">
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-basil-100 font-display font-bold text-basil-800">
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-subtle font-display font-bold text-brand-strong">
                     {i + 1}
                   </span>
-                  <span className="flex-1 font-bold text-ink">{b.nameAr}</span>
-                  <span className="text-ink-soft">× {b.qty}</span>
+                  <span className="flex-1 font-bold text-text-primary">
+                    {b.nameAr}
+                  </span>
+                  <span className="text-text-secondary">× {b.qty}</span>
                   <Price
                     minor={b.revenueMinor}
-                    className="font-bold text-ink"
+                    className="font-bold text-text-primary"
                   />
                 </li>
               ))}

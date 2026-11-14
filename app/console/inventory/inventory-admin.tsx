@@ -30,7 +30,7 @@ interface RecipeLine {
 }
 
 const inputClass =
-  "min-h-11 w-full rounded-md border border-cream-300 bg-cream-50 px-3 text-sm outline-none transition-colors focus:border-basil-500";
+  "min-h-11 w-full rounded-md border border-line bg-surface px-3 text-sm outline-none transition-colors focus:border-action";
 
 export function InventoryAdmin() {
   const [ingredients, setIngredients] = useState<IngredientRow[] | null>(null);
@@ -134,15 +134,15 @@ export function InventoryAdmin() {
         <p
           role="status"
           aria-live="polite"
-          className="rounded-md bg-basil-100 px-4 py-3 text-center text-sm font-bold text-basil-800"
+          className="rounded-md bg-brand-subtle px-4 py-3 text-center text-sm font-bold text-brand-strong"
         >
           {notice}
         </p>
       )}
 
       {/* ── ingredients ─────────────────────────────────────────── */}
-      <div className="rounded-card bg-cream-50 p-4 shadow-card">
-        <h2 className="flex items-center gap-2 font-bold text-ink">
+      <div className="rounded-card bg-surface p-4 shadow-card">
+        <h2 className="flex items-center gap-2 font-bold text-text-primary">
           المخزون
           {lowCount > 0 && (
             <span className="inline-flex items-center gap-1 rounded-full bg-bronze/15 px-2.5 py-1 text-xs font-bold text-warning">
@@ -158,12 +158,12 @@ export function InventoryAdmin() {
         </h2>
 
         {ingredients === null ? (
-          <div className="flex items-center justify-center gap-2 py-10 text-ink-soft">
+          <div className="flex items-center justify-center gap-2 py-10 text-text-secondary">
             <Loader2 className="size-5 animate-spin" aria-hidden />
             جارٍ التحميل…
           </div>
         ) : ingredients.length === 0 ? (
-          <p className="py-8 text-center text-sm text-ink-soft">
+          <p className="py-8 text-center text-sm text-text-secondary">
             لا مكوّنات بعد — أضف أول مكوّن من النموذج بالأسفل.
           </p>
         ) : (
@@ -171,11 +171,11 @@ export function InventoryAdmin() {
             {ingredients.map((ing) => (
               <li
                 key={ing.id}
-                className={`rounded-xl border p-3.5 ${ing.isLow ? "border-bronze/50 bg-bronze/5" : "border-cream-200 bg-cream-100"}`}
+                className={`rounded-xl border p-3.5 ${ing.isLow ? "border-bronze/50 bg-bronze/5" : "border-border-soft bg-surface-raised"}`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="font-bold text-ink">
+                    <p className="font-bold text-text-primary">
                       {ing.name}
                       {ing.isLow && (
                         <AlertTriangle
@@ -184,7 +184,7 @@ export function InventoryAdmin() {
                         />
                       )}
                     </p>
-                    <p className="text-xs text-ink-soft">
+                    <p className="text-xs text-text-secondary">
                       حد الطلب: {ing.reorderThreshold} {ing.unit} · التكلفة:{" "}
                       <Price
                         minor={ing.costPerUnitMinor}
@@ -194,10 +194,10 @@ export function InventoryAdmin() {
                     </p>
                   </div>
                   <p
-                    className={`text-xl font-extrabold tabular-nums ${ing.isLow ? "text-warning" : "text-basil-800"}`}
+                    className={`text-xl font-extrabold tabular-nums ${ing.isLow ? "text-warning" : "text-brand-strong"}`}
                   >
                     {ing.currentStock}
-                    <span className="ms-1 text-xs font-bold text-ink-soft">
+                    <span className="ms-1 text-xs font-bold text-text-secondary">
                       {ing.unit}
                     </span>
                   </p>
@@ -221,7 +221,7 @@ export function InventoryAdmin() {
                             : `${ing.id}:${btn.kind}`,
                         )
                       }
-                      className="inline-flex min-h-11 items-center rounded-full border border-cream-300 bg-cream-100 px-3 text-xs font-bold text-ink-soft transition-colors hover:border-basil-400"
+                      className="inline-flex min-h-11 items-center rounded-full border border-line bg-surface-raised px-3 text-xs font-bold text-text-secondary transition-colors hover:border-brand-soft"
                     >
                       {btn.label}
                     </button>
@@ -229,7 +229,7 @@ export function InventoryAdmin() {
                 </div>
 
                 {openRow?.startsWith(`${ing.id}:`) && (
-                  <div className="mt-2.5 grid grid-cols-[100px_1fr_auto] items-end gap-2 rounded-lg bg-cream-50 p-3">
+                  <div className="mt-2.5 grid grid-cols-[100px_1fr_auto] items-end gap-2 rounded-lg bg-surface p-3">
                     {(() => {
                       const kind = openRow.split(":")[1] as
                         "purchase" | "waste" | "adjustment";
@@ -238,7 +238,7 @@ export function InventoryAdmin() {
                           <div>
                             <label
                               htmlFor={`qty-${ing.id}-${kind}`}
-                              className="text-[10px] font-bold text-ink-soft"
+                              className="text-[10px] font-bold text-text-secondary"
                             >
                               الكمية ({ing.unit})
                             </label>
@@ -262,7 +262,7 @@ export function InventoryAdmin() {
                             <div>
                               <label
                                 htmlFor={`cost-${ing.id}`}
-                                className="text-[10px] font-bold text-ink-soft"
+                                className="text-[10px] font-bold text-text-secondary"
                               >
                                 تكلفة الوحدة الجديدة (₪) — اختياري
                               </label>
@@ -343,7 +343,7 @@ export function InventoryAdmin() {
                                 }
                               }
                             }}
-                            className="col-span-3 inline-flex min-h-11 items-center justify-center rounded-full bg-basil-700 text-sm font-bold text-cream-50 disabled:opacity-50"
+                            className="col-span-3 inline-flex min-h-11 items-center justify-center rounded-full bg-action text-sm font-bold text-action-text disabled:opacity-50"
                           >
                             تسجيل
                           </button>
@@ -359,16 +359,16 @@ export function InventoryAdmin() {
       </div>
 
       {/* ── recipes ─────────────────────────────────────────────── */}
-      <div className="rounded-card bg-cream-50 p-4 shadow-card">
-        <h2 className="font-bold text-ink">وصفات الأطباق</h2>
-        <p className="mt-1 text-xs text-ink-soft">
+      <div className="rounded-card bg-surface p-4 shadow-card">
+        <h2 className="font-bold text-text-primary">وصفات الأطباق</h2>
+        <p className="mt-1 text-xs text-text-secondary">
           كل بيع يخصم كميات الوصفة تلقائياً من المخزون — بحركة مُسجّلة مرجعها
           الطلب.
         </p>
         <div className="mt-3">
           <label
             htmlFor="recipe-product"
-            className="text-xs font-bold text-ink-soft"
+            className="text-xs font-bold text-text-secondary"
           >
             اختر الطبق
           </label>
@@ -390,25 +390,25 @@ export function InventoryAdmin() {
         </div>
 
         {recipeLines === null ? (
-          <div className="flex items-center justify-center gap-2 py-6 text-ink-soft">
+          <div className="flex items-center justify-center gap-2 py-6 text-text-secondary">
             <Loader2 className="size-4 animate-spin" aria-hidden />
           </div>
         ) : (
           <>
             <ul className="mt-3 space-y-2">
               {recipeLines.length === 0 && (
-                <li className="rounded-lg border border-dashed border-cream-300 py-4 text-center text-xs text-ink-soft">
+                <li className="rounded-lg border border-dashed border-line py-4 text-center text-xs text-text-secondary">
                   لا وصفة بعد — أضف مكونات هذا الطبق
                 </li>
               )}
               {recipeLines.map((line) => (
                 <li
                   key={line.ingredientId}
-                  className="flex items-center gap-2 rounded-lg border border-cream-200 bg-cream-100 p-2.5"
+                  className="flex items-center gap-2 rounded-lg border border-border-soft bg-surface-raised p-2.5"
                 >
-                  <span className="flex-1 text-sm font-bold text-ink">
+                  <span className="flex-1 text-sm font-bold text-text-primary">
                     {line.ingredientName}{" "}
-                    <span className="text-xs font-normal text-ink-soft">
+                    <span className="text-xs font-normal text-text-secondary">
                       / {line.unit}
                     </span>
                   </span>
@@ -434,7 +434,7 @@ export function InventoryAdmin() {
                         await loadRecipes(selectedProduct);
                       }
                     }}
-                    className="min-h-11 w-24 rounded-md border border-cream-300 bg-cream-50 px-2 py-1.5 text-center text-sm font-bold tabular-nums outline-none focus:border-basil-500"
+                    className="min-h-11 w-24 rounded-md border border-line bg-surface px-2 py-1.5 text-center text-sm font-bold tabular-nums outline-none focus:border-action"
                     maxLength={9}
                   />
                   <button
@@ -449,7 +449,7 @@ export function InventoryAdmin() {
                       if (!res.ok) setNotice(res.error ?? "تعذر الحذف");
                       await loadRecipes(selectedProduct);
                     }}
-                    className="flex size-11 items-center justify-center rounded-full text-ink-soft hover:bg-terracotta/10 hover:text-terracotta"
+                    className="flex size-11 items-center justify-center rounded-full text-text-secondary hover:bg-danger/10 hover:text-danger"
                   >
                     <Trash2 className="size-4" aria-hidden />
                   </button>
@@ -462,7 +462,7 @@ export function InventoryAdmin() {
                 <div>
                   <label
                     htmlFor="recipe-ing"
-                    className="text-xs font-bold text-ink-soft"
+                    className="text-xs font-bold text-text-secondary"
                   >
                     مكوّن
                   </label>
@@ -483,7 +483,7 @@ export function InventoryAdmin() {
                 <div>
                   <label
                     htmlFor="recipe-qty"
-                    className="text-xs font-bold text-ink-soft"
+                    className="text-xs font-bold text-text-secondary"
                   >
                     الكمية
                   </label>
@@ -517,7 +517,7 @@ export function InventoryAdmin() {
                       await loadRecipes(selectedProduct);
                     }
                   }}
-                  className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-basil-700 px-4 text-sm font-bold text-cream-50 disabled:opacity-50"
+                  className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-action px-4 text-sm font-bold text-action-text disabled:opacity-50"
                 >
                   <Plus className="size-4" aria-hidden />
                   أضف للموصفة
@@ -529,8 +529,8 @@ export function InventoryAdmin() {
       </div>
 
       {/* ── new ingredient ──────────────────────────────────────── */}
-      <div className="rounded-card border border-dashed border-basil-300 bg-basil-50/50 p-4">
-        <p className="font-bold text-ink">مكوّن جديد</p>
+      <div className="rounded-card border border-dashed border-brand-soft bg-brand/10 p-4">
+        <p className="font-bold text-text-primary">مكوّن جديد</p>
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
           <input
             type="text"
@@ -589,7 +589,7 @@ export function InventoryAdmin() {
           type="button"
           disabled={busy || newName.trim().length < 2}
           onClick={() => void create()}
-          className="mt-2.5 inline-flex min-h-11 items-center gap-1.5 rounded-full bg-basil-800 px-5 text-sm font-bold text-cream-50 disabled:opacity-50"
+          className="mt-2.5 inline-flex min-h-11 items-center gap-1.5 rounded-full bg-brand-deep px-5 text-sm font-bold text-cream-50 disabled:opacity-50"
         >
           {busy ? (
             <Loader2 className="size-4 animate-spin" aria-hidden />

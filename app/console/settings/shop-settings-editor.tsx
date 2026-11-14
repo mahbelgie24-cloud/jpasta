@@ -83,12 +83,12 @@ export function ShopSettingsEditor({ initial }: { initial: ShopSettings }) {
   }
 
   const inputClass =
-    "min-h-12 w-full rounded-md border border-cream-300 bg-cream-50 px-4 text-sm outline-none transition-colors focus:border-basil-500";
+    "min-h-12 w-full rounded-md border border-line bg-surface px-4 text-sm outline-none transition-colors focus:border-action";
 
   return (
-    <section className="mt-10 rounded-card border border-cream-200 bg-cream-50 p-5 shadow-card">
-      <h2 className="type-title text-ink">إعدادات المحل</h2>
-      <p className="mt-1 text-sm text-ink-soft">
+    <section className="mt-10 rounded-card border border-border-soft bg-surface p-5 shadow-card">
+      <h2 className="type-title text-text-primary">إعدادات المحل</h2>
+      <p className="mt-1 text-sm text-text-secondary">
         تنطبق فوراً على المتجر والطلب — بدون إعادة نشر.
       </p>
 
@@ -101,8 +101,11 @@ export function ShopSettingsEditor({ initial }: { initial: ShopSettings }) {
       >
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
-            <label htmlFor="cfg-name" className="text-sm font-bold text-ink">
-              اسم المحل <span className="text-terracotta">*</span>
+            <label
+              htmlFor="cfg-name"
+              className="text-sm font-bold text-text-primary"
+            >
+              اسم المحل <span className="text-danger">*</span>
             </label>
             <input
               id="cfg-name"
@@ -115,8 +118,11 @@ export function ShopSettingsEditor({ initial }: { initial: ShopSettings }) {
             />
           </div>
           <div>
-            <label htmlFor="cfg-phone" className="text-sm font-bold text-ink">
-              هاتف المحل <span className="text-terracotta">*</span>
+            <label
+              htmlFor="cfg-phone"
+              className="text-sm font-bold text-text-primary"
+            >
+              هاتف المحل <span className="text-danger">*</span>
             </label>
             <input
               id="cfg-phone"
@@ -133,7 +139,7 @@ export function ShopSettingsEditor({ initial }: { initial: ShopSettings }) {
           <div>
             <label
               htmlFor="cfg-whatsapp"
-              className="text-sm font-bold text-ink"
+              className="text-sm font-bold text-text-primary"
             >
               واتساب (دولي بدون +)
             </label>
@@ -151,7 +157,7 @@ export function ShopSettingsEditor({ initial }: { initial: ShopSettings }) {
               placeholder="970566064976"
             />
           </div>
-          <p className="text-xs leading-relaxed text-ink-soft sm:col-span-3">
+          <p className="text-xs leading-relaxed text-text-secondary sm:col-span-3">
             يظهر الاسم والهاتف وواتساب فوراً في الواجهات والإيصال؛ بيانات
             SEO/JSON-LD الثابتة تُحدَّث مع النشر التالي.
           </p>
@@ -159,8 +165,11 @@ export function ShopSettingsEditor({ initial }: { initial: ShopSettings }) {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="cfg-opens" className="text-sm font-bold text-ink">
-              الافتتاح <span className="text-terracotta">*</span>
+            <label
+              htmlFor="cfg-opens"
+              className="text-sm font-bold text-text-primary"
+            >
+              الافتتاح <span className="text-danger">*</span>
             </label>
             <input
               id="cfg-opens"
@@ -172,8 +181,11 @@ export function ShopSettingsEditor({ initial }: { initial: ShopSettings }) {
             />
           </div>
           <div>
-            <label htmlFor="cfg-closes" className="text-sm font-bold text-ink">
-              الإغلاق <span className="text-terracotta">*</span>
+            <label
+              htmlFor="cfg-closes"
+              className="text-sm font-bold text-text-primary"
+            >
+              الإغلاق <span className="text-danger">*</span>
             </label>
             <input
               id="cfg-closes"
@@ -185,7 +197,10 @@ export function ShopSettingsEditor({ initial }: { initial: ShopSettings }) {
             />
           </div>
           <div>
-            <label htmlFor="cfg-min" className="text-sm font-bold text-ink">
+            <label
+              htmlFor="cfg-min"
+              className="text-sm font-bold text-text-primary"
+            >
               الحد الأدنى للطلب (₪)
             </label>
             <input
@@ -200,7 +215,10 @@ export function ShopSettingsEditor({ initial }: { initial: ShopSettings }) {
             />
           </div>
           <div>
-            <label htmlFor="cfg-eta" className="text-sm font-bold text-ink">
+            <label
+              htmlFor="cfg-eta"
+              className="text-sm font-bold text-text-primary"
+            >
               مدة التوصيل المتوقعة (دقيقة)
             </label>
             <input
@@ -218,7 +236,7 @@ export function ShopSettingsEditor({ initial }: { initial: ShopSettings }) {
         <div>
           <label
             htmlFor="cfg-hours-label"
-            className="text-sm font-bold text-ink"
+            className="text-sm font-bold text-text-primary"
           >
             نص الساعات المعروض
           </label>
@@ -233,12 +251,14 @@ export function ShopSettingsEditor({ initial }: { initial: ShopSettings }) {
         </div>
 
         <fieldset>
-          <legend className="text-sm font-bold text-ink">طرق الدفع</legend>
+          <legend className="text-sm font-bold text-text-primary">
+            طرق الدفع
+          </legend>
           <div className="mt-2 space-y-2">
             {PAYMENT_METHODS.map((method) => (
               <label
                 key={method}
-                className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm font-bold text-ink"
+                className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm font-bold text-text-primary"
               >
                 <input
                   type="checkbox"
@@ -252,7 +272,7 @@ export function ShopSettingsEditor({ initial }: { initial: ShopSettings }) {
           </div>
         </fieldset>
 
-        <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm font-bold text-ink">
+        <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm font-bold text-text-primary">
           <input
             type="checkbox"
             checked={orderingEnabled}
@@ -263,7 +283,10 @@ export function ShopSettingsEditor({ initial }: { initial: ShopSettings }) {
         </label>
 
         <div>
-          <label htmlFor="cfg-footer" className="text-sm font-bold text-ink">
+          <label
+            htmlFor="cfg-footer"
+            className="text-sm font-bold text-text-primary"
+          >
             تذييل الإيصال
           </label>
           <input
@@ -279,7 +302,7 @@ export function ShopSettingsEditor({ initial }: { initial: ShopSettings }) {
         {notice && (
           <p
             role="status"
-            className="rounded-md bg-basil-50 px-4 py-3 text-sm font-bold text-basil-800"
+            className="rounded-md bg-brand-subtle px-4 py-3 text-sm font-bold text-brand-strong"
           >
             {notice}
           </p>
@@ -288,7 +311,7 @@ export function ShopSettingsEditor({ initial }: { initial: ShopSettings }) {
         <button
           type="submit"
           disabled={busy}
-          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-basil-700 px-8 text-sm font-bold text-cream-50 shadow-card transition-colors hover:bg-basil-600 disabled:opacity-50"
+          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-action px-8 text-sm font-bold text-action-text shadow-card transition-colors hover:bg-action-hover disabled:opacity-50"
         >
           {busy && <Loader2 className="size-4 animate-spin" aria-hidden />}
           حفظ الإعدادات

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { DishMedia } from "@/components/brand/dish-media";
 import { Button } from "@/components/ui/button";
+import { TextField } from "@/components/ui/field";
 import { Price } from "@/components/ui/price";
 import { Sheet } from "@/components/ui/sheet";
 import { Stepper } from "@/components/ui/stepper";
@@ -47,10 +48,10 @@ function findOption(group: ModifierGroup, optionId: string) {
 }
 
 const pillBase =
-  "inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-bold transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-basil-600";
-const pillActive = "border-2 border-basil-700 bg-basil-50 text-basil-800";
+  "inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-bold transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus";
+const pillActive = "border-2 border-action bg-brand-subtle text-brand-strong";
 const pillIdle =
-  "border-cream-300 bg-cream-100 text-ink-soft hover:border-basil-300";
+  "border-line bg-surface-raised text-text-secondary hover:border-brand-soft";
 const pillDisabled = "cursor-not-allowed opacity-45";
 
 export function ItemSheet({
@@ -181,7 +182,7 @@ export function ItemSheet({
             <p
               role="status"
               aria-live="polite"
-              className="text-center text-xs font-bold text-terracotta"
+              className="text-center text-xs font-bold text-danger"
             >
               اختر {missingRequired.map((g) => g.nameAr).join(" و")} لإتمام
               الإضافة
@@ -218,7 +219,7 @@ export function ItemSheet({
         }}
       >
         <div className="flex items-start gap-4">
-          <div className="w-32 shrink-0 overflow-hidden rounded-xl bg-cream-100">
+          <div className="w-32 shrink-0 overflow-hidden rounded-xl bg-surface-raised">
             <DishMedia
               product={product}
               decorative
@@ -226,7 +227,7 @@ export function ItemSheet({
               className={cn("w-full", product.image && "aspect-[4/3]")}
             />
           </div>
-          <p className="pt-1 text-sm leading-relaxed text-ink-soft">
+          <p className="pt-1 text-sm leading-relaxed text-text-secondary">
             {product.descAr}
           </p>
         </div>
@@ -248,14 +249,14 @@ export function ItemSheet({
                 key={group.id}
                 aria-describedby={unanswered ? hintId : undefined}
               >
-                <legend className="flex items-center gap-2 text-sm font-bold text-ink">
+                <legend className="flex items-center gap-2 text-sm font-bold text-text-primary">
                   {group.nameAr}
                   {group.required && (
                     <>
-                      <span className="text-terracotta" aria-hidden>
+                      <span className="text-danger" aria-hidden>
                         *
                       </span>
-                      <span className="text-[11px] font-bold text-terracotta">
+                      <span className="text-[11px] font-bold text-danger">
                         مطلوب
                       </span>
                     </>
@@ -263,17 +264,14 @@ export function ItemSheet({
                   {group.type === "multi" &&
                     group.maxSelections !== undefined &&
                     group.maxSelections > 1 && (
-                      <span className="text-xs font-normal text-ink-soft">
+                      <span className="text-xs font-normal text-text-secondary">
                         (حتى {group.maxSelections})
                       </span>
                     )}
                 </legend>
 
                 {unanswered && (
-                  <p
-                    id={hintId}
-                    className="mt-1 text-xs font-bold text-terracotta"
-                  >
+                  <p id={hintId} className="mt-1 text-xs font-bold text-danger">
                     اختر خياراً واحداً للمتابعة
                   </p>
                 )}
@@ -336,24 +334,16 @@ export function ItemSheet({
             );
           })}
 
-          <div>
-            <label
-              htmlFor={`note-${product.id}`}
-              className="text-sm font-bold text-ink"
-            >
-              ملاحظة للمطبخ{" "}
-              <span className="font-normal text-ink-soft">(اختياري)</span>
-            </label>
-            <input
-              id={`note-${product.id}`}
-              type="text"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              maxLength={140}
-              placeholder="مثال: بدون بصل، صلصة زيادة عالجنب…"
-              className="mt-2 min-h-12 w-full rounded-md border border-cream-300 bg-cream-50 px-4 text-sm transition-colors outline-none placeholder:text-ink-soft/50 focus:border-basil-500"
-            />
-          </div>
+          <TextField
+            id={`note-${product.id}`}
+            label="ملاحظة للمطبخ"
+            optional
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={140}
+            placeholder="مثال: بدون بصل، صلصة زيادة عالجنب…"
+          />
         </div>
       </form>
     </Sheet>

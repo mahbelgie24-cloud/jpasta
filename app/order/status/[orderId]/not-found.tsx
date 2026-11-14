@@ -14,11 +14,11 @@ export default function OrderStatusNotFound() {
       className="flex min-h-dvh flex-col items-center justify-center px-4 text-center"
     >
       <LogoMark className="size-20" />
-      <h1 className="mt-6 type-section text-ink">الطلب غير موجود</h1>
-      <p className="mt-3 max-w-sm text-ink-soft">
+      <h1 className="mt-6 type-section text-text-primary">الطلب غير موجود</h1>
+      <p className="mt-3 max-w-sm text-text-secondary">
         تأكد أنك فتحت الرابط الصحيح — روابط متابعة الطلب خاصة بكل طلب.
       </p>
-      <p className="mt-6 text-sm text-ink-soft">
+      <p className="mt-6 text-sm text-text-secondary">
         للاستفسار:{" "}
         <span dir="ltr" className="font-bold tabular-nums">
           {SITE.phoneDisplay}
@@ -26,7 +26,7 @@ export default function OrderStatusNotFound() {
       </p>
       <Link
         href="/menu"
-        className="mt-6 inline-flex min-h-12 items-center rounded-full bg-basil-700 px-6 font-bold text-cream-50"
+        className="mt-6 inline-flex min-h-12 items-center rounded-full bg-action px-6 font-bold text-action-text"
       >
         تصفّح القائمة
       </Link>

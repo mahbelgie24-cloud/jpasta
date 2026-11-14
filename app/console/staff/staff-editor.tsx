@@ -10,6 +10,9 @@ import {
   setStaffActive,
   type StaffRow,
 } from "@/app/actions/staff";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { TextField } from "@/components/ui/field";
 
 /**
  * Staff editor (owner-only page). The PIN-uniqueness rule (spec §8.1) is
@@ -90,58 +93,38 @@ export function StaffEditor({ currentUserId }: { currentUserId: string }) {
     await load();
   }
 
-  const inputClass =
-    "min-h-12 w-full rounded-md border border-cream-300 bg-cream-50 px-4 text-sm outline-none transition-colors focus:border-basil-500";
-
   return (
     <div className="mt-6 space-y-4">
       {/* add form */}
-      <div className="rounded-card border border-dashed border-basil-300 bg-basil-50/50 p-5">
-        <p className="font-bold text-ink">إضافة موظف</p>
+      <div className="rounded-card border border-dashed border-brand-soft bg-brand-subtle p-5">
+        <p className="font-bold text-text-primary">إضافة موظف</p>
         <div className="mt-3 grid grid-cols-[1fr_130px_auto] items-end gap-2">
-          <div>
-            <label
-              htmlFor="staff-name"
-              className="text-xs font-bold text-ink-soft"
-            >
-              الاسم
-            </label>
-            <input
-              id="staff-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className={`mt-1 ${inputClass}`}
-              placeholder="اسم الموظف"
-              maxLength={60}
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="staff-pin"
-              className="text-xs font-bold text-ink-soft"
-            >
-              رمز الدخول (6)
-            </label>
-            <input
-              id="staff-pin"
-              type="text"
-              inputMode="numeric"
-              dir="ltr"
-              value={pin}
-              onChange={(e) =>
-                setPin(e.target.value.replace(/\D/g, "").slice(0, 6))
-              }
-              className={`mt-1 ${inputClass} font-bold tabular-nums`}
-              placeholder="••••••"
-              maxLength={6}
-            />
-          </div>
-          <button
-            type="button"
+          <TextField
+            id="staff-name"
+            label="الاسم"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="اسم الموظف"
+            maxLength={60}
+          />
+          <TextField
+            id="staff-pin"
+            label="رمز الدخول (6)"
+            type="text"
+            inputMode="numeric"
+            dir="ltr"
+            value={pin}
+            onChange={(e) =>
+              setPin(e.target.value.replace(/\D/g, "").slice(0, 6))
+            }
+            className="font-bold tabular-nums"
+            placeholder="••••••"
+            maxLength={6}
+          />
+          <Button
             onClick={() => void create()}
             disabled={busy || name.trim().length < 2 || pin.length !== 6}
-            className="inline-flex min-h-12 items-center gap-1.5 rounded-full bg-basil-800 px-5 text-sm font-bold text-cream-50 disabled:opacity-50"
+            className="min-h-12 px-5"
           >
             {busy ? (
               <Loader2 className="size-4 animate-spin" aria-hidden />
@@ -149,9 +132,9 @@ export function StaffEditor({ currentUserId }: { currentUserId: string }) {
               <UserPlus className="size-4" aria-hidden />
             )}
             إضافة
-          </button>
+          </Button>
         </div>
-        <p className="mt-2 text-xs text-ink-soft">
+        <p className="mt-2 text-xs text-text-secondary">
           الرمز فريد بين كل الموظفين النشطين — النظام يرفض أي تكرار تلقائياً.
         </p>
       </div>
@@ -159,7 +142,7 @@ export function StaffEditor({ currentUserId }: { currentUserId: string }) {
       {error && (
         <p
           role="alert"
-          className="rounded-md bg-terracotta/10 px-4 py-3 text-sm font-bold text-terracotta"
+          className="rounded-md bg-danger/10 px-4 py-3 text-sm font-bold text-danger"
         >
           {error}
         </p>
@@ -168,7 +151,7 @@ export function StaffEditor({ currentUserId }: { currentUserId: string }) {
         <p
           role="status"
           aria-live="polite"
-          className="rounded-md bg-basil-100 px-4 py-3 text-sm font-bold text-basil-800"
+          className="rounded-md bg-brand-subtle px-4 py-3 text-sm font-bold text-brand-strong"
         >
           {notice}
         </p>
@@ -176,7 +159,7 @@ export function StaffEditor({ currentUserId }: { currentUserId: string }) {
 
       {/* list */}
       {rows === null ? (
-        <div className="flex items-center justify-center gap-2 py-10 text-ink-soft">
+        <div className="flex items-center justify-center gap-2 py-10 text-text-secondary">
           <Loader2 className="size-5 animate-spin" aria-hidden />
           جارٍ التحميل…
         </div>
@@ -185,24 +168,24 @@ export function StaffEditor({ currentUserId }: { currentUserId: string }) {
           {rows.map((row) => (
             <li
               key={row.id}
-              className="rounded-card border border-cream-200 bg-cream-50 p-4 shadow-card"
+              className="rounded-card border border-border-soft bg-surface p-4 shadow-card"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="font-bold text-ink">
+                  <p className="font-bold text-text-primary">
                     {row.name}
                     {row.role === "owner" && (
-                      <span className="ms-2 rounded-full bg-wheat-300 px-2 py-0.5 text-[10px] font-bold text-basil-950">
+                      <span className="ms-2 rounded-full bg-wheat-300 px-2 py-0.5 text-[10px] font-bold text-brand-deep">
                         مالك
                       </span>
                     )}
                     {!row.isActive && (
-                      <span className="ms-2 rounded-full bg-cream-300 px-2 py-0.5 text-[10px] font-bold text-ink-soft">
+                      <span className="ms-2 rounded-full bg-surface-sunken px-2 py-0.5 text-[10px] font-bold text-text-secondary">
                         موقوف
                       </span>
                     )}
                   </p>
-                  <p className="text-xs text-ink-soft">
+                  <p className="text-xs text-text-secondary">
                     {row.role === "owner"
                       ? "صلاحيات كاملة"
                       : "الطلبات والمطبخ فقط"}
@@ -223,23 +206,12 @@ export function StaffEditor({ currentUserId }: { currentUserId: string }) {
                     <KeyRound className="size-3.5" aria-hidden />
                     {row.id === currentUserId ? "تغيير رمزي" : "تغيير الرمز"}
                   </button>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={row.isActive}
-                    aria-label={`${row.isActive ? "إيقاف" : "تفعيل"} ${row.name}`}
+                  <Switch
+                    checked={row.isActive}
+                    onCheckedChange={() => void toggle(row)}
+                    label={row.name}
                     disabled={busy || row.id === currentUserId}
-                    onClick={() => void toggle(row)}
-                    className={`relative h-11 w-16 shrink-0 rounded-full transition-colors disabled:opacity-40 ${
-                      row.isActive ? "bg-basil-600" : "bg-cream-400"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-2 size-7 rounded-full bg-cream-50 shadow transition-all ${
-                        row.isActive ? "start-7" : "start-2"
-                      }`}
-                    />
-                  </button>
+                  />
                 </div>
               </div>
 

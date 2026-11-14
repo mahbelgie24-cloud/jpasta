@@ -37,7 +37,7 @@ export default async function OrderStatusPage({
   };
 
   return (
-    <main id="main" tabIndex={-1} className="min-h-dvh bg-cream-50">
+    <main id="main" tabIndex={-1} className="min-h-dvh bg-surface">
       <div className="mx-auto max-w-lg px-4 py-8">
         <div className="flex justify-center">
           <Logo size="lg" />
@@ -47,7 +47,7 @@ export default async function OrderStatusPage({
           token={t ?? ""}
           initial={initial}
         />
-        <div className="mt-8 flex items-center justify-center gap-5 text-xs text-ink-soft">
+        <div className="mt-8 flex items-center justify-center gap-5 text-xs text-text-secondary">
           <span className="inline-flex items-center gap-1.5">
             <Clock className="size-3.5" aria-hidden />
             {SITE.hoursLabel}

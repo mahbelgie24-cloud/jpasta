@@ -107,7 +107,7 @@ function MenuContent({
               type="button"
               onClick={() => setQuery("")}
               aria-label="مسح البحث"
-              className="absolute end-2 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-full text-text-secondary hover:bg-paper-deep hover:text-ink"
+              className="absolute end-2 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-full text-text-secondary hover:bg-paper-deep hover:text-text-primary"
             >
               <X className="size-4" aria-hidden />
             </button>
@@ -145,7 +145,7 @@ function MenuContent({
       <div className="container-page pt-10 pb-36">
         {grouped.length === 0 ? (
           <div className="mx-auto max-w-md py-20 text-center">
-            <p className="font-display-ar text-3xl font-bold text-ink">
+            <p className="font-display-ar text-3xl font-bold text-text-primary">
               ما لقينا شي
             </p>
             <p className="mt-2 text-sm text-text-secondary">
@@ -176,7 +176,7 @@ function MenuContent({
                 <div>
                   <h2
                     id={`cat-title-${category.slug}`}
-                    className="font-display-ar type-section text-ink"
+                    className="font-display-ar type-section text-text-primary"
                   >
                     {category.nameAr}
                   </h2>
@@ -215,7 +215,7 @@ function MenuContent({
             className="flex min-h-14 w-full items-center justify-between gap-3 rounded-full bg-brand-strong px-5 font-bold text-cream-50 shadow-lift transition-transform active:scale-[0.99]"
           >
             <span className="flex items-center gap-2">
-              <span className="flex size-7 items-center justify-center rounded-full bg-wheat-300 text-sm font-extrabold text-basil-950 tabular-nums">
+              <span className="flex size-7 items-center justify-center rounded-full bg-wheat-300 text-sm font-extrabold text-text-primary tabular-nums">
                 {cart.count}
               </span>
               عرض السلة

@@ -46,23 +46,25 @@ export default function PrivacyPage() {
       >
         <Link
           href="/"
-          className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-basil-700 hover:text-basil-600"
+          className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-brand hover:text-brand-strong"
         >
           <ArrowRight className="size-4" aria-hidden />
           رجوع للرئيسية
         </Link>
-        <h1 className="mt-6 type-section text-ink">سياسة الخصوصية</h1>
-        <p className="mt-3 text-ink-soft">
+        <h1 className="mt-6 type-section text-text-primary">سياسة الخصوصية</h1>
+        <p className="mt-3 text-text-secondary">
           الخصوصية عندنا بسيطة: نجمع أقل شي ممكن، ونستخدمه لخدمتك فقط.
         </p>
         <div className="mt-8 space-y-6">
           {SECTIONS.map((s) => (
             <section
               key={s.title}
-              className="rounded-card border border-cream-200 bg-cream-100 p-6 shadow-card"
+              className="rounded-card border border-border-soft bg-surface-raised p-6 shadow-card"
             >
-              <h2 className="type-title text-ink">{s.title}</h2>
-              <p className="mt-2 leading-relaxed text-ink-soft">{s.body}</p>
+              <h2 className="type-title text-text-primary">{s.title}</h2>
+              <p className="mt-2 leading-relaxed text-text-secondary">
+                {s.body}
+              </p>
             </section>
           ))}
         </div>

@@ -75,7 +75,7 @@ export default async function MenuPage() {
               <span className="h-3 w-px bg-border-strong" aria-hidden />
               توصيل داخل قلقيلية
             </p>
-            <h1 className="mt-5 font-display-ar type-section text-balance text-ink">
+            <h1 className="mt-5 font-display-ar type-section text-balance text-text-primary">
               القائمة
             </h1>
             <p className="mx-auto mt-3 max-w-lg type-body text-pretty text-text-secondary">
@@ -87,7 +87,7 @@ export default async function MenuPage() {
           {!orderingEnabled && (
             <p
               role="status"
-              className="mx-auto mt-6 max-w-xl rounded-2xl border border-warning/25 bg-warning/10 px-5 py-4 text-center text-sm font-bold text-ink"
+              className="mx-auto mt-6 max-w-xl rounded-2xl border border-warning/25 bg-warning/10 px-5 py-4 text-center text-sm font-bold text-text-primary"
             >
               القائمة للعرض فقط الآن — الطلب المباشر غير متاح مؤقتاً. راسلنا على
               واتساب وسنساعدك فوراً.

@@ -131,19 +131,19 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
         <div className="flex items-center gap-2.5">
           <LogoMark className="size-10" />
           <div>
-            <h1 className="font-display-ar text-lg font-semibold text-basil-800">
+            <h1 className="font-display-ar text-lg font-semibold text-brand-strong">
               لوحة الطلبات
             </h1>
-            <p className="text-xs text-ink-soft">مرحباً {ownerName}</p>
+            <p className="text-xs text-text-secondary">مرحباً {ownerName}</p>
           </div>
         </div>
         <div className="flex items-center gap-1.5">
           <span
             className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${
               connection === "live"
-                ? "bg-basil-100 text-basil-800"
+                ? "bg-brand-subtle text-brand-strong"
                 : connection === "offline"
-                  ? "bg-terracotta/10 text-terracotta"
+                  ? "bg-danger/10 text-danger"
                   : "bg-bronze/15 text-warning"
             }`}
             aria-live="polite"
@@ -165,7 +165,7 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
             onClick={toggleSound}
             aria-label={soundEnabled ? "كتم صوت التنبيه" : "تشغيل صوت التنبيه"}
             aria-pressed={soundEnabled}
-            className="flex size-11 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-cream-200 hover:text-ink"
+            className="flex size-11 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-surface-sunken hover:text-text-primary"
           >
             {soundEnabled ? (
               <Volume2 className="size-5" aria-hidden />
@@ -177,7 +177,7 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
             type="button"
             onClick={doLogout}
             aria-label="تسجيل الخروج"
-            className="flex size-11 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-cream-200 hover:text-terracotta"
+            className="flex size-11 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-surface-sunken hover:text-danger"
           >
             <LogOut className="size-5" aria-hidden />
           </button>
@@ -186,7 +186,7 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
       {actionError && (
         <p
           role="alert"
-          className="mt-4 rounded-xl border border-terracotta/25 bg-terracotta/10 px-4 py-3 text-sm font-bold text-terracotta"
+          className="mt-4 rounded-xl border border-danger/25 bg-danger/10 px-4 py-3 text-sm font-bold text-danger"
         >
           {actionError}
         </p>
@@ -194,7 +194,7 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
 
       {/* board */}
       {orders === null ? (
-        <div className="flex items-center justify-center gap-2 py-24 text-ink-soft">
+        <div className="flex items-center justify-center gap-2 py-24 text-text-secondary">
           <Loader2 className="size-5 animate-spin" aria-hidden />
           جارٍ تحميل الطلبات…
         </div>
@@ -207,36 +207,36 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
               <section
                 key={col.key}
                 aria-label={col.label}
-                className="rounded-card bg-cream-50 p-3 shadow-card"
+                className="rounded-card bg-surface p-3 shadow-card"
               >
-                <h2 className="flex items-center gap-2 px-2 py-2 text-sm font-bold text-ink">
-                  <Icon className="size-4 text-basil-700" aria-hidden />
+                <h2 className="flex items-center gap-2 px-2 py-2 text-sm font-bold text-text-primary">
+                  <Icon className="size-4 text-brand" aria-hidden />
                   {col.label}
-                  <span className="ms-auto flex size-6 items-center justify-center rounded-full bg-basil-700 text-xs font-bold text-cream-50 tabular-nums">
+                  <span className="ms-auto flex size-6 items-center justify-center rounded-full bg-action text-xs font-bold text-action-text tabular-nums">
                     {list.length}
                   </span>
                 </h2>
                 <div className="mt-2 space-y-3">
                   {list.length === 0 && (
-                    <p className="rounded-xl border border-dashed border-cream-300 py-8 text-center text-sm text-ink-soft">
+                    <p className="rounded-xl border border-dashed border-line py-8 text-center text-sm text-text-secondary">
                       لا يوجد طلبات
                     </p>
                   )}
                   {list.map((o) => (
                     <article
                       key={o.id}
-                      className="rounded-xl border border-cream-200 bg-cream-100 p-4"
+                      className="rounded-xl border border-border-soft bg-surface-raised p-4"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <Link
                           href={`/console/orders/${o.id}`}
-                          className="font-display text-xl font-bold text-basil-800 hover:text-basil-600"
+                          className="font-display text-xl font-bold text-brand-strong hover:text-brand"
                           dir="ltr"
                         >
                           {o.orderNumber}
                         </Link>
                         <div className="flex flex-col items-end gap-1">
-                          <span className="inline-flex items-center gap-1 rounded-full bg-cream-200 px-2 py-0.5 text-[11px] font-bold text-ink-soft">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 text-[11px] font-bold text-text-secondary">
                             {o.channel === "delivery" ? (
                               <>
                                 <Bike className="size-3" aria-hidden /> توصيل
@@ -256,24 +256,24 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
                               </>
                             )}
                           </span>
-                          <span className="text-[11px] text-ink-soft">
+                          <span className="text-[11px] text-text-secondary">
                             {timeAgoAr(o.createdAt)} ·{" "}
                             {formatTimeAr(o.createdAt)}
                           </span>
                         </div>
                       </div>
 
-                      <ul className="mt-2.5 space-y-1.5 border-y border-cream-200 py-2.5">
+                      <ul className="mt-2.5 space-y-1.5 border-y border-border-soft py-2.5">
                         {o.items.map((it, i) => (
                           <li key={i} className="text-sm">
-                            <span className="font-bold text-ink">
+                            <span className="font-bold text-text-primary">
                               {it.nameAr}{" "}
-                              <span className="text-ink-soft">
+                              <span className="text-text-secondary">
                                 × {it.quantity}
                               </span>
                             </span>
                             {it.detailAr && (
-                              <span className="block text-xs text-ink-soft">
+                              <span className="block text-xs text-text-secondary">
                                 {it.detailAr}
                               </span>
                             )}
@@ -286,12 +286,14 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
                         ))}
                       </ul>
 
-                      <div className="mt-2.5 space-y-1 text-xs text-ink-soft">
-                        <p className="font-bold text-ink">{o.customerName}</p>
+                      <div className="mt-2.5 space-y-1 text-xs text-text-secondary">
+                        <p className="font-bold text-text-primary">
+                          {o.customerName}
+                        </p>
                         <a
                           href={`tel:${o.customerPhone}`}
                           dir="ltr"
-                          className="inline-flex items-center gap-1 font-bold text-basil-700 tabular-nums"
+                          className="inline-flex items-center gap-1 font-bold text-brand tabular-nums"
                         >
                           <Phone className="size-3" aria-hidden />
                           {o.customerPhone}
@@ -307,7 +309,7 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
                       <div className="mt-3 flex items-center justify-between gap-2">
                         <Price
                           minor={o.totalMinor}
-                          className="font-bold text-ink"
+                          className="font-bold text-text-primary"
                         />
                         <div className="flex gap-2">
                           {o.status !== "ready" && (
@@ -322,8 +324,8 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
                               disabled={busyId === o.id}
                               className={
                                 armedCancel === o.id
-                                  ? "inline-flex min-h-11 items-center gap-1 rounded-full bg-terracotta px-3.5 text-xs font-bold text-cream-50"
-                                  : "inline-flex min-h-11 items-center gap-1 rounded-full px-3 text-xs font-bold text-ink-soft hover:bg-terracotta/10 hover:text-terracotta"
+                                  ? "inline-flex min-h-11 items-center gap-1 rounded-full bg-danger px-3.5 text-xs font-bold text-action-text"
+                                  : "inline-flex min-h-11 items-center gap-1 rounded-full px-3 text-xs font-bold text-text-secondary hover:bg-danger/10 hover:text-danger"
                               }
                             >
                               إلغاء
@@ -333,7 +335,7 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
                             type="button"
                             onClick={() => move(o.id, col.next)}
                             disabled={busyId === o.id}
-                            className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-basil-700 px-4 text-sm font-bold text-cream-50 shadow-card transition-colors hover:bg-basil-600 disabled:opacity-50"
+                            className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-action px-4 text-sm font-bold text-action-text shadow-card transition-colors hover:bg-action-hover disabled:opacity-50"
                           >
                             {busyId === o.id ? (
                               <Loader2
@@ -348,10 +350,10 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
                       </div>
 
                       {armedCancel === o.id && (
-                        <div className="mt-3 rounded-xl border border-terracotta/30 bg-terracotta/5 p-3">
+                        <div className="mt-3 rounded-xl border border-danger/30 bg-danger/5 p-3">
                           <label
                             htmlFor={`cancel-reason-${o.id}`}
-                            className="text-xs font-bold text-ink"
+                            className="text-xs font-bold text-text-primary"
                           >
                             سبب الإلغاء (مطلوب)
                           </label>
@@ -363,7 +365,7 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
                             maxLength={140}
                             autoFocus
                             placeholder="مثال: الزبون غيّر رأيه"
-                            className="mt-1.5 min-h-11 w-full rounded-md border border-cream-300 bg-cream-50 px-3 text-sm outline-none focus:border-basil-500"
+                            className="mt-1.5 min-h-11 w-full rounded-md border border-line bg-surface px-3 text-sm outline-none focus:border-action"
                           />
                           <div className="mt-2 flex gap-2">
                             <button
@@ -375,7 +377,7 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
                               onClick={() =>
                                 void move(o.id, "cancelled", cancelReason)
                               }
-                              className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-terracotta px-4 text-sm font-bold text-cream-50 disabled:opacity-50"
+                              className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-danger px-4 text-sm font-bold text-action-text disabled:opacity-50"
                             >
                               <X className="size-4" aria-hidden />
                               تأكيد الإلغاء
@@ -386,7 +388,7 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
                                 setArmedCancel(null);
                                 setCancelReason("");
                               }}
-                              className="inline-flex min-h-11 items-center justify-center rounded-full border border-cream-300 px-4 text-sm font-bold text-ink-soft"
+                              className="inline-flex min-h-11 items-center justify-center rounded-full border border-line px-4 text-sm font-bold text-text-secondary"
                             >
                               تراجع
                             </button>
