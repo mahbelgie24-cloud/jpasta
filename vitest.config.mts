@@ -44,6 +44,29 @@ export default defineConfig({
     // The integration suites share one seeded database and TRUNCATE orders
     // in beforeAll — parallel files would truncate each other mid-run.
     fileParallelism: false,
+    coverage: {
+      provider: "v8",
+      // `lib/**` (not `lib/**/*.ts`) — the deep glob skipped top-level files
+      // and silently shrank the measured set to lib/server only.
+      include: ["lib/**"],
+      // Integration-only modules: their logic is exercised against the real
+      // Postgres / runtime (auth-throttle + orders integration suites, e2e
+      // login/push journeys). Unit-level percentages for them are noise, so
+      // they are excluded from the ratchet — deliberately, one by one, not
+      // by glob.
+      exclude: [
+        "lib/server/session.ts",
+        "lib/server/pin-bcrypt.ts",
+        "lib/server/push.ts",
+        "lib/server/guard.ts",
+        "lib/server/catalog.ts",
+      ],
+      // Phase E baseline (2026-11-15), measured over the remainder:
+      // 75.9 stmts / 68.3 branch / 80.7 funcs / 78.1 lines. The thresholds
+      // sit just under the floor — a regression fails CI, new code must
+      // hold the line. Ratchet upward, never downward.
+      thresholds: { statements: 74, branches: 66, functions: 78, lines: 76 },
+    },
   },
   resolve: {
     alias: {

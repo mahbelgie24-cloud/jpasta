@@ -77,7 +77,9 @@ interface ExportedHandler<Env = unknown> {
 }
 
 interface RateLimitBinding {
-  limit(key: string): Promise<{ success: boolean }>;
+  // The runtime API takes a configuration object (Cloudflare docs
+  // §Rate Limiting) — a bare string throws "invalid rate limit options".
+  limit(options: { key: string }): Promise<{ success: boolean }>;
 }
 
 interface CloudflareEnv {

@@ -11,7 +11,7 @@ import {
 } from "@/lib/server/orders";
 import { requireStaff } from "@/lib/server/session";
 import { userMessageOf } from "@/lib/server/guard";
-import { logEvent } from "@/lib/server/log";
+import { checkRateLimit as checkEdgeRateLimit } from "@/lib/server/rate-limit";
 
 /**
  * Order actions.
@@ -31,33 +31,11 @@ async function clientIp(): Promise<string> {
 async function checkRateLimit(
   bindingName: "ORDER_LIMIT" | "READ_LIMIT",
   key: string,
-  message = "طلبات كثيرة جداً — انتظر دقيقة ثم حاول مجدداً.",
+  message?: string,
 ): Promise<string | null> {
-  try {
-    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
-    const env = getCloudflareContext().env as {
-      ORDER_LIMIT?: { limit(key: string): Promise<{ success: boolean }> };
-      READ_LIMIT?: { limit(key: string): Promise<{ success: boolean }> };
-    };
-    const binding = env[bindingName];
-    if (!binding) {
-      // Node runtime (local dev/tests) has no edge binding by design; inside
-      // Workers a missing binding silently removes the ceiling — make it
-      // visible instead of failing open unnoticed.
-      if (
-        typeof navigator !== "undefined" &&
-        /Cloudflare-Workers/i.test(navigator.userAgent)
-      ) {
-        logEvent("warn", "ratelimit.binding_missing", { message: bindingName });
-      }
-      return null;
-    }
-    const { success } = await binding.limit(key);
-    if (!success) return message;
-    return null;
-  } catch {
-    return null; // Node runtime (local dev/tests) — binding is Workers-only
-  }
+  // Shared resolver (lib/server/rate-limit.ts): one call shape, one
+  // missing-binding warn, one e2e bypass — nothing drifts per call site.
+  return checkEdgeRateLimit(bindingName, key, message);
 }
 
 export async function placeStorefrontOrder(

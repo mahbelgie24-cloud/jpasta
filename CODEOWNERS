@@ -1,0 +1,7 @@
+# Default owner for everything — the shop owner reviews all changes.
+* @mahbelgie24-cloud
+
+# The spec and security posture change with the owner's explicit sign-off.
+/docs/technical-spec.md @mahbelgie24-cloud
+/docs/SECURITY.md @mahbelgie24-cloud
+/AGENTS.md @mahbelgie24-cloud

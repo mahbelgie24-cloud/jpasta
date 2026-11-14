@@ -83,6 +83,11 @@ jobs:
       - name: Tests
         run: npm test
 
+      # Coverage thresholds live in vitest.config.mts (lib/** only) — a
+      # regression below the ratchet fails this job.
+      - name: Coverage gate
+        run: npm run test:coverage
+
       - name: Next build
         run: npm run build
 
@@ -134,7 +139,7 @@ jobs:
           npm run db:seed
 
       - name: Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium webkit firefox
 
       - name: Build
         run: npm run build
@@ -143,6 +148,11 @@ jobs:
       # The visual baselines in e2e/visual.spec.ts-snapshots/ must be committed.
       - name: Journeys + axe + visual
         run: npx playwright test
+
+      # Cross-browser smoke (@smoke journeys) — catches engine-specific
+      # breakage in landing/menu + the console PIN pad on webkit/firefox.
+      - name: Cross-browser smoke
+        run: npx playwright test --project=webkit --project=firefox
 
       - name: Playwright artifacts
         if: failure()

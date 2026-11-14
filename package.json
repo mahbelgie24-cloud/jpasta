@@ -38,7 +38,9 @@
     "test:e2e:update": "npm run build && playwright test --update-snapshots",
     "test:e2e:report": "playwright show-report",
     "test:lighthouse": "lhci autorun --config=./lighthouserc.json",
-    "test:lighthouse:desktop": "lhci autorun --config=./lighthouserc.desktop.json"
+    "test:lighthouse:desktop": "lhci autorun --config=./lighthouserc.desktop.json",
+    "prepare": "lefthook install",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -63,10 +65,12 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^5.1.0",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",
     "eslint-config-next": "~16.4.5",
     "fake-indexeddb": "^6.2.7",
+    "lefthook": "^2.2.2",
     "patch-package": "^8.0.1",
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",

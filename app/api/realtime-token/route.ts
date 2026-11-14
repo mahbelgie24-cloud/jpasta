@@ -3,7 +3,7 @@ import { requireStaff } from "@/lib/server/session";
 import { requireSecret } from "@/lib/server/env";
 import { verifyOrderAccessToken } from "@/lib/server/orders";
 import { signRealtimeToken } from "@/lib/domain/realtime-token";
-import { logEvent } from "@/lib/server/log";
+import { checkRateLimit, classKey } from "@/lib/server/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -49,34 +49,13 @@ export async function GET(request: Request) {
     // Per-IP ceiling with its own key class: sharing the raw-IP bucket with
     // the 4s status polls would let ~16 concurrent pages behind one CGNAT
     // exhaust the quota and 429 each other's mints.
-    let binding:
-      { limit(key: string): Promise<{ success: boolean }> } | undefined;
-    try {
-      const { getCloudflareContext } = await import("@opennextjs/cloudflare");
-      binding = (
-        getCloudflareContext().env as {
-          READ_LIMIT?: { limit(key: string): Promise<{ success: boolean }> };
-        }
-      ).READ_LIMIT;
-    } catch {
-      // Node runtime (local dev/tests) — no edge binding by design.
-    }
-    if (binding === undefined) {
-      // A missing binding inside Workers silently removes the ceiling —
-      // make it visible instead of failing open unnoticed.
-      if (
-        typeof navigator !== "undefined" &&
-        /Cloudflare-Workers/i.test(navigator.userAgent)
-      ) {
-        logEvent("warn", "ratelimit.binding_missing", {
-          message: "READ_LIMIT",
-        });
-      }
-    } else if (!(await binding.limit(`mint:${await clientIp()}`)).success) {
-      return Response.json(
-        { ok: false, error: "rate-limited" },
-        { status: 429 },
-      );
+    const limited = await checkRateLimit(
+      "READ_LIMIT",
+      classKey("mint", await clientIp()),
+      "rate-limited",
+    );
+    if (limited) {
+      return Response.json({ ok: false, error: limited }, { status: 429 });
     }
     const valid = await verifyOrderAccessToken(orderId, orderToken);
     if (!valid) {

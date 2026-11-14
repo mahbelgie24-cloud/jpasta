@@ -9,6 +9,7 @@ import {
   requireOwner,
   requireStaff,
 } from "@/lib/server/session";
+import { checkRateLimit as checkEdgeRateLimit } from "@/lib/server/rate-limit";
 import {
   getConsoleOrders,
   getOrderHistory,
@@ -37,24 +38,19 @@ export async function consoleLogin(pin: string): Promise<{
   retryAfterSec?: number;
 }> {
   try {
-    // Per-colo Workers limiter first (cheap, fails open only on Node).
-    try {
-      const { getCloudflareContext } = await import("@opennextjs/cloudflare");
-      const env = getCloudflareContext().env as {
-        AUTH_LIMIT?: { limit(key: string): Promise<{ success: boolean }> };
+    // Per-colo Workers limiter first (cheap; the DB throttle still applies
+    // after it — lib/server/rate-limit.ts owns the call shape).
+    const limited = await checkEdgeRateLimit(
+      "AUTH_LIMIT",
+      await clientIp(),
+      "محاولات كثيرة — انتظر دقيقة ثم حاول مرة أخرى.",
+    );
+    if (limited) {
+      return {
+        ok: false,
+        error: limited,
+        retryAfterSec: 60,
       };
-      if (env.AUTH_LIMIT) {
-        const { success } = await env.AUTH_LIMIT.limit(await clientIp());
-        if (!success) {
-          return {
-            ok: false,
-            error: "محاولات كثيرة — انتظر دقيقة ثم حاول مرة أخرى.",
-            retryAfterSec: 60,
-          };
-        }
-      }
-    } catch {
-      // Node runtime — the DB throttle still applies.
     }
 
     const result = await loginWithPin(pin, { ip: await clientIp() });
