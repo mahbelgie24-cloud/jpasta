@@ -1,3 +1,4 @@
+import { timingSafeEqualText } from "@/lib/domain/hash";
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { logEvent } from "@/lib/server/log";
@@ -6,22 +7,42 @@ export const dynamic = "force-dynamic";
 
 const STARTED_AT = Date.now();
 
-/** Liveness + DB readiness for the deploy checklist and uptime probes. */
-export async function GET() {
+/**
+ * Liveness + DB readiness for the deploy checklist and uptime probes.
+ *
+ * The public body is minimal on purpose: version and uptime fingerprint the
+ * deployment to anyone who can reach the host. The full detail ships only
+ * with the CRON_SECRET bearer (the same secret the uptime/deploy tooling
+ * already holds).
+ */
+export async function GET(request: Request) {
   const started = Date.now();
-  const version = process.env.NEXT_PUBLIC_COMMIT_SHA ?? "dev";
+
+  const authorized = (() => {
+    const secret = process.env.CRON_SECRET;
+    if (!secret) return false;
+    return timingSafeEqualText(
+      request.headers.get("authorization") ?? "",
+      `Bearer ${secret}`,
+    );
+  })();
 
   try {
     await db.execute(sql`select 1`);
+    const base = {
+      ok: true,
+      db: "up",
+      time: new Date().toISOString(),
+    };
     return Response.json(
-      {
-        ok: true,
-        db: "up",
-        latencyMs: Date.now() - started,
-        uptimeMs: Date.now() - STARTED_AT,
-        version,
-        time: new Date().toISOString(),
-      },
+      authorized
+        ? {
+            ...base,
+            latencyMs: Date.now() - started,
+            uptimeMs: Date.now() - STARTED_AT,
+            version: process.env.NEXT_PUBLIC_COMMIT_SHA ?? "dev",
+          }
+        : base,
       { headers: { "cache-control": "no-store" } },
     );
   } catch (err) {
@@ -33,9 +54,13 @@ export async function GET() {
       {
         ok: false,
         db: "down",
-        latencyMs: Date.now() - started,
-        version,
         time: new Date().toISOString(),
+        ...(authorized
+          ? {
+              latencyMs: Date.now() - started,
+              version: process.env.NEXT_PUBLIC_COMMIT_SHA ?? "dev",
+            }
+          : {}),
       },
       { status: 503, headers: { "cache-control": "no-store" } },
     );

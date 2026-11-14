@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildCsp, buildStaticCsp, generateCspNonce } from "@/lib/csp-nonce";
+import {
+  buildCsp,
+  buildStaticCsp,
+  generateCspNonce,
+  reportToHeader,
+  reportingEndpointsHeader,
+} from "@/lib/csp-nonce";
 import { serializeJsonLd } from "@/lib/json-ld";
 
 describe("CSP builder (v2 hardening)", () => {
@@ -8,6 +14,19 @@ describe("CSP builder (v2 hardening)", () => {
     const csp = buildCsp(nonce);
     expect(csp).toContain(`'nonce-${nonce}'`);
     expect(csp).toContain("'strict-dynamic'");
+  });
+
+  it("reports violations to the same-origin sink on both tiers", () => {
+    for (const csp of [buildCsp(generateCspNonce()), buildStaticCsp()]) {
+      expect(csp).toContain("report-uri /api/csp-report");
+      expect(csp).toContain("report-to csp-endpoint");
+    }
+    // Reporting-Endpoints is a Structured Fields dictionary — JSON here
+    // fails sf-dictionary parsing and Chrome drops the group silently.
+    expect(reportingEndpointsHeader()).toBe('csp-endpoint="/api/csp-report"');
+    // The legacy JSON header carries the same relative endpoint.
+    expect(reportToHeader()).toContain("/api/csp-report");
+    expect(reportToHeader()).not.toContain("https://");
   });
 
   it("never allows unsafe-eval and locks framing/base down", () => {

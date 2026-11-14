@@ -4,8 +4,38 @@ import { requireStaff } from "@/lib/server/session";
 import { db } from "@/lib/db";
 import { pushSubscriptions } from "@/db/schema";
 import { isAllowedPushEndpoint } from "@/lib/domain/vapid";
+import { logEvent } from "@/lib/server/log";
 
 export const dynamic = "force-dynamic";
+
+/** Own key class on the shared READ_LIMIT binding (see realtime-token). */
+async function limitPerClass(key: string): Promise<boolean> {
+  try {
+    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+    const binding = (
+      getCloudflareContext().env as {
+        READ_LIMIT?: { limit(key: string): Promise<{ success: boolean }> };
+      }
+    ).READ_LIMIT;
+    if (!binding) {
+      // A missing binding inside Workers silently removes the ceiling —
+      // visible in observability instead of failing open unnoticed.
+      if (
+        typeof navigator !== "undefined" &&
+        /Cloudflare-Workers/i.test(navigator.userAgent)
+      ) {
+        logEvent("warn", "ratelimit.binding_missing", {
+          message: "READ_LIMIT",
+        });
+      }
+      return false;
+    }
+    const { success } = await binding.limit(key);
+    return !success;
+  } catch {
+    return false;
+  }
+}
 
 const subscribeSchema = z.object({
   endpoint: z.string().url().max(600),
@@ -21,6 +51,14 @@ export async function POST(request: Request) {
     user = await requireStaff();
   } catch {
     return new Response("unauthorized", { status: 401 });
+  }
+
+  // Authenticated but still rate-limited: the endpoint writes a DB row on
+  // every hit, so a scripted session must not turn it into unbounded writes.
+  const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+  const limited = await limitPerClass(`push:${ip}`);
+  if (limited) {
+    return Response.json({ ok: false, error: "rate-limited" }, { status: 429 });
   }
 
   const body = await request.json().catch(() => null);
@@ -68,6 +106,12 @@ export async function DELETE(request: Request) {
     user = await requireStaff();
   } catch {
     return new Response("unauthorized", { status: 401 });
+  }
+
+  // Same ceiling as POST — SECURITY.md documents both endpoints limited.
+  const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+  if (await limitPerClass(`push:${ip}`)) {
+    return Response.json({ ok: false, error: "rate-limited" }, { status: 429 });
   }
 
   const body = (await request.json().catch(() => null)) as {

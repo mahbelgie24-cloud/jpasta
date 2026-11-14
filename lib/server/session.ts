@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
-import { and, eq, gt, like } from "drizzle-orm";
+import { and, asc, eq, gt, like } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { sessions, users } from "@/db/schema";
 import { hashToken, newSessionToken, pinLookup, verifyPin } from "./pin";
@@ -123,7 +123,10 @@ export async function loginWithPin(
 
   // Migration bridge: rows created before v2 carry a unique "legacy:" key.
   // We verify against their scrypt hash and upgrade the lookup on success,
-  // so no PIN needs to be known at migration time.
+  // so no PIN needs to be known at migration time. The scan is bounded: this
+  // path runs on EVERY wrong PIN (the O(1) lookup missed), and each row is a
+  // scrypt verification — an unbounded scan would be a CPU-amplification
+  // primitive. Real staff lists are single digits; 50 is generous.
   if (!user) {
     const legacyRows = await db
       .select({
@@ -135,7 +138,11 @@ export async function loginWithPin(
         sessionVersion: users.sessionVersion,
       })
       .from(users)
-      .where(and(like(users.pinLookup, "legacy:%"), eq(users.isActive, true)));
+      .where(and(like(users.pinLookup, "legacy:%"), eq(users.isActive, true)))
+      // Deterministic cut: without an order, a >50-legacy-row shop would
+      // lock out whoever falls past the window with no diagnosable signal.
+      .orderBy(asc(users.id))
+      .limit(50);
     let match: (typeof legacyRows)[number] | null = null;
     for (const row of legacyRows) {
       if (await verifyPin(normalized, row.pinHash)) {
@@ -177,7 +184,9 @@ export async function loginWithPin(
   const store = await cookies();
   store.set(COOKIE_NAME, token, {
     httpOnly: true,
-    sameSite: "lax",
+    // strict: the console has no cross-origin entry links, and strict removes
+    // even the top-level-navigation CSRF window that lax leaves open.
+    sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: Math.floor(SESSION_TTL_MS / 1000),

@@ -24,11 +24,9 @@ export const dynamic = "force-dynamic";
 
 async function clientIp(): Promise<string> {
   const h = await headers();
-  return (
-    h.get("cf-connecting-ip") ??
-    h.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    "unknown"
-  );
+  // cf-connecting-ip only — same rule as the actions; x-forwarded-for's
+  // first hop is client-controlled and would make the mint: key forgeable.
+  return h.get("cf-connecting-ip") ?? "unknown";
 }
 
 export async function GET(request: Request) {

@@ -25,11 +25,10 @@ import { userMessageOf } from "@/lib/server/guard";
 
 async function clientIp(): Promise<string> {
   const h = await headers();
-  return (
-    h.get("cf-connecting-ip") ??
-    h.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    "unknown"
-  );
+  // cf-connecting-ip is set by the Cloudflare edge and cannot be spoofed by
+  // the client. x-forwarded-for's FIRST hop IS client-controlled (CF only
+  // appends to it), so trusting it made the per-IP throttle keys forgeable.
+  return h.get("cf-connecting-ip") ?? "unknown";
 }
 
 export async function consoleLogin(pin: string): Promise<{

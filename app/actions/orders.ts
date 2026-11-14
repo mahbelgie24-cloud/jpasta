@@ -23,11 +23,9 @@ import { logEvent } from "@/lib/server/log";
 
 async function clientIp(): Promise<string> {
   const h = await headers();
-  return (
-    h.get("cf-connecting-ip") ??
-    h.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    "unknown"
-  );
+  // cf-connecting-ip is set by the Cloudflare edge and cannot be spoofed by
+  // the client; x-forwarded-for's first hop is client-controlled.
+  return h.get("cf-connecting-ip") ?? "unknown";
 }
 
 async function checkRateLimit(
