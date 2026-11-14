@@ -29,8 +29,9 @@ interface DurableObjectNamespace {
 }
 
 interface DurableObjectState {
-  acceptWebSocket(ws: WebSocket): void;
-  getWebSockets(): WebSocket[];
+  /** Hibernatable sockets — tags scope getWebSockets() fan-outs. */
+  acceptWebSocket(ws: WebSocket, tags?: string[]): void;
+  getWebSockets(tag?: string): WebSocket[];
   blockConcurrencyWhile<T>(fn: () => Promise<T>): Promise<T>;
 }
 

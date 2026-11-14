@@ -7,6 +7,7 @@ import { CartProvider, useCart } from "@/components/menu/cart-context";
 import { ProductCard } from "@/components/menu/product-card";
 import { Price } from "@/components/ui/price";
 import { SheetSkeleton } from "@/components/ui/sheet";
+import { ToastProvider, useToast } from "@/components/ui/toast";
 import { registerOfflineSync } from "@/lib/offline/sync";
 import { placeStorefrontOrder } from "@/app/actions/orders";
 import { arabicCount, arabicIncludes } from "@/lib/arabic";
@@ -70,6 +71,28 @@ function MenuContent({
   const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
 
   useEffect(() => registerOfflineSync(placeStorefrontOrder), []);
+
+  // The offline queue replays in the background (lib/offline/sync). The
+  // confirmation screen covers the moment of queueing; without this toast a
+  // customer who queued offline never learns the order actually landed.
+  const toast = useToast();
+  useEffect(() => {
+    const onSynced = (event: Event) => {
+      const detail = (event as CustomEvent<{ sent: number }>).detail;
+      const count = detail?.sent ?? 1;
+      // Arabic dual form — "وصلنا 2 طلبات" is broken grammar.
+      toast(
+        count === 2
+          ? "وصل طلباك المؤجلان — شكراً لصبرك"
+          : count > 2
+            ? `وصلنا ${count} طلبات مؤجلة — شكراً لصبرك`
+            : "وصلنا طلبك المؤجل — شكراً لصبرك",
+        "success",
+      );
+    };
+    window.addEventListener("jpasta:orders-synced", onSynced);
+    return () => window.removeEventListener("jpasta:orders-synced", onSynced);
+  }, [toast]);
 
   // First add → quietly fetch the drawer chunk so opening the cart is
   // instant even on a slow connection.
@@ -310,14 +333,16 @@ export function MenuShell({
 }) {
   return (
     <CartProvider>
-      <MenuContent
-        categories={categories}
-        products={products}
-        orderingEnabled={orderingEnabled}
-        paymentMethods={paymentMethods}
-        minOrderMinor={minOrderMinor}
-        deliveryEtaMinutes={deliveryEtaMinutes}
-      />
+      <ToastProvider>
+        <MenuContent
+          categories={categories}
+          products={products}
+          orderingEnabled={orderingEnabled}
+          paymentMethods={paymentMethods}
+          minOrderMinor={minOrderMinor}
+          deliveryEtaMinutes={deliveryEtaMinutes}
+        />
+      </ToastProvider>
     </CartProvider>
   );
 }

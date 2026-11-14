@@ -62,6 +62,9 @@ export function OrderStatusClient({
   const [order, setOrder] = useState(initial);
   const terminal = TERMINAL.has(order.status);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Live socket flag shared between the WS effect and the polling effect:
+  // while the Durable Object push is healthy, the 4s poll stands down.
+  const wsLiveRef = useRef(false);
 
   // Relative time depends on the client clock; render the deterministic
   // absolute time during SSR, then add "منذ …" after hydration.
@@ -80,6 +83,9 @@ export function OrderStatusClient({
       // the whole delivery window (battery + needless DB reads). The
       // visibility listener catches up as soon as the customer returns.
       if (document.hidden) return;
+      // The realtime push owns freshness while it is connected; the poll is
+      // the fallback (local dev and e2e have no Durable Object).
+      if (wsLiveRef.current) return;
       try {
         const fresh = await fetchOrderStatus(orderId, token);
         if (fresh) {
@@ -101,6 +107,121 @@ export function OrderStatusClient({
     return () => {
       if (timer.current) clearInterval(timer.current);
       document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [orderId, token, terminal]);
+
+  // Realtime push (Phase C): the DO broadcasts a dataless "orders-changed"
+  // tickle after every committed transition; the customer refetches their
+  // own status through the token-gated action. Fallback = the 4s poll above
+  // (socket down, local dev, e2e). The tickle carries no order data.
+  useEffect(() => {
+    if (terminal) return;
+    let disposed = false;
+    let socket: WebSocket | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let lastTick = 0;
+    // Trailing-edge coalescing: a tickle inside the throttle window SCHEDULES
+    // the refetch instead of being dropped — the LAST transition must always
+    // reach the customer (double-advance within 1.5s is a normal console
+    // gesture). The visibility listener re-runs refresh on return, so a
+    // tickle that fired on a hidden tab is caught up, never lost.
+    let pendingRefresh: ReturnType<typeof setTimeout> | null = null;
+
+    const refresh = () => {
+      if (pendingRefresh) return;
+      const elapsed = Date.now() - lastTick;
+      const run = () => {
+        pendingRefresh = null;
+        lastTick = Date.now();
+        if (document.hidden) return;
+        void fetchOrderStatus(orderId, token)
+          .then((fresh) => {
+            if (!fresh) return;
+            setOrder((prev) =>
+              prev.status === fresh.status
+                ? prev
+                : { ...prev, status: fresh.status },
+            );
+          })
+          .catch(() => {
+            // transient network error — the next tickle/poll retries
+          });
+      };
+      if (elapsed >= 1500) run();
+      else pendingRefresh = setTimeout(run, 1500 - elapsed);
+    };
+
+    const onVisibility = () => {
+      // Returning to the tab must catch up even while the socket is live —
+      // the 4s poll stands down in that case (wsLiveRef).
+      if (!document.hidden) refresh();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    async function connect() {
+      if (disposed) return;
+      const retryLater = () => {
+        if (!disposed) retryTimer = setTimeout(() => void connect(), 30_000);
+      };
+      try {
+        const res = await fetch(
+          `/api/realtime-token?orderId=${encodeURIComponent(orderId)}&t=${encodeURIComponent(token)}`,
+          { cache: "no-store" },
+        );
+        // A 429/404/offline blip must not kill push for the page's lifetime —
+        // the limiter makes a fixed 30s re-mint cost ~2 requests/min, safe.
+        if (!res.ok) {
+          retryLater();
+          return;
+        }
+        const data = (await res.json()) as { ok: boolean; token?: string };
+        if (disposed || !data.ok || !data.token) {
+          retryLater();
+          return;
+        }
+        const proto = location.protocol === "https:" ? "wss:" : "ws:";
+        const ws = new WebSocket(
+          `${proto}//${location.host}/api/realtime?token=${encodeURIComponent(data.token)}`,
+        );
+        socket = ws;
+        ws.onopen = () => {
+          wsLiveRef.current = true;
+        };
+        ws.onmessage = (event) => {
+          if (typeof event.data !== "string" || event.data === "pong") return;
+          try {
+            const msg = JSON.parse(event.data) as { type?: string };
+            if (msg.type === "orders-changed") refresh();
+          } catch {
+            // unknown frame — ignore
+          }
+        };
+        ws.onclose = () => {
+          wsLiveRef.current = false;
+          // The token expires in 2 minutes; re-mint on a slow backoff.
+          retryLater();
+        };
+        ws.onerror = () => {
+          try {
+            ws.close();
+          } catch {
+            // already closed
+          }
+        };
+      } catch {
+        // offline or no realtime — the polling fallback keeps the page fresh
+        retryLater();
+      }
+    }
+
+    void connect();
+    return () => {
+      disposed = true;
+      if (retryTimer) clearTimeout(retryTimer);
+      if (pendingRefresh) clearTimeout(pendingRefresh);
+      document.removeEventListener("visibilitychange", onVisibility);
+      wsLiveRef.current = false;
+      socket?.close();
     };
   }, [orderId, token, terminal]);
 

@@ -11,6 +11,7 @@ import {
 } from "@/lib/server/orders";
 import { requireStaff } from "@/lib/server/session";
 import { userMessageOf } from "@/lib/server/guard";
+import { logEvent } from "@/lib/server/log";
 
 /**
  * Order actions.
@@ -41,7 +42,18 @@ async function checkRateLimit(
       READ_LIMIT?: { limit(key: string): Promise<{ success: boolean }> };
     };
     const binding = env[bindingName];
-    if (!binding) return null;
+    if (!binding) {
+      // Node runtime (local dev/tests) has no edge binding by design; inside
+      // Workers a missing binding silently removes the ceiling — make it
+      // visible instead of failing open unnoticed.
+      if (
+        typeof navigator !== "undefined" &&
+        /Cloudflare-Workers/i.test(navigator.userAgent)
+      ) {
+        logEvent("warn", "ratelimit.binding_missing", { message: bindingName });
+      }
+      return null;
+    }
     const { success } = await binding.limit(key);
     if (!success) return message;
     return null;

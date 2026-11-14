@@ -573,7 +573,7 @@ export async function placeOrder(
     // Notify AFTER the transaction commits — notifying inside the callback
     // races the commit (measured ~2.9s instead of milliseconds).
     if (result.ok) {
-      await notifyOrdersChanged();
+      await notifyOrdersChanged(result.order.id);
       await notifyNewOrderPush();
     }
     return result;
@@ -817,6 +817,24 @@ export async function getOrderForStatus(
   };
 }
 
+/**
+ * Capability check for the customer realtime token: does this (orderId,
+ * accessToken) pair exist? A cheap indexed lookup — the status view (with
+ * its PII decryption) stays behind getOrderForStatus.
+ */
+export async function verifyOrderAccessToken(
+  orderId: string,
+  token: string,
+): Promise<boolean> {
+  if (!isUuid(orderId) || !isUuid(token)) return false;
+  const [row] = await db
+    .select({ id: orders.id })
+    .from(orders)
+    .where(and(eq(orders.id, orderId), eq(orders.accessToken, token)))
+    .limit(1);
+  return Boolean(row);
+}
+
 // ---------- Console board ----------
 
 export const LEGAL_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
@@ -923,7 +941,7 @@ export async function transitionOrder(input: {
     return { ok: false, error: "تعذر تحديث الطلب — حاول مرة أخرى." };
   }
 
-  await notifyOrdersChanged();
+  await notifyOrdersChanged(orderId);
   return { ok: true };
 }
 
@@ -996,7 +1014,7 @@ export async function undoLastTransition(input: {
     return { ok: false, error: "تعذر التراجع — حاول مرة أخرى." };
   }
 
-  await notifyOrdersChanged();
+  await notifyOrdersChanged(input.orderId);
   return { ok: true };
 }
 

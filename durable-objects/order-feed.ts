@@ -19,6 +19,8 @@ import {
 
 interface BroadcastBody {
   at?: number;
+  /** When set, the tickle targets staff + that one order's customer. */
+  orderId?: string;
 }
 
 export class OrderFeed extends DurableObject<CloudflareEnv> {
@@ -48,7 +50,15 @@ export class OrderFeed extends DurableObject<CloudflareEnv> {
         version: this.version,
         at: body.at ?? Date.now(),
       });
-      for (const ws of this.ctx.getWebSockets()) {
+      // Tag-scoped fan-out: staff hear every change; a customer socket only
+      // wakes for its own order (no order id = conservative global tickle).
+      const targets = body.orderId
+        ? [
+            ...this.ctx.getWebSockets("staff"),
+            ...this.ctx.getWebSockets(`customer:${body.orderId}`),
+          ]
+        : this.ctx.getWebSockets();
+      for (const ws of targets) {
         try {
           ws.send(payload);
         } catch {
@@ -75,7 +85,12 @@ export class OrderFeed extends DurableObject<CloudflareEnv> {
     const pair = new WebSocketPair();
     const client = pair[0];
     const server = pair[1];
-    this.ctx.acceptWebSocket(server);
+    // Tags scope the future: any payload added to this DO can only reach the
+    // audience it names (staff vs one customer's order), so a role change
+    // here can never silently fan customer data out to staff or vice versa.
+    this.ctx.acceptWebSocket(server, [
+      claims.role === "customer" ? `customer:${claims.oid ?? ""}` : "staff",
+    ]);
     server.send(
       JSON.stringify({
         type: "hello",
