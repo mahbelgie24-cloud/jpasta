@@ -46,10 +46,15 @@ test.describe("menu", () => {
       expect(total).toBeGreaterThan(0);
 
       // Search by the first product's own name — no hardcoded catalog facts.
+      // Typed keystrokes (trusted events), not fill(): React 19 in WebKit
+      // does not observe Playwright's synthetic input events on this field,
+      // and typing is the real user journey anyway.
       const first =
         (await page.locator("article h3").first().textContent()) ?? "";
       const query = first.trim();
-      await page.getByLabel("ابحث في القائمة").fill(query);
+      const search = page.getByLabel("ابحث في القائمة");
+      await search.click();
+      await search.pressSequentially(query);
       const results = page.locator("article h3");
       await expect(results.first()).toHaveText(query);
       expect(await results.count()).toBeLessThanOrEqual(total);
