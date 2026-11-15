@@ -1,0 +1,203 @@
+# Handoff — برنامج النخبة، الجلسة التالية (2026-11-15)
+
+> اقرأ هذا الملف كاملاً قبل أي تنفيذ. هو التسليم الرسمي من الجلسة السابقة:
+> ما أُنجز، أين توقف العمل بالضبط، ما الذي جُرّب واستُبعد، البيئات ومزالقها،
+> والآلية الإلزامية للعمل. المراجع الأعلى: `docs/technical-spec.md` ثم
+> `AGENTS.md` ثم `docs/brand/brand.md` — أي تعارض يرجع للمواصفة.
+
+---
+
+## 1. لقطة الحالة الحالية (دقيقة لحظة التسليم)
+
+- **الفرع**: `elite/design-system` — 12 التزاماً عن `main`، مرفوع ومتصل بـ origin.
+- **PR**: [#5](https://github.com/mahbelgie24-cloud/jpasta/pull/5) مفتوح.
+- **CI على آخر التزام `e329030`**: `verify` ✅ · `lighthouse` ✅ · `e2e` ❌ —
+  والفشل **محصور في خطوة `Cross-browser smoke`**: رحلة واحدة
+  `[webkit] e2e/storefront.spec.ts:35 menu @smoke`. رحلات chromium الكاملة
+  (journeys + axe + visual) خضراء في نفس التشغيل.
+- **الدمج موقوف عمداً**: بوابة الـ PR تمنع الدمج قبل اخضرار e2e. هذا هو العمل
+  المعلق الأول والوحيد القابل للحظر.
+- **الإنتاج**: `jpasta.ascendly.space` يعمل على `main@76c6c73` (قبل البرنامج).
+  لم يُنشر هذا الفرع بعد. لا توجد migrations جديدة (كل التغييرات كودية).
+- **الشجرة المحلية**: نظيفة، كل شيء مرفوع.
+- البوابات المحلية كلها خضراء: vitest **141/141** (28 ملفاً) · coverage gate
+  (75.9/68.3/80.7/78.1 فوق عتبات 74/66/78/76) · chromium **48/48** · firefox
+  smoke 3/3 · lint 0 · contrast 14/14 · build · build:cf · wrangler dry-run.
+
+## 2. المهمة المعلقة رقم 1: رحلة webkit المفشلة (شخّص قبل أن تلمس)
+
+### العرض
+
+`[webkit] menu @smoke`: بعد كتابة اسم أول طبق في حقل البحث والتحقق من نتائج
+التصفية، الرحلة تنتظر 60 ثانية على
+`getByRole('button', { name: 'مسح البحث' })` ثم تفشل. نفس الرحلة تمر على
+chromium وfirefox. سجل CI يقول `waiting for …` **بلا** سطر
+`locator resolved to` — أي أن الزر غير موجود في لحظة البحث.
+
+### ما جُرّب واستُبعد (لا تعيد هذه الدروب)
+
+1. ~~`fill()` أحداث اصطناعية لا يسمعها React 19 في webkit~~ — استُبدلت
+   بـ `pressSequentially` (أحداث لوحة مفاتيح موثوقة) و**الفشل نفسه**.
+2. ~~الزر متداخل داخل `<label>` فتبتلعه شجرة الوصول في WebKit~~ — أُعيدت
+   البنية إلى أقارب (`htmlFor`/`id="menu-search"`) و**الفشل نفسه**.
+3. ~~زر المسح الأصلي لـ webkit (`::-webkit-search-cancel-button`) يحجب زرنا~~ —
+   أُخفي CSS و**الفشل نفسه** (يبقى الإخفاء: قرارات التصميم الثلاثة أعلاه
+   صحيحة ومستقلة بذاتها، لا تُرجع).
+
+### ما نعرفه يقيناً
+
+- تأكيدات التصفية (`results.first() == query` و`count ≤ total`) **تمر حتى لو
+  لم تتحدّث حالة React** — لأن أول بطاقة تحتوي نص الاستعلام أصلاً. إذن لم
+  نثبت قط أن `onChange` يعمل/لا يعمل في webkit؛ فرضية «query === ""» ما زالت
+  حية، وفرضية «الزر موجود وPlaywright لا يراه» ما زالت حية.
+- الزر: `{query && <button aria-label="مسح البحث">}` في
+  `components/menu/menu-shell.tsx` (~سطر 175 بعد إعادة الهيكلة).
+
+### خطوات التشخيص التالية — بالترتيب
+
+**الشرط المسبق**: `sudo npx playwright install-deps webkit` — أمر المالك
+(الوكيل لا يشغّل sudo بنفسه). بدونه لا يوجد webkit محلياً ولا رؤية.
+
+1. شغّل محلياً بالأثر الكامل:
+   `npx playwright test --project=webkit e2e/storefront.spec.ts --trace-on`
+   ثم `npx playwright show-trace test-results/…` — انظر DOM الحية والـ console
+   لحظة الفشل (وليس تخميناً من سجل CI).
+2. افصل الفرضيتين بقياس مباشر (probe داخل الاختبار مؤقتاً أو `--debug`):
+   - `page.locator('button[aria-label="مسح البحث"]').count()` بعد الكتابة —
+     إن كان **1 في DOM** لكن getByRole لا يراه → مشكلة ARIA في محرك webkit مع
+     Playwright → الحل على مستوى الاختبار: استعمل CSS locator بدل getByRole
+     لهذا التأكيد (البنية الدلالية القائمة تبقى كما هي — هي صحيحة).
+   - إن كان **0 في DOM** → `onChange` فعلاً لا يحدّث الحالة في webkit →
+     افحص console لأي خطأ hydration/React، وجرّب `type="text"` + `inputMode`
+     بدل `type="search"` للتحقق من خلل webkit مع حقول search في React 19.
+3. **قاعدة صارمة**: لا تحذف/تضعّف الرحلة لتخضرّ. رحلة البحث رحلة زبون حقيقية.
+4. تحقق محلياً قبل أي دفع — كل دورة CI = ~7 دقائق، والمحلي ثوانٍ.
+
+## 3. بعد webkit: الدمج ثم النشر (دفتر `docs/DEPLOY.md` §4–§5 حرفياً)
+
+1. `gh pr checks 5` أخضر كامل → دمج الـ PR (merge commit يحفظ سرد الالتزامات).
+2. حذف الفرع بعد الدمج (`git branch -d` + `git push origin --delete`).
+3. النشر من الجذر:
+   ```bash
+   set -a && source .env.local && source .env.production.local && set +a
+   NEXT_PUBLIC_SITE_URL="https://jpasta.ascendly.space" npm run deploy
+   ```
+   (`npm run deploy` = check-env → OpenNext build → wrangler deploy).
+4. **تحقق ما بعد النشر** (DEPLOY.md §5): health، رأس CSP على مسار ديناميكي
+   وثابت، 20×200 على `/menu`، رحلة طلب حقيقية على جهازين (الـ DO)، وصورة طبل.
+   - السطر الجديد: دخان مستقبِل CSP (توقع `204`).
+5. إن لزم التراجع: `npx wrangler rollback` · السجلات: `npx wrangler tail`.
+6. **Service Worker**: رُفع إلى `jpasta-v6` مع هذا الفرع (الهيكل تغيّر) —
+   أجهزة الموظفين ستتحدث تلقائياً بعد أول زيارة.
+
+## 4. بيئات العمل ومزالقها (كل واحد كلف وقتاً حقيقياً — لا تتعلمها بالطريقة الصعبة)
+
+- **Postgres الاختباري**: حاوية `jpasta-test-pg` (postgres:17 على
+  `127.0.0.1:54330`، المستخدم postgres/postgres). قاعدتان: `jpasta_test`
+  (وحدات+تكامل) و`jpasta` (اصطلاح التطوير لـ `next start`/E2E).
+  التهيئة: `docker run -d --name jpasta-test-pg -e POSTGRES_PASSWORD=postgres
+-e POSTGRES_DB=jpasta_test -p 127.0.0.1:54330:5432 postgres:17` ثم
+  migrate+seed للقاعدتين (لباسطة `jpasta`: صدّر `.env.local` ووجّه
+  DATABASE_URL ثم `npm run db:migrate && npm run db:seed -- --force`).
+- **env لـ vitest**: `export TEST_DATABASE_URL=…/jpasta_test` (الإعدادات
+  تحوّله إلى DATABASE_URL داخلياً).
+- **env لـ E2E**: صدّر **كلاهما** `TEST_DATABASE_URL` و`DATABASE_URL`
+  → `…/jpasta_test`، **بعد** `set -a; source .env.local` (لأسرار صحيحة).
+  سبب القاعدة: `.env.production.local` يحمل URL Neon **إنتاجياً** وPIN/pepper
+  إنتاجيين ويتفوق على `.env.local` تحت `next start` (NODE_ENV=production) —
+  دفعة E2E قديمة فشلت «الرمز غير صحيح» ثلاث مرات بسببها.
+- **لا تكتب `pkill -f 'next start'`** — النمط يطابق أمر الصدفة نفسه ويقتل
+  العملية. استعمل `fuser -k 3220/tcp`.
+- **`reuseExistingServer` مفعّل محلياً** — خادم قديم ببيئة خاطئة يُعاد استخدام
+  بصمت؛ اقتل المنفذ 3220 قبل أي تشغيل.
+- **النسخ الاحتياطي**: `backup-db.mjs` يفترض حاوية `jpasta-pg` (متوقفة) —
+  مرر `JPASTA_DB_CONTAINER=jpasta-test-pg`؛ و`BACKUP_ENCRYPTION_KEY` يجب أن
+  يُصدَّر (`set -a` قبل المصدر) وإلا خرجت النسخة غير مشفّرة. تدريب استعادة
+  كامل مُنفّذ وموثق (audit/05 §5) — كرره على أول نسخة إنتاجية حقيقية.
+- **Next.js معدّل**: اقرأ الدليل المعني من `node_modules/next/dist/docs/`
+  قبل أي API (أمثلة: `preload` في next/image بدل `priority`؛ `proxy.ts` بدل
+  middleware).
+
+## 5. الآلية الإلزامية — دورة النخبة (كما عملناها، بلا اختصار)
+
+1. **فهم**: أعد صياغة القيود غير البديهية في كتلة قصيرة قبل أي فعل.
+2. **خطة**: لأي عمل متعدد الخطوات — استكشف، صمم، اعرض للاعتماد قبل الكود
+   (وضع الخطة). عنصر خارطة طريق واحد في كل مرة.
+3. **تنفيذ**: أصغر حل صحيح بأسلوب الكود المحيط. لا تجريديات استكشافية.
+4. **مراجعة ذاتية عدائية** قبل التسليم: أعد قراءة diff كمراجع معادٍ.
+5. **تحقق**: شغّل البوابات الحقيقية وأبلغ الأرقام حرفياً (pass/fail). لا نجاح
+   غير متحقق — ولا مبرر لنتيجة فاشلة.
+6. **بوابات الوكلاء**: `elite-code-reviewer` على كل diff جوهري؛
+   `elite-security-auditor` إلزامي حين يلمس auth/input/secrets/شبكة؛
+   `elite-critic` للتسليمات عالية المخاطر — REVISE تعالج فوراً وتُعاد البوابة.
+7. **تسليم صادق**: commit اصطلاحي + تحديث الوثائق + قائمة «ما لم يُنجز ولماذا».
+8. **انضباط السياق**: وكلاء متوازيون ≤2؛ لا تكرر عمل وكيّل؛ لا تخمين بعيداً
+   عن الرؤية المحلية (درس webkit: 3 دورات CI على فرضيات قبل طلب sudo —
+   اطلب الرؤية أبكر).
+
+## 6. الثوابت التي لا تُمس (ملخص — المصدر AGENTS.md والمواصفة)
+
+المال بالأقروض عبر `lib/pricing.ts` فقط (parseFloat محظور بالـ lint) ·
+idempotency مربوطة بالحمولة · المصدر server-owned · RBAC على السيرفر في كل
+مسار · RTL بخصائص منطقية فقط · tokens من globals.css فقط (لا hex) · أهداف
+لمس ≥44px · reduced-motion في كل مكان · صحة المحتوى (لا «معجونة اليوم») ·
+`npm run build` بوابة النشر · كل تغيير shell يرفع `VERSION` في `public/sw.js`
+(الآن v6) · لا WAF/ميزات جديدة بقرار مالك.
+
+## 7. طابور العمل بعد فتح الـ PR (بالأولوية)
+
+1. **P0 — webkit أخضر → دمج → نشر → تحقق حي** (§2–§3 أعلاه).
+2. **P1 — خطوات مالك**: تفعيل Cloudflare Web Analytics (RUM — يحسم سؤال LCP
+   `/` ثنائي النمط المُفهرس في audit/05 §5) · `sudo npx playwright
+install-deps webkit` · إعادة أمر الاستعادة على أول نسخة إنتاجية · أسبوع
+   التشغيل المتوازي · قرار الاحتفاظ/DSAR (المدة).
+3. **P2 — عند الإشارة**: بناء أداة الاحتفاظ/DSAR (آلية المالك + سجل تدقيق
+   دون مساس order_status_history) · WAF/Turnstile عند أول إشارة إساءة · رفع
+   عتبات التغطية (سقّة لأعلى فقط).
+
+## 8. خريطة الملفات الساخنة
+
+`proxy.ts` (CSP tiers + reporting headers) · `lib/csp-nonce.ts` ·
+`lib/server/rate-limit.ts` (شكل limit({key}) الوحيد) ·
+`lib/server/{orders,session,console,order-feed}.ts` · `app/api/*` ·
+`components/ui/*` (primitives) · `components/menu/{menu-shell,cart-drawer,item-sheet}.tsx` ·
+`durable-objects/order-feed.ts` · `worker.ts` · `e2e/helpers.ts` ·
+`playwright.config.ts` · `vitest.config.mts` · `lighthouserc.json` ·
+`docs/{technical-spec,SECURITY,DEPLOY,brand/brand}.md` ·
+`docs/audit/05-elite-elevation-2026-11-15.md` (سجل البرنامج بأكمله).
+
+---
+
+## 9. المطالبة الجاهزة للصق في الجلسة الجديدة
+
+> انسخ الكتلة التالية كما هي في الجلسة الجديدة.
+
+```text
+نفّذ المهمة التالية بالدورة النخبوية كاملة دون اختصار أي بوابة (فهم ← خطة ←
+تنفيذ ← مراجعة عدائية ← تحقق حرفي ← بوابات الوكلاء ← تسليم صادق).
+
+أولاً: اقرأ docs/HANDOFF-ELITE-2026-11-15.md كاملاً — هو التسليم الرسمي من
+الجلسة السابقة (الحالة الدقيقة للمشروع وPR #5، شجرة تشخيص رحلة webkit
+المفشلة بما جُرّب واستُبعد، بيئات العمل ومزالقها المصقولة بالخبرة، طابور
+العمل بالأولوية). ثم راجع docs/technical-spec.md وAGENTS.md و
+docs/brand/brand.md — أي تعارض ترجع فيه للمواصفة.
+
+المهمة الفورية (P0): المهمة المعلقة رقم 1 في ملف التسليم — رحلة webkit
+المفشلة التي تحتجز دمج PR #5. الشرط المسبق: اطلب مني تشغيل
+`sudo npx playwright install-deps webkit` (لا تشغّل sudo بنفسك). بعدها
+شخّص بالرؤية المحلية (trace + فحص DOM فعلي) وفق خطوات القسم 2 بالترتيب،
+وأصلح الجذر الحقيقي. قاعدة صارمة: لا تحذف أو تضعّف الرحلة لتخضرّ، ولا دفع
+جديد قبل التحقق محلياً (كل دورة CI = 7 دقائق، والمحلي ثوانٍ).
+
+بعد الاخضرار الكامل للـ PR: ادمجه في main (merge commit يحفظ السرد)، احذف
+الفرع، ثم انشر الإنتاج وفق docs/DEPLOY.md §4–§5 حرفياً، وتحقق حياً كاملاً:
+health، رأس CSP على مسارين، 20×200 على /menu، رحلة طلب حقيقية على جهازين
+(تأكيد الـ DO < ثانية)، ودخان مستقبِل CSP = 204. أي فشل نشر:
+`npx wrangler rollback` فوراً وأبلغني.
+
+ثم تابع طابور P1/P2 في ملف التسليم بالترتيب نفسه. كل خطوة تلامس
+auth/money/PII تمر على elite-security-auditor، والتسليمات عالية المخاطر
+على elite-critic قبل عرضها عليّ. لا تنفق سنتاً واحداً ولا تفعّل أي خدمة
+مدفوعة. أبلغني بنتائج كل بوابة حرفياً (أرقام pass/fail)، وعند أي قرار
+حقيقي توقف واسألني — لا تفترض إجابتي.
+```
