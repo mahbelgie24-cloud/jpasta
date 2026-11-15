@@ -144,13 +144,20 @@ function MenuContent({
   return (
     <>
       <div className="container-page mt-6">
-        <label className="relative block">
-          <span className="sr-only">ابحث في القائمة</span>
+        {/* Siblings, not label-nested: WebKit's accessibility tree swallows
+            interactive elements inside a <label>, which made the clear
+            button invisible to Safari users (and untestable). The label
+            pairs with the input through htmlFor/id instead. */}
+        <div className="relative block">
+          <label htmlFor="menu-search" className="sr-only">
+            ابحث في القائمة
+          </label>
           <Search
             className="pointer-events-none absolute start-4 top-1/2 size-5 -translate-y-1/2 text-text-secondary"
             aria-hidden
           />
           <input
+            id="menu-search"
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -167,7 +174,7 @@ function MenuContent({
               <X className="size-4" aria-hidden />
             </button>
           )}
-        </label>
+        </div>
       </div>
 
       {/* sticky category nav */}
