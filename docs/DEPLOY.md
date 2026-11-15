@@ -219,4 +219,5 @@ openssl enc -d -aes-256-cbc -pbkdf2 -pass env:BACKUP_ENCRYPTION_KEY \
 - [ ] `npx wrangler deploy --dry-run`
 - [ ] `npm run deploy`
 - [ ] §5 verification, including realtime and the 00:30 report
+- [ ] CSP sink smoke: `curl -s -o /dev/null -w '%{http_code}' -X POST https://jpasta.ps/api/csp-report -H 'content-type: application/csp-report' -d '{"csp-report":{"effective-directive":"smoke"}}'` → expect `204` (proves the violation endpoint went live with the deploy)
 - [ ] one-week parallel run before retiring any old process
