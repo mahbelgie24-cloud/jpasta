@@ -1,5 +1,5 @@
 /* JPasta service worker — app shell, offline ordering, push-ready. */
-const VERSION = "jpasta-v5";
+const VERSION = "jpasta-v6";
 const SHELL = `${VERSION}-shell`;
 const MEDIA = `${VERSION}-media`;
 
