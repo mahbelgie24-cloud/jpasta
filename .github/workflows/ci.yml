@@ -147,7 +147,7 @@ jobs:
       # `webServer` boots `next start -p 3220`; reuseExistingServer is off in CI.
       # The visual baselines in e2e/visual.spec.ts-snapshots/ must be committed.
       - name: Journeys + axe + visual
-        run: npx playwright test
+        run: npx playwright test --project=chromium
 
       # Cross-browser smoke (@smoke journeys) — catches engine-specific
       # breakage in landing/menu + the console PIN pad on webkit/firefox.
