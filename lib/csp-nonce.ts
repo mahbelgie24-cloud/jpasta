@@ -50,6 +50,27 @@ function wsOrigin(origin?: string): string {
   }
 }
 
+/**
+ * `upgrade-insecure-requests` protects HTTPS pages from mixed content, and
+ * production is HTTPS-only — so it ships there. On an HTTP page (local
+ * `next start`, E2E) WebKit applies it even to 127.0.0.1 and upgrades the
+ * same-origin JS chunks to a TLS port the dev server does not speak: every
+ * chunk request fails, hydration never runs, and React is dead (the
+ * cross-browser smoke gate caught this — Chromium/Firefox exempt localhost,
+ * webkit does not). HTTP pages omit the directive; unknown origins keep the
+ * secure default.
+ */
+function upgradeDirective(origin?: string): string {
+  if (!origin) return "upgrade-insecure-requests";
+  try {
+    return new URL(origin).protocol === "https:"
+      ? "upgrade-insecure-requests"
+      : "";
+  } catch {
+    return "upgrade-insecure-requests";
+  }
+}
+
 export function buildCsp(nonce: string, origin?: string): string {
   // React needs eval() for its development debugging features; production
   // never does. Keep the relaxation strictly scoped to `next dev`.
@@ -70,8 +91,10 @@ export function buildCsp(nonce: string, origin?: string): string {
     "manifest-src 'self'",
     `report-uri ${CSP_REPORT_URI}`,
     "report-to csp-endpoint",
-    "upgrade-insecure-requests",
-  ].join("; ");
+    upgradeDirective(origin),
+  ]
+    .filter(Boolean)
+    .join("; ");
 }
 
 /**
@@ -97,6 +120,8 @@ export function buildStaticCsp(origin?: string): string {
     "manifest-src 'self'",
     `report-uri ${CSP_REPORT_URI}`,
     "report-to csp-endpoint",
-    "upgrade-insecure-requests",
-  ].join("; ");
+    upgradeDirective(origin),
+  ]
+    .filter(Boolean)
+    .join("; ");
 }

@@ -46,6 +46,28 @@ describe("CSP builder (v2 hardening)", () => {
     expect(csp).not.toMatch(/connect-src[^\n;]*https?:\/\//);
   });
 
+  it("scopes upgrade-insecure-requests to HTTPS origins", () => {
+    // WebKit applies the directive even on 127.0.0.1 over HTTP: the
+    // same-origin chunks get upgraded to a TLS port the dev server does not
+    // speak, hydration dies, and React never runs. Production (HTTPS-only)
+    // keeps the directive; unknown origins keep the secure default.
+    expect(
+      buildCsp(generateCspNonce(), "https://jpasta.ascendly.space"),
+    ).toContain("upgrade-insecure-requests");
+    expect(buildCsp(generateCspNonce(), "http://127.0.0.1:3220")).not.toContain(
+      "upgrade-insecure-requests",
+    );
+    // Both tiers must keep the directive on https origins — deleting it from
+    // the static tier alone would otherwise slip past the http-only checks.
+    expect(buildStaticCsp("https://jpasta.ascendly.space")).toContain(
+      "upgrade-insecure-requests",
+    );
+    expect(buildStaticCsp("http://127.0.0.1:3220")).not.toContain(
+      "upgrade-insecure-requests",
+    );
+    expect(buildCsp(generateCspNonce())).toContain("upgrade-insecure-requests");
+  });
+
   it("keeps the static tier free of external hosts", () => {
     const csp = buildStaticCsp("https://jpasta.ps");
     expect(csp).toContain("connect-src 'self' wss://jpasta.ps");
