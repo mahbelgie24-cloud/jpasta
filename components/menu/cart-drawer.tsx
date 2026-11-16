@@ -9,12 +9,17 @@ import {
   HandPlatter,
   Loader2,
   MessageCircle,
+  ShoppingBag,
   Trash2,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonStyles } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Price } from "@/components/ui/price";
+import { RadioCardGroup } from "@/components/ui/radio-group";
+import { SelectField } from "@/components/ui/select";
 import { Sheet } from "@/components/ui/sheet";
 import { Stepper } from "@/components/ui/stepper";
+import { TextField } from "@/components/ui/field";
 import { useCart } from "@/components/menu/cart-context";
 import {
   PAYMENT_METHOD_LABELS,
@@ -39,6 +44,14 @@ import { nextIdempotencyScope, type IdempotencyScope } from "@/lib/idempotency";
  */
 
 type OrderType = "delivery" | "pickup";
+
+/** Validation is per-field; cart-level problems surface as formError. */
+interface FieldErrors {
+  name?: string;
+  phone?: string;
+  address?: string;
+  zone?: string;
+}
 
 export function CartDrawer({
   open,
@@ -78,7 +91,8 @@ export function CartDrawer({
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [note, setNote] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [busy, setBusy] = useState(false);
   const [offlineQueued, setOfflineQueued] = useState<number | null>(null);
   const [placed, setPlaced] = useState<{
@@ -222,41 +236,53 @@ export function CartDrawer({
     // A queued-offline order must never pin the drawer to its confirmation
     // screen on every subsequent open (v1 defect).
     setOfflineQueued(null);
-    setError(null);
+    setFormError(null);
     onClose();
   }
 
   async function submit() {
     const digits = phone.replace(/\D/g, "");
     if (cart.lines.length === 0) {
-      setError("السلة فاضية — أضف طبقاً أولاً.");
+      setFormError("السلة فاضية — أضف طبقاً أولاً.");
       return;
     }
     if (cart.lines.some((l) => l.unavailable)) {
-      setError("بعض الأصناف لم تعد متاحة — احذفها وأعد المحاولة.");
-      return;
-    }
-    if (name.trim().length < 2) {
-      setError("اكتب اسمك حتى نعرف لمن الطلب.");
-      return;
-    }
-    if (digits.length < 9) {
-      setError("رقم الهاتف غير صحيح — تأكد منه حتى نقدر نتواصل.");
-      return;
-    }
-    if (orderType === "delivery" && address.trim().length < 5) {
-      setError("اكتب العنوان بالتفصيل حتى يوصلك الطلب بسرعة.");
-      return;
-    }
-    if (orderType === "delivery" && !zoneId) {
-      setError(zonesError ?? "اختر منطقة التوصيل حتى نعرف رسم التوصيل.");
+      setFormError("بعض الأصناف لم تعد متاحة — احذفها وأعد المحاولة.");
       return;
     }
     if (noPaymentMethod) {
-      setError("لا توجد طريقة دفع متاحة لهذا النوع من الطلبات حالياً.");
+      setFormError("لا توجد طريقة دفع متاحة لهذا النوع من الطلبات حالياً.");
       return;
     }
-    setError(null);
+    const next: FieldErrors = {};
+    if (name.trim().length < 2) {
+      next.name = "اكتب اسمك حتى نعرف لمن الطلب.";
+    }
+    if (digits.length < 9) {
+      next.phone = "رقم الهاتف غير صحيح — تأكد منه حتى نقدر نتواصل.";
+    }
+    if (orderType === "delivery" && address.trim().length < 5) {
+      next.address = "اكتب العنوان بالتفصيل حتى يوصلك الطلب بسرعة.";
+    }
+    if (orderType === "delivery" && !zoneId) {
+      next.zone = zonesError ?? "اختر منطقة التوصيل حتى نعرف رسم التوصيل.";
+    }
+    if (Object.values(next).some(Boolean)) {
+      setFieldErrors(next);
+      // Move focus to the first invalid field so keyboard and screen-reader
+      // users land where the fix is needed instead of hunting for the error.
+      const focusOrder: Array<[keyof FieldErrors, string]> = [
+        ["name", "cust-name"],
+        ["phone", "cust-phone"],
+        ["address", "cust-address"],
+        ["zone", "cust-zone"],
+      ];
+      const firstInvalid = focusOrder.find(([key]) => next[key]);
+      if (firstInvalid) document.getElementById(firstInvalid[1])?.focus();
+      return;
+    }
+    setFieldErrors({});
+    setFormError(null);
     setBusy(true);
     const payload = {
       channel:
@@ -296,7 +322,7 @@ export function CartDrawer({
         // Don't retain customer PII in memory after a successful submit.
         resetCustomer();
       } else {
-        setError(result.error);
+        setFormError(result.error);
       }
     } catch {
       // network failure — queue the payload; the replay carries the SAME
@@ -310,8 +336,16 @@ export function CartDrawer({
     }
   }
 
-  const inputClass =
-    "min-h-12 w-full rounded-md border border-cream-300 bg-cream-50 px-4 text-sm outline-none transition-colors placeholder:text-ink-soft/50 focus:border-basil-500";
+  /** Sets the value and clears that field's validation message. */
+  function fieldSetter<T>(
+    set: (value: T) => void,
+    key: keyof FieldErrors,
+  ): (value: T) => void {
+    return (value) => {
+      set(value);
+      setFieldErrors((current) => ({ ...current, [key]: undefined }));
+    };
+  }
 
   return (
     <Sheet
@@ -321,11 +355,11 @@ export function CartDrawer({
     >
       {offlineQueued !== null && !placed ? (
         <div className="py-6 text-center" role="status" aria-live="polite">
-          <CloudUpload className="mx-auto size-14 text-bronze" aria-hidden />
+          <CloudUpload className="mx-auto size-14 text-warning" aria-hidden />
           <h3 ref={confirmationRef} tabIndex={-1} className="mt-4 type-title">
             طلبك محفوظ وسيتولى الإرسال
           </h3>
-          <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-ink-soft">
+          <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-text-secondary">
             الشبكة منقطعة الآن — عند عودة الاتصال يُرسل طلبك تلقائياً وبنفس
             الرقم، بدون تكرار
             {offlineQueued > 1 ? ` (${offlineQueued} طلبات بالانتظار)` : ""}.
@@ -338,21 +372,18 @@ export function CartDrawer({
         </div>
       ) : placed ? (
         <div className="py-6 text-center" role="status" aria-live="polite">
-          <CheckCircle2
-            className="mx-auto size-14 text-basil-600"
-            aria-hidden
-          />
+          <CheckCircle2 className="mx-auto size-14 text-success" aria-hidden />
           <h3 ref={confirmationRef} tabIndex={-1} className="mt-4 type-title">
             طلبك رقم {placed.orderNumber} وصلنا
           </h3>
-          <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-ink-soft">
+          <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-text-secondary">
             المحل بدأ يشوف طلبك الآن — تابع حالته لحظة بلحظة، وبنبلغك لما يكون
             جاهز.
           </p>
           <div className="mt-6 flex flex-col gap-3">
             <Link
               href={`/order/status/${placed.orderId}?t=${placed.accessToken}`}
-              className="inline-flex min-h-12 items-center justify-center rounded-full bg-basil-700 px-6 font-bold text-cream-50 shadow-card transition-colors hover:bg-basil-600"
+              className={buttonStyles("primary", "md", "min-h-12 w-full")}
             >
               تابع حالة طلبك
             </Link>
@@ -362,20 +393,20 @@ export function CartDrawer({
           </div>
         </div>
       ) : cart.lines.length === 0 ? (
-        <div className="py-10 text-center">
-          <p className="text-lg font-bold text-ink">سلتك فاضية</p>
-          <p className="mt-2 text-sm text-ink-soft">
-            تصفّح القائمة وأضف ما يشتهيه قلبك 🍝
-          </p>
-          <div className="mt-6">
+        <EmptyState
+          icon={ShoppingBag}
+          title="سلتك فاضية"
+          body="تصفّح القائمة وأضف ما يشتهيه قلبك"
+          action={
             <Button variant="secondary" onClick={handleClose}>
               تصفّح القائمة
             </Button>
-          </div>
-        </div>
+          }
+        />
       ) : (
         <form
           className="space-y-6"
+          noValidate
           onSubmit={(event) => {
             event.preventDefault();
             void submit();
@@ -386,23 +417,23 @@ export function CartDrawer({
             {cart.lines.map((l) => (
               <li
                 key={l.key}
-                className="rounded-xl border border-cream-200 bg-cream-100 p-3.5"
+                className="rounded-xl border border-border-soft bg-surface-raised p-3.5"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-bold text-ink">{l.nameAr}</p>
+                    <p className="font-bold text-text-primary">{l.nameAr}</p>
                     {l.detailAr && (
-                      <p className="mt-0.5 text-xs leading-relaxed text-ink-soft">
+                      <p className="mt-0.5 text-xs leading-relaxed text-text-secondary">
                         {l.detailAr}
                       </p>
                     )}
                     {l.note && (
-                      <p className="mt-1 text-xs text-bronze">
+                      <p className="mt-1 text-xs text-warning">
                         ملاحظة: {l.note}
                       </p>
                     )}
                     {l.unavailable && (
-                      <span className="mt-1.5 inline-flex rounded-full bg-terracotta/10 px-2 py-0.5 text-[11px] font-bold text-terracotta">
+                      <span className="mt-1.5 inline-flex rounded-full bg-danger/10 px-2 py-0.5 text-[11px] font-bold text-danger">
                         غير متاح الآن
                       </span>
                     )}
@@ -411,7 +442,7 @@ export function CartDrawer({
                     type="button"
                     onClick={() => cart.remove(l.key)}
                     aria-label={`حذف ${l.nameAr} من السلة`}
-                    className="flex size-11 shrink-0 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-terracotta/10 hover:text-terracotta"
+                    className="flex size-11 shrink-0 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-danger/10 hover:text-danger"
                   >
                     <Trash2 className="size-4" aria-hidden />
                   </button>
@@ -424,7 +455,7 @@ export function CartDrawer({
                   />
                   <Price
                     minor={l.lineTotalMinor}
-                    className="font-bold text-ink"
+                    className="font-bold text-text-primary"
                   />
                 </div>
               </li>
@@ -432,205 +463,135 @@ export function CartDrawer({
           </ul>
 
           {/* order type */}
-          <fieldset>
-            <legend className="text-sm font-bold text-ink">
-              طريقة الاستلام
-            </legend>
-            <div className="mt-2.5 grid grid-cols-2 gap-2">
-              {(
-                [
-                  { id: "delivery", label: "توصيل", icon: Bike },
-                  { id: "pickup", label: "استلام من المحل", icon: HandPlatter },
-                ] as const
-              ).map((opt) => {
-                const active = orderType === opt.id;
-                return (
-                  <label
-                    key={opt.id}
-                    className={
-                      active
-                        ? "flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-md border-2 border-basil-700 bg-basil-50 text-sm font-bold text-basil-800 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-basil-600"
-                        : "flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-md border border-cream-300 bg-cream-100 text-sm font-bold text-ink-soft transition-colors hover:border-basil-300 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-basil-600"
-                    }
-                  >
-                    <input
-                      type="radio"
-                      name="order-type"
-                      value={opt.id}
-                      checked={active}
-                      onChange={() => setOrderType(opt.id)}
-                      className="sr-only"
-                    />
-                    <opt.icon className="size-4" aria-hidden />
-                    {opt.label}
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
+          <RadioCardGroup<OrderType>
+            label="طريقة الاستلام"
+            name="order-type"
+            value={orderType}
+            onChange={setOrderType}
+            columns={2}
+            options={[
+              { value: "delivery", label: "توصيل", icon: Bike },
+              { value: "pickup", label: "استلام من المحل", icon: HandPlatter },
+            ]}
+          />
 
           {orderType === "delivery" && (
-            <div>
-              <label htmlFor="cust-zone" className="text-sm font-bold text-ink">
-                منطقة التوصيل <span className="text-terracotta">*</span>
-              </label>
-              <select
-                id="cust-zone"
-                value={zoneId}
-                onChange={(e) => setZoneId(e.target.value)}
-                className={`mt-1.5 ${inputClass}`}
-                disabled={!zones || zones.length === 0}
-              >
-                {!zones && <option value="">جارٍ تحميل المناطق…</option>}
-                {zones && zones.length === 0 && (
-                  <option value="">لا توجد مناطق توصيل متاحة</option>
-                )}
-                {zones?.map((z) => (
-                  <option key={z.id} value={z.id}>
-                    {z.nameAr} — {formatPrice(z.feeMinor)} ₪
-                  </option>
-                ))}
-              </select>
-              {zonesError && (
-                <p className="mt-1.5 text-xs font-bold text-terracotta">
-                  {zonesError}
-                </p>
+            <SelectField
+              id="cust-zone"
+              label="منطقة التوصيل"
+              required
+              value={zoneId}
+              onChange={(e) => {
+                setZoneId(e.target.value);
+                setFieldErrors((current) => ({ ...current, zone: undefined }));
+              }}
+              disabled={!zones || zones.length === 0}
+              error={fieldErrors.zone ?? zonesError}
+              hint={
+                regionsReady && !zonesError && deliveryEtaMinutes > 0
+                  ? `التوصيل خلال ~${deliveryEtaMinutes} دقيقة داخل قلقيلية.`
+                  : undefined
+              }
+            >
+              {!zones && <option value="">جارٍ تحميل المناطق…</option>}
+              {zones && zones.length === 0 && (
+                <option value="">لا توجد مناطق توصيل متاحة</option>
               )}
-              {!zonesError && regionsReady && deliveryEtaMinutes > 0 && (
-                <p className="mt-1.5 text-xs text-ink-soft">
-                  التوصيل خلال ~{deliveryEtaMinutes} دقيقة داخل قلقيلية.
-                </p>
-              )}
-            </div>
+              {zones?.map((z) => (
+                <option key={z.id} value={z.id}>
+                  {z.nameAr} — {formatPrice(z.feeMinor)} ₪
+                </option>
+              ))}
+            </SelectField>
           )}
 
           {/* payment — the owner configures the accepted methods */}
           {availableMethods.length > 1 ? (
-            <fieldset>
-              <legend className="text-sm font-bold text-ink">
-                طريقة الدفع
-              </legend>
-              <div className="mt-2.5 grid gap-2 sm:grid-cols-3">
-                {availableMethods.map((method) => {
-                  const active = effectivePaymentMethod === method;
-                  return (
-                    <label
-                      key={method}
-                      className={
-                        active
-                          ? "flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-md border-2 border-basil-700 bg-basil-50 px-2 text-center text-xs font-bold text-basil-800 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-basil-600"
-                          : "flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-md border border-cream-300 bg-cream-100 px-2 text-center text-xs font-bold text-ink-soft transition-colors hover:border-basil-300 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-basil-600"
-                      }
-                    >
-                      <input
-                        type="radio"
-                        name="payment-method"
-                        value={method}
-                        checked={active}
-                        onChange={() => setPaymentMethod(method)}
-                        className="sr-only"
-                      />
-                      {PAYMENT_METHOD_LABELS[method]}
-                    </label>
-                  );
-                })}
-              </div>
-            </fieldset>
+            <RadioCardGroup<PaymentMethod>
+              label="طريقة الدفع"
+              name="payment-method"
+              value={effectivePaymentMethod}
+              onChange={setPaymentMethod}
+              columns={3}
+              options={availableMethods.map((method) => ({
+                value: method,
+                label: PAYMENT_METHOD_LABELS[method],
+              }))}
+            />
           ) : null}
 
           {/* customer info */}
           <div className="space-y-3">
-            <div>
-              <label htmlFor="cust-name" className="text-sm font-bold text-ink">
-                الاسم <span className="text-terracotta">*</span>
-              </label>
-              <input
-                id="cust-name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className={`mt-1.5 ${inputClass}`}
-                placeholder="اسمك الكريم"
-                autoComplete="name"
-                maxLength={60}
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="cust-phone"
-                className="text-sm font-bold text-ink"
-              >
-                رقم الهاتف <span className="text-terracotta">*</span>
-              </label>
-              <input
-                id="cust-phone"
-                type="tel"
-                inputMode="tel"
-                dir="rtl"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className={`mt-1.5 ${inputClass}`}
-                placeholder="05XXXXXXXX"
-                autoComplete="tel"
-                maxLength={15}
-              />
-            </div>
+            <TextField
+              id="cust-name"
+              label="الاسم"
+              required
+              value={name}
+              onChange={(e) => fieldSetter(setName, "name")(e.target.value)}
+              placeholder="اسمك الكريم"
+              autoComplete="name"
+              maxLength={60}
+              error={fieldErrors.name}
+            />
+            <TextField
+              id="cust-phone"
+              label="رقم الهاتف"
+              type="tel"
+              inputMode="tel"
+              dir="rtl"
+              required
+              value={phone}
+              onChange={(e) => fieldSetter(setPhone, "phone")(e.target.value)}
+              placeholder="05XXXXXXXX"
+              autoComplete="tel"
+              maxLength={15}
+              error={fieldErrors.phone}
+            />
             {orderType === "delivery" && (
-              <div>
-                <label
-                  htmlFor="cust-address"
-                  className="text-sm font-bold text-ink"
-                >
-                  العنوان <span className="text-terracotta">*</span>
-                </label>
-                <input
-                  id="cust-address"
-                  type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className={`mt-1.5 ${inputClass}`}
-                  placeholder="الحي، الشارع، أقرب علامة مميزة"
-                  maxLength={140}
-                />
-              </div>
-            )}
-            <div>
-              <label htmlFor="cust-note" className="text-sm font-bold text-ink">
-                ملاحظات عامة{" "}
-                <span className="font-normal text-ink-soft">(اختياري)</span>
-              </label>
-              <input
-                id="cust-note"
-                type="text"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                className={`mt-1.5 ${inputClass}`}
-                placeholder="مثال: الاتصال قبل الوصول"
+              <TextField
+                id="cust-address"
+                label="العنوان"
+                required
+                value={address}
+                onChange={(e) =>
+                  fieldSetter(setAddress, "address")(e.target.value)
+                }
+                placeholder="الحي، الشارع، أقرب علامة مميزة"
                 maxLength={140}
+                error={fieldErrors.address}
               />
-            </div>
+            )}
+            <TextField
+              id="cust-note"
+              label="ملاحظات عامة"
+              optional
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="مثال: الاتصال قبل الوصول"
+              maxLength={140}
+            />
           </div>
 
           {/* summary — server recomputes; this is the display estimate */}
-          <dl className="space-y-1.5 rounded-xl bg-cream-100 p-4 text-sm">
+          <dl className="space-y-1.5 rounded-xl bg-surface-raised p-4 text-sm">
             <div className="flex justify-between">
-              <dt className="text-ink-soft">المجموع</dt>
+              <dt className="text-text-secondary">المجموع</dt>
               <dd>
                 <Price minor={cart.subtotal} />
               </dd>
             </div>
             {orderType === "delivery" && (
               <div className="flex justify-between">
-                <dt className="text-ink-soft">التوصيل</dt>
+                <dt className="text-text-secondary">التوصيل</dt>
                 <dd>
                   <Price minor={deliveryFee} />
                 </dd>
               </div>
             )}
-            <div className="flex justify-between border-t border-cream-300 pt-2 text-base font-bold">
+            <div className="flex justify-between border-t border-border-soft pt-2 text-base font-bold">
               <dt>الإجمالي</dt>
               <dd>
-                <Price minor={total} className="text-basil-800" />
+                <Price minor={total} className="text-brand-strong" />
               </dd>
             </div>
           </dl>
@@ -638,7 +599,7 @@ export function CartDrawer({
           {priceNotice && (
             <p
               role="status"
-              className="rounded-md bg-warning/10 px-3 py-2 text-xs font-bold text-ink"
+              className="rounded-md bg-warning/10 px-3 py-2 text-xs font-bold text-text-primary"
             >
               {priceNotice}
             </p>
@@ -647,7 +608,7 @@ export function CartDrawer({
           {belowMinimum && (
             <p
               role="status"
-              className="rounded-md bg-warning/10 px-3 py-2 text-xs font-bold text-ink"
+              className="rounded-md bg-warning/10 px-3 py-2 text-xs font-bold text-text-primary"
             >
               باقي <Price minor={remainingToMinimum} /> للوصول للحد الأدنى (
               <Price minor={minOrderMinor} />
@@ -655,12 +616,12 @@ export function CartDrawer({
             </p>
           )}
 
-          {error && (
+          {formError && (
             <p
               role="alert"
-              className="rounded-md bg-terracotta/10 px-4 py-3 text-sm font-bold text-terracotta"
+              className="rounded-md bg-danger/10 px-4 py-3 text-sm font-bold text-danger"
             >
-              {error}
+              {formError}
             </p>
           )}
 
@@ -716,13 +677,13 @@ export function CartDrawer({
                   "noopener,noreferrer",
                 );
               }}
-              className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-basil-700 underline decoration-basil-300 underline-offset-4 hover:text-basil-600"
+              className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-brand underline decoration-brand-soft underline-offset-4 hover:text-brand-strong"
             >
               <MessageCircle className="size-4" aria-hidden />
               أو أرسل الطلب عبر واتساب
             </button>
           </div>
-          <p className="text-center text-xs text-ink-soft">
+          <p className="text-center text-xs text-text-secondary">
             {availableMethods.length > 1
               ? "الدفع عند الاستلام — بدون أي رسوم إضافية."
               : availableMethods[0]

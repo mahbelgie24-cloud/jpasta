@@ -59,7 +59,7 @@ export function Features() {
           {FEATURES.map((f, i) => (
             <li
               key={f.title}
-              className="group flex items-start gap-5 py-6 transition-colors hover:bg-cream-50/[0.03]"
+              className="group flex items-start gap-5 py-6 transition-colors hover:bg-surface/[0.03]"
             >
               <span
                 className="mt-1 font-display text-sm font-bold text-wheat-300/60 tabular-nums"
@@ -67,7 +67,7 @@ export function Features() {
               >
                 {String(i + 1).padStart(2, "0")}
               </span>
-              <span className="mt-0.5 inline-flex size-12 shrink-0 items-center justify-center rounded-full border border-cream-50/10 bg-cream-50/5 text-wheat-300 transition-colors group-hover:border-wheat-300/30">
+              <span className="mt-0.5 inline-flex size-12 shrink-0 items-center justify-center rounded-full border border-cream-50/10 bg-surface/5 text-wheat-300 transition-colors group-hover:border-wheat-300/30">
                 <f.icon className="size-6" aria-hidden />
               </span>
               <div>

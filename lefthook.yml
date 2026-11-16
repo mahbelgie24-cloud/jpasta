@@ -1,0 +1,13 @@
+# Pre-commit hygiene — the same gates CI runs, on the staged files only.
+# CI remains the hard gate; this just keeps broken formatting/lint from
+# ever being committed (lefthook skips cleanly when nothing matches).
+pre-commit:
+  parallel: true
+  commands:
+    format:
+      glob: "*.{js,mjs,cjs,ts,tsx,md,json,jsonc,yml,yaml,css}"
+      run: npx prettier --write {staged_files}
+      stage_fixed: true
+    lint:
+      glob: "*.{js,mjs,cjs,ts,tsx}"
+      run: npx eslint --max-warnings 0 {staged_files}

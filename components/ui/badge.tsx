@@ -4,11 +4,11 @@ import { cn } from "@/lib/utils";
 const badgeStyles: Record<Badge, { label: string; className: string }> = {
   bestseller: {
     label: "الأكثر طلباً",
-    className: "bg-wheat-300 text-basil-950",
+    className: "bg-wheat-300 text-text-primary",
   },
-  new: { label: "جديد", className: "bg-basil-100 text-basil-800" },
-  spicy: { label: "حار", className: "bg-terracotta/12 text-terracotta" },
-  fresh: { label: "طازج", className: "bg-basil-700 text-cream-50" },
+  new: { label: "جديد", className: "bg-brand-subtle text-brand-strong" },
+  spicy: { label: "حار", className: "bg-danger/12 text-danger" },
+  fresh: { label: "طازج", className: "bg-action text-action-text" },
 };
 
 export function ProductBadge({

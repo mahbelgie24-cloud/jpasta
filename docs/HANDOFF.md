@@ -401,8 +401,9 @@ photography. (Playwright E2E, axe automation and visual baselines shipped
 7. **`AUTH_PEPPER` is not freely rotatable** (see §8).
 8. **`NEXT_PUBLIC_*` are build-time.** Changing them requires a rebuild.
 9. **`wrangler.jsonc` placeholders** block `npm run deploy` by design.
-10. **Console colour bridge:** older console pages use primitive utilities;
-    `.theme-console` maps them. New code must use semantic tokens.
+10. **Console colour bridge retired (2026-11):** all console/kitchen components
+    use semantic tokens directly; the bridge CSS was removed. Deliberate
+    primitive exceptions: image-overlay utilities and `/studio`.
 11. **Arabic display font utility is `font-display-ar`** (Amiri); plain
     `font-display` is Fraunces (Latin only).
 12. **`/studio` is public but noindex**; it is the design review surface.

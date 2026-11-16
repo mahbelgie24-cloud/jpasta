@@ -128,6 +128,31 @@
 - **2026-11-04:** the offline order queue keeps the payload (including
   customer contact fields) in IndexedDB until a successful send. It is
   device-local and disclosed by the privacy page, but not encrypted.
+- **2026-11-15 (elite-elevation pass, `docs/audit/05`):**
+  - CSP violation reporting is live: `report-uri /api/csp-report` +
+    `report-to csp-endpoint` on both tiers, with a `Reporting-Endpoints`
+    group. The sink logs directive + blocked-host + source file/line only —
+    never full URLs, because `/order/status` document URIs carry the order
+    capability token in the query string.
+  - Throttle/limit keys now use `cf-connecting-ip` exclusively:
+    `x-forwarded-for`'s first hop is client-controlled (Cloudflare only
+    appends to it), which made per-IP keys forgeable.
+  - The session cookie is `SameSite=strict` (the console has no cross-site
+    entry links; strict closes lax's top-level-navigation window).
+  - `/api/health` exposes `{ok, db, time}` publicly; `version`/`uptimeMs`/
+    `latencyMs` (deployment fingerprinting + DB timing) require the
+    `CRON_SECRET` bearer.
+  - Web Push subscribe/delete are rate-limited (own `push:` key class on
+    `READ_LIMIT`); the realtime-token mint uses its own `mint:` class so
+    status-page polls cannot exhaust the shared raw-IP bucket.
+  - The legacy scrypt login bridge scan is bounded (`LIMIT 50`): it runs on
+    every wrong PIN, and each row is a scrypt verification.
+  - **Staff/board PII parity (decided, not a gap):** the console board ships
+    decrypted name/phone/address/note to the `staff` role — all four fields
+    are the operational minimum for fulfilling and delivering an order
+    (call the customer, hand to the driver). Exports stay owner-only, PII
+    is encrypted at rest, and the board query is bounded (200 rows). No
+    additional redaction without an owner decision.
 - ASVS mapping is implementation-level, not a third-party audit.
 
 ## 6. Security review checklist

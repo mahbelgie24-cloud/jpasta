@@ -1,5 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { buildCsp, buildStaticCsp, generateCspNonce } from "@/lib/csp-nonce";
+import {
+  buildCsp,
+  buildStaticCsp,
+  generateCspNonce,
+  reportToHeader,
+  reportingEndpointsHeader,
+} from "@/lib/csp-nonce";
 
 /**
  * Proxy (Next 16 — formerly Middleware). UX/headers layer only; it never
@@ -49,6 +55,10 @@ export function proxy(request: NextRequest) {
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set("content-security-policy", csp);
+  // Violation reporting endpoint group: the modern Structured Fields header
+  // (Chrome/Edge) + the legacy JSON header (older Report-To consumers).
+  response.headers.set("reporting-endpoints", reportingEndpointsHeader());
+  response.headers.set("report-to", reportToHeader());
   return response;
 }
 

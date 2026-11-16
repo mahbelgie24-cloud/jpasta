@@ -130,7 +130,7 @@ export default function RootLayout({
       <body>
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:start-3 focus:top-3 focus:z-[100] focus:rounded-full focus:bg-basil-800 focus:px-5 focus:py-3 focus:text-sm focus:font-bold focus:text-cream-50 focus:shadow-lift"
+          className="sr-only focus:not-sr-only focus:fixed focus:start-3 focus:top-3 focus:z-[100] focus:rounded-full focus:bg-brand-deep focus:px-5 focus:py-3 focus:text-sm focus:font-bold focus:text-cream-50 focus:shadow-lift"
         >
           تخطَّ إلى المحتوى
         </a>

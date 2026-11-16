@@ -12,40 +12,57 @@ import {
  */
 
 test.describe("landing", () => {
-  test("tells the brand story and offers the menu", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.getByRole("heading", { level: 1 })).toContainText(
-      "باستا",
-    );
-    const menuLink = page.getByRole("link", { name: /القائمة|اطلب/ }).first();
-    await expect(menuLink).toBeVisible();
-    await expect(menuLink).toHaveAttribute("href", /\/menu/);
-    // The visit section carries hours + location (spec §1 business facts).
-    await expect(page.getByRole("contentinfo")).toBeVisible();
-  });
+  // @smoke — runs on webkit/firefox too (cross-browser gate).
+  test(
+    "tells the brand story and offers the menu",
+    { tag: "@smoke" },
+    async ({ page }) => {
+      await page.goto("/");
+      await expect(page.getByRole("heading", { level: 1 })).toContainText(
+        "باستا",
+      );
+      const menuLink = page.getByRole("link", { name: /القائمة|اطلب/ }).first();
+      await expect(menuLink).toBeVisible();
+      await expect(menuLink).toHaveAttribute("href", /\/menu/);
+      // The visit section carries hours + location (spec §1 business facts).
+      await expect(page.getByRole("contentinfo")).toBeVisible();
+    },
+  );
 });
 
 test.describe("menu", () => {
-  test("lists products and search filters by dish name", async ({ page }) => {
-    await page.goto("/menu");
-    await expect(page.getByRole("heading", { name: "القائمة" })).toBeVisible();
+  // @smoke — runs on webkit/firefox too (cross-browser gate).
+  test(
+    "lists products and search filters by dish name",
+    { tag: "@smoke" },
+    async ({ page }) => {
+      await page.goto("/menu");
+      await expect(
+        page.getByRole("heading", { name: "القائمة" }),
+      ).toBeVisible();
 
-    const cards = page.locator("article");
-    const total = await cards.count();
-    expect(total).toBeGreaterThan(0);
+      const cards = page.locator("article");
+      const total = await cards.count();
+      expect(total).toBeGreaterThan(0);
 
-    // Search by the first product's own name — no hardcoded catalog facts.
-    const first =
-      (await page.locator("article h3").first().textContent()) ?? "";
-    const query = first.trim();
-    await page.getByLabel("ابحث في القائمة").fill(query);
-    const results = page.locator("article h3");
-    await expect(results.first()).toHaveText(query);
-    expect(await results.count()).toBeLessThanOrEqual(total);
+      // Search by the first product's own name — no hardcoded catalog facts.
+      // Typed keystrokes (trusted events), not fill(): React 19 in WebKit
+      // does not observe Playwright's synthetic input events on this field,
+      // and typing is the real user journey anyway.
+      const first =
+        (await page.locator("article h3").first().textContent()) ?? "";
+      const query = first.trim();
+      const search = page.getByLabel("ابحث في القائمة");
+      await search.click();
+      await search.pressSequentially(query);
+      const results = page.locator("article h3");
+      await expect(results.first()).toHaveText(query);
+      expect(await results.count()).toBeLessThanOrEqual(total);
 
-    await page.getByRole("button", { name: "مسح البحث" }).click();
-    await expect(cards).toHaveCount(total);
-  });
+      await page.getByRole("button", { name: "مسح البحث" }).click();
+      await expect(cards).toHaveCount(total);
+    },
+  );
 
   test("quick-adds a dish with no options without opening a sheet", async ({
     page,

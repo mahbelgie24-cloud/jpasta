@@ -10,8 +10,8 @@ export default function NotFound() {
       className="flex min-h-dvh flex-col items-center justify-center px-4 text-center"
     >
       <LogoMark className="size-20" />
-      <h1 className="mt-6 type-section text-ink">ضل الطبق؟</h1>
-      <p className="mt-3 max-w-sm text-ink-soft">
+      <h1 className="mt-6 type-section text-text-primary">ضل الطبق؟</h1>
+      <p className="mt-3 max-w-sm text-text-secondary">
         الصفحة اللي تبحث عنها مش موجودة — بس الباستا موجودة دايماً.
       </p>
       <div className="mt-8 flex gap-3">

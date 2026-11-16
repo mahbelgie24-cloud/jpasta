@@ -33,11 +33,11 @@ function isWorkersRuntime(): boolean {
   );
 }
 
-export async function notifyOrdersChanged(): Promise<void> {
+export async function notifyOrdersChanged(orderId?: string): Promise<void> {
   const at = Date.now();
 
   if (!isWorkersRuntime()) {
-    bus.emit(ORDERS_CHANGED, at);
+    bus.emit(ORDERS_CHANGED, { at, orderId });
     return;
   }
 
@@ -63,7 +63,7 @@ export async function notifyOrdersChanged(): Promise<void> {
         "content-type": "application/json",
         authorization: `Bearer ${secret}`,
       },
-      body: JSON.stringify({ at }),
+      body: JSON.stringify({ at, orderId }),
     });
     if (!response.ok) {
       logEvent("warn", "realtime.broadcast_rejected", {

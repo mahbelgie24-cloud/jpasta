@@ -104,10 +104,10 @@ export function PinLogin() {
             aria-hidden
             className={
               error
-                ? "size-3.5 rounded-full bg-terracotta"
+                ? "size-3.5 rounded-full bg-danger"
                 : i < pin.length
-                  ? "size-3.5 animate-pop rounded-full bg-basil-700 motion-reduce:animate-none"
-                  : "size-3.5 rounded-full border-2 border-cream-400"
+                  ? "size-3.5 animate-pop rounded-full bg-action motion-reduce:animate-none"
+                  : "size-3.5 rounded-full border-2 border-border-strong"
             }
           />
         ))}
@@ -115,7 +115,7 @@ export function PinLogin() {
       {error && (
         <p
           role="alert"
-          className="mt-3 text-center text-sm font-bold text-terracotta"
+          className="mt-3 text-center text-sm font-bold text-danger"
         >
           {error}
         </p>
@@ -132,7 +132,7 @@ export function PinLogin() {
             aria-label={
               key === "clear" ? "مسح الكل" : key === "back" ? "حذف رقم" : key
             }
-            className="flex min-h-16 items-center justify-center rounded-lg border border-cream-300 bg-cream-50 text-2xl font-bold text-ink shadow-card transition-transform active:scale-95 disabled:opacity-50"
+            className="flex min-h-16 items-center justify-center rounded-lg border border-line bg-surface text-2xl font-bold text-text-primary shadow-card transition-transform active:scale-95 disabled:opacity-50"
           >
             {key === "clear" ? (
               <span className="text-sm">مسح</span>
@@ -145,7 +145,7 @@ export function PinLogin() {
         ))}
       </div>
       {busy && (
-        <p className="mt-4 flex items-center justify-center gap-2 text-sm text-ink-soft">
+        <p className="mt-4 flex items-center justify-center gap-2 text-sm text-text-secondary">
           <TwirlLoader className="size-5" label="جارٍ التحقق…" />
           جارٍ التحقق…
         </p>

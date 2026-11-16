@@ -4,6 +4,7 @@ import { requireStaff } from "@/lib/server/session";
 import { db } from "@/lib/db";
 import { pushSubscriptions } from "@/db/schema";
 import { isAllowedPushEndpoint } from "@/lib/domain/vapid";
+import { checkRateLimit, classKey } from "@/lib/server/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,18 @@ export async function POST(request: Request) {
     user = await requireStaff();
   } catch {
     return new Response("unauthorized", { status: 401 });
+  }
+
+  // Authenticated but still rate-limited: the endpoint writes a DB row on
+  // every hit, so a scripted session must not turn it into unbounded writes.
+  const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+  const limited = await checkRateLimit(
+    "READ_LIMIT",
+    classKey("push", ip),
+    "rate-limited",
+  );
+  if (limited) {
+    return Response.json({ ok: false, error: "rate-limited" }, { status: 429 });
   }
 
   const body = await request.json().catch(() => null);
@@ -68,6 +81,14 @@ export async function DELETE(request: Request) {
     user = await requireStaff();
   } catch {
     return new Response("unauthorized", { status: 401 });
+  }
+
+  // Same ceiling as POST — SECURITY.md documents both endpoints limited.
+  const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+  if (
+    await checkRateLimit("READ_LIMIT", classKey("push", ip), "rate-limited")
+  ) {
+    return Response.json({ ok: false, error: "rate-limited" }, { status: 429 });
   }
 
   const body = (await request.json().catch(() => null)) as {

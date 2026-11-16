@@ -14,11 +14,12 @@ const base =
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    "bg-basil-700 text-cream-50 shadow-card hover:bg-basil-600 hover:shadow-lift",
+    "bg-action text-action-text shadow-card hover:bg-action-hover hover:shadow-lift",
   secondary:
-    "border border-cream-300 bg-cream-100 text-basil-800 hover:bg-cream-200",
-  ghost: "text-basil-700 hover:bg-basil-50",
-  dark: "bg-basil-800 text-cream-50 hover:bg-basil-700",
+    "border border-line bg-surface-raised text-brand-strong hover:bg-surface-sunken",
+  ghost: "text-brand hover:bg-brand-subtle",
+  dark: "bg-brand-deep text-cream-50 hover:bg-action",
+  // Image-overlay style — storefront heroes only, never inside the themes.
   "outline-light":
     "border border-cream-50/40 text-cream-50 hover:bg-cream-50/10",
 };

@@ -158,6 +158,26 @@ describe("realtime token", () => {
     );
     expect(await verifyRealtimeToken(expired, secret)).toBeNull();
   });
+
+  it("customer tokens are single-order capabilities", async () => {
+    const token = await signRealtimeToken(
+      { sub: "customer", role: "customer", oid: "order-uuid-1" },
+      secret,
+      60,
+    );
+    const claims = await verifyRealtimeToken(token, secret);
+    expect(claims?.role).toBe("customer");
+    expect(claims?.oid).toBe("order-uuid-1");
+
+    // A customer claim without its order scope is invalid — no oid, no
+    // socket (the minting route pairs it with the order's access token).
+    const oidless = await signRealtimeToken(
+      { sub: "customer", role: "customer" },
+      secret,
+      60,
+    );
+    expect(await verifyRealtimeToken(oidless, secret)).toBeNull();
+  });
 });
 
 describe("PIN credentials", () => {

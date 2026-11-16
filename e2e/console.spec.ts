@@ -9,15 +9,19 @@ import { boardCard, enterPin, loginAsOwner, placePickupOrder } from "./helpers";
  */
 
 test.describe("console auth", () => {
-  test("redirects unauthenticated visitors to the PIN login", async ({
-    page,
-  }) => {
-    await page.goto("/console");
-    await page.waitForURL(/\/console\/login$/);
-    await expect(
-      page.getByRole("heading", { name: "كونسول JPasta" }),
-    ).toBeVisible();
-  });
+  // @smoke — runs on webkit/firefox too (cross-browser gate): the PIN pad
+  // is the only interactive surface non-chromium engines must fully master.
+  test(
+    "redirects unauthenticated visitors to the PIN login",
+    { tag: "@smoke" },
+    async ({ page }) => {
+      await page.goto("/console");
+      await page.waitForURL(/\/console\/login$/);
+      await expect(
+        page.getByRole("heading", { name: "كونسول JPasta" }),
+      ).toBeVisible();
+    },
+  );
 
   test("rejects a wrong PIN with the throttle message", async ({ page }) => {
     await page.goto("/console/login");

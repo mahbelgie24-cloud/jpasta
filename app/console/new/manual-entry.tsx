@@ -350,22 +350,22 @@ export function ManualEntry({
   }
 
   const inputClass =
-    "min-h-12 w-full rounded-md border border-cream-300 bg-cream-50 px-4 text-sm outline-none transition-colors placeholder:text-ink-soft/50 focus:border-basil-500";
+    "min-h-12 w-full rounded-md border border-line bg-surface px-4 text-sm outline-none transition-colors placeholder:text-text-secondary/50 focus:border-action";
 
   if (placed) {
     return (
       <div className="py-8 text-center" role="status" aria-live="polite">
-        <CheckCircle2 className="mx-auto size-14 text-basil-600" aria-hidden />
+        <CheckCircle2 className="mx-auto size-14 text-brand" aria-hidden />
         <h2 ref={placedHeadingRef} tabIndex={-1} className="mt-4 type-title">
           طلب {placed.orderNumber} دخل الطابور
         </h2>
-        <p className="mt-2 text-sm text-ink-soft">
+        <p className="mt-2 text-sm text-text-secondary">
           يظهر الآن على لوحة الطلبات والمطبخ.
         </p>
         <div className="mx-auto mt-6 flex max-w-xs flex-col gap-3">
           <Link
             href={`/order/status/${placed.orderId}?t=${placed.accessToken}`}
-            className="inline-flex min-h-12 items-center justify-center rounded-full bg-basil-700 font-bold text-cream-50"
+            className="inline-flex min-h-12 items-center justify-center rounded-full bg-action font-bold text-action-text"
           >
             صفحة حالة الزبون
           </Link>
@@ -380,7 +380,7 @@ export function ManualEntry({
   return (
     <div className="space-y-5">
       {/* product picker */}
-      <div className="rounded-card bg-cream-50 p-4 shadow-card">
+      <div className="rounded-card bg-surface p-4 shadow-card">
         <input
           type="search"
           value={query}
@@ -392,18 +392,23 @@ export function ManualEntry({
         <div className="mt-3 max-h-72 space-y-4 overflow-y-auto pe-1">
           {grouped.map(([category, items]) => (
             <div key={category}>
-              <p className="text-xs font-bold text-ink-soft">{category}</p>
+              <p className="text-xs font-bold text-text-secondary">
+                {category}
+              </p>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {items.map((p) => (
                   <button
                     key={p.id}
                     type="button"
                     onClick={() => addLine(p)}
-                    className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-cream-300 bg-cream-100 px-3 text-xs font-bold text-ink transition-colors hover:border-basil-400"
+                    className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-line bg-surface-raised px-3 text-xs font-bold text-text-primary transition-colors hover:border-brand-soft"
                   >
-                    <Plus className="size-3 text-basil-700" aria-hidden />
+                    <Plus className="size-3 text-brand" aria-hidden />
                     {p.nameAr}
-                    <Price minor={p.basePriceMinor} className="text-ink-soft" />
+                    <Price
+                      minor={p.basePriceMinor}
+                      className="text-text-secondary"
+                    />
                   </button>
                 ))}
               </div>
@@ -420,17 +425,19 @@ export function ManualEntry({
             return (
               <li
                 key={l.key}
-                className="rounded-card border border-cream-200 bg-cream-50 p-4"
+                className="rounded-card border border-border-soft bg-surface p-4"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="font-bold text-ink">{l.product.nameAr}</p>
+                  <p className="font-bold text-text-primary">
+                    {l.product.nameAr}
+                  </p>
                   <button
                     type="button"
                     onClick={() =>
                       setLines((prev) => prev.filter((x) => x !== l))
                     }
                     aria-label={`حذف ${l.product.nameAr}`}
-                    className="flex size-11 items-center justify-center rounded-full text-ink-soft hover:bg-terracotta/10 hover:text-terracotta"
+                    className="flex size-11 items-center justify-center rounded-full text-text-secondary hover:bg-danger/10 hover:text-danger"
                   >
                     <Trash2 className="size-4" aria-hidden />
                   </button>
@@ -446,10 +453,10 @@ export function ManualEntry({
                     chosen.length >= group.maxSelections;
                   return (
                     <div key={group.key} className="mt-2">
-                      <p className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-ink-soft">
+                      <p className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-text-secondary">
                         {group.nameAr}
                         {group.required && (
-                          <span className="text-terracotta">مطلوب</span>
+                          <span className="text-danger">مطلوب</span>
                         )}
                         {group.type === "multi" &&
                           group.maxSelections !== undefined &&
@@ -490,8 +497,8 @@ export function ManualEntry({
                               }
                               className={
                                 active
-                                  ? "inline-flex min-h-11 items-center gap-1.5 rounded-full border-2 border-basil-700 bg-basil-50 px-3 text-xs font-bold text-basil-800 disabled:opacity-45"
-                                  : "inline-flex min-h-11 items-center gap-1.5 rounded-full border border-cream-300 bg-cream-100 px-3 text-xs font-bold text-ink-soft disabled:cursor-not-allowed disabled:opacity-45"
+                                  ? "inline-flex min-h-11 items-center gap-1.5 rounded-full border-2 border-action bg-brand-subtle px-3 text-xs font-bold text-brand-strong disabled:opacity-45"
+                                  : "inline-flex min-h-11 items-center gap-1.5 rounded-full border border-line bg-surface-raised px-3 text-xs font-bold text-text-secondary disabled:cursor-not-allowed disabled:opacity-45"
                               }
                             >
                               {option.nameAr}
@@ -506,7 +513,7 @@ export function ManualEntry({
                         })}
                       </div>
                       {unanswered && (
-                        <p className="mt-1 text-[11px] font-bold text-terracotta">
+                        <p className="mt-1 text-[11px] font-bold text-danger">
                           اختر خياراً للمتابعة
                         </p>
                       )}
@@ -525,12 +532,12 @@ export function ManualEntry({
                   }
                   placeholder="ملاحظة سطر (اختياري)"
                   aria-label={`ملاحظة ${l.product.nameAr}`}
-                  className={`mt-2 min-h-11 w-full rounded-md border border-cream-200 bg-cream-100 px-3 text-xs outline-none focus:border-basil-400`}
+                  className={`mt-2 min-h-11 w-full rounded-md border border-border-soft bg-surface-raised px-3 text-xs outline-none focus:border-action`}
                   maxLength={140}
                 />
                 <div className="mt-2.5 flex items-center justify-between">
                   <div
-                    className="inline-flex items-center gap-1 rounded-full border border-cream-300 p-1"
+                    className="inline-flex items-center gap-1 rounded-full border border-line p-1"
                     role="group"
                     aria-label={`كمية ${l.product.nameAr}`}
                   >
@@ -546,7 +553,7 @@ export function ManualEntry({
                         )
                       }
                       aria-label="إنقاص"
-                      className="flex size-11 items-center justify-center rounded-full hover:bg-cream-200"
+                      className="flex size-11 items-center justify-center rounded-full hover:bg-surface-sunken"
                     >
                       <Minus className="size-3.5" aria-hidden />
                     </button>
@@ -565,14 +572,14 @@ export function ManualEntry({
                         )
                       }
                       aria-label="زيادة"
-                      className="flex size-11 items-center justify-center rounded-full hover:bg-cream-200"
+                      className="flex size-11 items-center justify-center rounded-full hover:bg-surface-sunken"
                     >
                       <Plus className="size-3.5" aria-hidden />
                     </button>
                   </div>
                   <Price
                     minor={multiplyMinor(unit, l.quantity)}
-                    className="font-bold text-ink"
+                    className="font-bold text-text-primary"
                   />
                 </div>
               </li>
@@ -583,7 +590,7 @@ export function ManualEntry({
 
       {/* customer + submit */}
       {lines.length > 0 && (
-        <div className="space-y-3 rounded-card bg-cream-50 p-4 shadow-card">
+        <div className="space-y-3 rounded-card bg-surface p-4 shadow-card">
           <div
             className="grid grid-cols-3 gap-2"
             role="radiogroup"
@@ -604,8 +611,8 @@ export function ManualEntry({
                 onClick={() => setOrderType(o.id)}
                 className={
                   orderType === o.id
-                    ? "flex min-h-11 items-center justify-center rounded-md border-2 border-basil-700 bg-basil-50 text-sm font-bold text-basil-800"
-                    : "flex min-h-11 items-center justify-center rounded-md border border-cream-300 bg-cream-100 text-sm font-bold text-ink-soft"
+                    ? "flex min-h-11 items-center justify-center rounded-md border-2 border-action bg-brand-subtle text-sm font-bold text-brand-strong"
+                    : "flex min-h-11 items-center justify-center rounded-md border border-line bg-surface-raised text-sm font-bold text-text-secondary"
                 }
               >
                 {o.label}
@@ -615,7 +622,7 @@ export function ManualEntry({
 
           {availableMethods.length > 1 && (
             <fieldset>
-              <legend className="text-sm font-bold text-ink">
+              <legend className="text-sm font-bold text-text-primary">
                 طريقة الدفع
               </legend>
               <div className="mt-2 grid grid-cols-3 gap-2">
@@ -626,8 +633,8 @@ export function ManualEntry({
                       key={method}
                       className={
                         active
-                          ? "flex min-h-11 cursor-pointer items-center justify-center rounded-md border-2 border-basil-700 bg-basil-50 px-2 text-center text-xs font-bold text-basil-800 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-basil-600"
-                          : "flex min-h-11 cursor-pointer items-center justify-center rounded-md border border-cream-300 bg-cream-100 px-2 text-center text-xs font-bold text-ink-soft has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-basil-600"
+                          ? "flex min-h-11 cursor-pointer items-center justify-center rounded-md border-2 border-action bg-brand-subtle px-2 text-center text-xs font-bold text-brand-strong has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus"
+                          : "flex min-h-11 cursor-pointer items-center justify-center rounded-md border border-line bg-surface-raised px-2 text-center text-xs font-bold text-text-secondary has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus"
                       }
                     >
                       <input
@@ -646,12 +653,12 @@ export function ManualEntry({
             </fieldset>
           )}
           {availableMethods.length === 1 && (
-            <p className="text-xs font-bold text-ink-soft">
+            <p className="text-xs font-bold text-text-secondary">
               طريقة الدفع: {PAYMENT_METHOD_LABELS[effectivePaymentMethod]}
             </p>
           )}
           {noPaymentMethod && (
-            <p role="alert" className="text-xs font-bold text-terracotta">
+            <p role="alert" className="text-xs font-bold text-danger">
               لا توجد طريقة دفع متاحة لهذا النوع من الطلبات — عدّل الإعدادات
               أولاً.
             </p>
@@ -716,16 +723,16 @@ export function ManualEntry({
             maxLength={200}
           />
 
-          <dl className="space-y-1 border-t border-cream-200 pt-3 text-sm">
+          <dl className="space-y-1 border-t border-border-soft pt-3 text-sm">
             <div className="flex items-center justify-between">
-              <dt className="text-ink-soft">المجموع</dt>
+              <dt className="text-text-secondary">المجموع</dt>
               <dd>
                 <Price minor={subtotal} />
               </dd>
             </div>
             {orderType === "delivery" && (
               <div className="flex items-center justify-between">
-                <dt className="text-ink-soft">
+                <dt className="text-text-secondary">
                   التوصيل{selectedZone ? ` — ${selectedZone.nameAr}` : ""}
                 </dt>
                 <dd>
@@ -736,7 +743,7 @@ export function ManualEntry({
             <div className="flex items-center justify-between pt-1 font-bold">
               <dt>الإجمالي</dt>
               <dd>
-                <Price minor={total} className="text-lg text-basil-800" />
+                <Price minor={total} className="text-lg text-brand-strong" />
               </dd>
             </div>
           </dl>
@@ -744,7 +751,7 @@ export function ManualEntry({
           {error && (
             <p
               role="alert"
-              className="rounded-md bg-terracotta/10 px-4 py-3 text-sm font-bold text-terracotta"
+              className="rounded-md bg-danger/10 px-4 py-3 text-sm font-bold text-danger"
             >
               {error}
             </p>
@@ -769,7 +776,7 @@ export function ManualEntry({
         </div>
       )}
 
-      <p className="text-center text-xs text-ink-soft">
+      <p className="text-center text-xs text-text-secondary">
         مرحباً {ownerName} — الطلبات اليدوية تمر بنفس خط أنابيب الأسعار المحمي.
       </p>
     </div>

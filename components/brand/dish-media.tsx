@@ -37,7 +37,7 @@ export function DishMedia({
   if (product.image) {
     return (
       <div
-        className={cn("relative overflow-hidden bg-cream-200", className)}
+        className={cn("relative overflow-hidden bg-surface-sunken", className)}
         style={
           product.image.color
             ? { backgroundColor: product.image.color }
@@ -51,6 +51,10 @@ export function DishMedia({
           height={product.image.height}
           sizes={sizes}
           preload={preload}
+          // React 19 native attribute: the preload <link> alone still left
+          // the decode/paint deprioritized, which deferred the / LCP paint
+          // past the main-thread idle window under simulated mobile.
+          fetchPriority={preload ? "high" : undefined}
           placeholder={product.image.blurDataURL ? "blur" : "empty"}
           blurDataURL={product.image.blurDataURL}
           className="h-full w-full object-cover"

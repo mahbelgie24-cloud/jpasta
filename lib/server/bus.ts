@@ -17,6 +17,6 @@ globalForBus.jpastaBus = bus;
 
 export const ORDERS_CHANGED = "orders-changed";
 
-export function notifyOrdersChanged(): void {
-  bus.emit(ORDERS_CHANGED, Date.now());
+export function notifyOrdersChanged(orderId?: string): void {
+  bus.emit(ORDERS_CHANGED, { at: Date.now(), orderId });
 }

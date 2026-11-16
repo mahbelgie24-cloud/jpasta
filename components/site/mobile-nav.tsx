@@ -47,7 +47,7 @@ export function MobileNav({
         onClick={() => setOpen(true)}
         aria-label="فتح القائمة"
         aria-expanded={open}
-        className="flex size-11 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-cream-200 hover:text-ink"
+        className="flex size-11 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-surface-sunken hover:text-text-primary"
       >
         <Menu className="size-5" aria-hidden />
       </button>
@@ -65,7 +65,7 @@ export function MobileNav({
               type="button"
               onClick={() => ref.current?.close()}
               aria-label="إغلاق القائمة"
-              className="flex size-11 items-center justify-center rounded-full text-cream-100 transition-colors hover:bg-cream-50/10"
+              className="flex size-11 items-center justify-center rounded-full text-cream-100 transition-colors hover:bg-surface/10"
             >
               <X className="size-5" aria-hidden />
             </button>
@@ -83,7 +83,7 @@ export function MobileNav({
                     href={link.href}
                     prefetch={false}
                     onClick={() => ref.current?.close()}
-                    className="flex min-h-14 items-center justify-between gap-3 rounded-2xl px-3 font-display-ar text-2xl font-bold text-cream-50 transition-colors hover:bg-cream-50/5"
+                    className="flex min-h-14 items-center justify-between gap-3 rounded-2xl px-3 font-display-ar text-2xl font-bold text-cream-50 transition-colors hover:bg-surface/5"
                   >
                     <span>{link.label}</span>
                     <span
@@ -110,7 +110,7 @@ export function MobileNav({
               href={whatsappUrl(wa, "مرحباً JPasta — بدي أطلب")}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-wheat-300 text-sm font-bold text-basil-950"
+              className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-wheat-300 text-sm font-bold text-text-primary"
             >
               <MessageCircle className="size-4" aria-hidden />
               اطلب عبر واتساب

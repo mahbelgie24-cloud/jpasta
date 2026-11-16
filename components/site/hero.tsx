@@ -42,8 +42,12 @@ export async function Hero() {
       />
 
       <div className="relative container-page grid items-center gap-12 pt-14 pb-20 sm:pt-20 lg:grid-cols-[1.02fr_0.98fr] lg:gap-8 lg:pt-24 lg:pb-28">
-        <div className="animate-fade-up text-center lg:text-start">
-          <p className="inline-flex items-center gap-2 rounded-full border border-cream-50/15 bg-cream-50/5 px-4 py-1.5 text-sm font-bold text-cream-100 backdrop-blur">
+        {/* No entrance animation here: elements at opacity:0 are not LCP
+            candidates, so a fade-in deferred the recorded LCP to the first
+            main-thread idle window (~4.6s throttled). The plate paints as
+            soon as its preloaded image does. */}
+        <div className="text-center lg:text-start">
+          <p className="inline-flex items-center gap-2 rounded-full border border-cream-50/15 bg-surface/5 px-4 py-1.5 text-sm font-bold text-cream-100 backdrop-blur">
             صلصة بيتية · تُحضّر طازجة يومياً
           </p>
 
@@ -78,7 +82,7 @@ export async function Hero() {
               className={buttonStyles(
                 "primary",
                 "lg",
-                "w-full bg-wheat-300 text-basil-950 shadow-lift hover:bg-wheat-400 sm:w-auto",
+                "w-full bg-wheat-300 text-text-primary shadow-lift hover:bg-wheat-400 sm:w-auto",
               )}
             >
               تصفّح القائمة
@@ -94,7 +98,7 @@ export async function Hero() {
               className={buttonStyles(
                 "secondary",
                 "lg",
-                "w-full border-cream-50/20 bg-cream-50/5 text-cream-50 hover:border-wheat-300/50 hover:bg-cream-50/10 sm:w-auto",
+                "w-full border-cream-50/20 bg-surface/5 text-cream-50 hover:border-wheat-300/50 hover:bg-surface/10 sm:w-auto",
               )}
             >
               <MessageCircle className="size-5" aria-hidden />
@@ -132,7 +136,7 @@ export async function Hero() {
             className="absolute inset-0 rounded-full border border-wheat-300/15 motion-safe:animate-[twirl_28s_linear_infinite]"
           />
           {heroProduct && (
-            <div className="relative animate-fade-up px-3 pt-8 pb-6 [animation-delay:120ms]">
+            <div className="relative px-3 pt-8 pb-6">
               <DishMedia
                 product={heroProduct}
                 variant="hero"

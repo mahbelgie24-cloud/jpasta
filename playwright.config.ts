@@ -29,11 +29,32 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${PORT}`,
     trace: "retain-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    // Cross-browser smoke (Phase E): the full suite stays chromium-only —
+    // webkit/firefox run just the @smoke journeys (landing, menu, console
+    // login) to catch engine-specific breakage cheaply. Run with:
+    //   npx playwright test --project=webkit --project=firefox
+    {
+      name: "webkit",
+      use: { ...devices["Desktop Safari"] },
+      grep: /@smoke/,
+    },
+    {
+      name: "firefox",
+      use: { ...devices["Desktop Firefox"] },
+      grep: /@smoke/,
+    },
+  ],
   webServer: {
     command: "npx next start -p 3220",
     url: `http://127.0.0.1:${PORT}/api/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // The e2e suite drives dozens of real order journeys per minute from one
+    // IP — it must not spend the edge ORDER_LIMIT quota. Only the webServer
+    // gets this flag (lib/server/rate-limit.ts); production never does, and
+    // the DB-side login throttle stays active either way.
+    env: { JPASTA_SKIP_EDGE_RATE_LIMIT: "1" },
   },
 });

@@ -22,6 +22,33 @@ const PAIRS = [
   { fg: "#2C714B", bg: "#FDFBF7", min: 4.5, label: "basil-600 / cream-50" },
   { fg: "#E3C98F", bg: "#0C2419", min: 7, label: "wheat-300 / basil-950" },
   { fg: "#F9F5EC", bg: "#0C2419", min: 7, label: "cream-100 / basil-950" },
+  // Console theme — semantic action button (v2 token sweep, 2026-11).
+  {
+    fg: "#030C07",
+    bg: "#3D8A5F",
+    min: 4.5,
+    label: "action-text / action (console)",
+  },
+  // Toast pill — same pair in every theme (brand-deep is always darkest).
+  {
+    fg: "#FDFBF7",
+    bg: "#010804",
+    min: 7,
+    label: "cream-50 / brand-deep (toast)",
+  },
+  // Active radio card on the dark themes (brand-subtle composited on surface).
+  {
+    fg: "#94C2A4",
+    bg: "#15281E",
+    min: 4.5,
+    label: "brand-strong / brand-subtle (console)",
+  },
+  {
+    fg: "#C0DCC8",
+    bg: "#18261F",
+    min: 4.5,
+    label: "brand-strong / brand-subtle (kitchen)",
+  },
 ];
 
 function channel(value) {

@@ -38,19 +38,21 @@ export function HowToOrder() {
         {STEPS.map((s) => (
           <li
             key={s.title}
-            className="relative rounded-card border border-cream-200 bg-cream-100 p-6 pt-8 shadow-card"
+            className="relative rounded-card border border-border-soft bg-surface-raised p-6 pt-8 shadow-card"
           >
             <span
               aria-hidden
-              className="absolute start-6 -top-5 flex size-10 items-center justify-center rounded-full bg-basil-700 font-display text-lg font-bold text-cream-50 shadow-card"
+              className="absolute start-6 -top-5 flex size-10 items-center justify-center rounded-full bg-action font-display text-lg font-bold text-action-text shadow-card"
             >
               {s.title.charAt(0)}
             </span>
-            <span className="inline-flex size-12 items-center justify-center rounded-full bg-cream-50 text-basil-700 shadow-card">
+            <span className="inline-flex size-12 items-center justify-center rounded-full bg-surface text-brand shadow-card">
               <s.icon className="size-6" aria-hidden />
             </span>
-            <h3 className="mt-4 type-title text-ink">{s.title.slice(3)}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+            <h3 className="mt-4 type-title text-text-primary">
+              {s.title.slice(3)}
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-text-secondary">
               {s.body}
             </p>
           </li>

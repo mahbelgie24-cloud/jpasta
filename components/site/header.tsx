@@ -22,19 +22,19 @@ export async function Header() {
           <Link
             href="/menu"
             prefetch={false}
-            className="inline-flex min-h-11 items-center rounded-full px-4 py-2.5 text-sm font-bold text-ink-soft transition-colors hover:bg-paper-deep hover:text-ink"
+            className="inline-flex min-h-11 items-center rounded-full px-4 py-2.5 text-sm font-bold text-text-secondary transition-colors hover:bg-paper-deep hover:text-text-primary"
           >
             القائمة
           </Link>
           <Link
             href="/#featured"
-            className="inline-flex min-h-11 items-center rounded-full px-4 py-2.5 text-sm font-bold text-ink-soft transition-colors hover:bg-paper-deep hover:text-ink"
+            className="inline-flex min-h-11 items-center rounded-full px-4 py-2.5 text-sm font-bold text-text-secondary transition-colors hover:bg-paper-deep hover:text-text-primary"
           >
             أطباقنا
           </Link>
           <Link
             href="/#visit"
-            className="inline-flex min-h-11 items-center rounded-full px-4 py-2.5 text-sm font-bold text-ink-soft transition-colors hover:bg-paper-deep hover:text-ink"
+            className="inline-flex min-h-11 items-center rounded-full px-4 py-2.5 text-sm font-bold text-text-secondary transition-colors hover:bg-paper-deep hover:text-text-primary"
           >
             موقعنا وأوقاتنا
           </Link>

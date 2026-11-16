@@ -21,11 +21,11 @@
 
 - **Tokens only.** Components use semantic tokens; the dark console and the
   kitchen read the same components through `.theme-console` /
-  `.theme-kitchen` variable remapping (globals.css). Eight legacy console
-  files still write primitive utility names (e.g. `bg-cream-50`) — the bridge
-  remaps their rendered values, so output is coherent today; renaming them to
-  semantic tokens is a tracked post-launch refactor (HANDOFF §11/§12.10),
-  deliberately not churned right before launch.
+  `.theme-kitchen` variable remapping (globals.css). The former primitive-class
+  bridge is retired (2026-11 token sweep): every console/kitchen file now
+  writes semantic tokens directly, and the bridge CSS is gone. Deliberate
+  primitive exceptions: image-overlay utilities (`outline-light` button,
+  hero/footer overlays on dark imagery) and the `/studio` swatch board.
 - **Focus.** A global `:focus-visible` ring from the `focus` token covers
   every interactive element, including the console keypad and board buttons.
 - **RTL.** Arabic-first with logical properties everywhere; the new lint rule

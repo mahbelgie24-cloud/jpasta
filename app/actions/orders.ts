@@ -11,6 +11,7 @@ import {
 } from "@/lib/server/orders";
 import { requireStaff } from "@/lib/server/session";
 import { userMessageOf } from "@/lib/server/guard";
+import { checkRateLimit as checkEdgeRateLimit } from "@/lib/server/rate-limit";
 
 /**
  * Order actions.
@@ -22,32 +23,19 @@ import { userMessageOf } from "@/lib/server/guard";
 
 async function clientIp(): Promise<string> {
   const h = await headers();
-  return (
-    h.get("cf-connecting-ip") ??
-    h.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    "unknown"
-  );
+  // cf-connecting-ip is set by the Cloudflare edge and cannot be spoofed by
+  // the client; x-forwarded-for's first hop is client-controlled.
+  return h.get("cf-connecting-ip") ?? "unknown";
 }
 
 async function checkRateLimit(
   bindingName: "ORDER_LIMIT" | "READ_LIMIT",
   key: string,
-  message = "طلبات كثيرة جداً — انتظر دقيقة ثم حاول مجدداً.",
+  message?: string,
 ): Promise<string | null> {
-  try {
-    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
-    const env = getCloudflareContext().env as {
-      ORDER_LIMIT?: { limit(key: string): Promise<{ success: boolean }> };
-      READ_LIMIT?: { limit(key: string): Promise<{ success: boolean }> };
-    };
-    const binding = env[bindingName];
-    if (!binding) return null;
-    const { success } = await binding.limit(key);
-    if (!success) return message;
-    return null;
-  } catch {
-    return null; // Node runtime (local dev/tests) — binding is Workers-only
-  }
+  // Shared resolver (lib/server/rate-limit.ts): one call shape, one
+  // missing-binding warn, one e2e bypass — nothing drifts per call site.
+  return checkEdgeRateLimit(bindingName, key, message);
 }
 
 export async function placeStorefrontOrder(

@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /**
  * Bottom sheet on native <dialog> — showModal gives focus trapping, Esc
@@ -89,5 +90,23 @@ export function Sheet({
         </div>
       )}
     </dialog>
+  );
+}
+
+/**
+ * Loading state for dynamically imported sheet content — mirrors the open
+ * sheet chrome so the tap→content swap never shifts layout.
+ */
+export function SheetSkeleton() {
+  return (
+    <div
+      role="status"
+      aria-label="جارٍ التحميل"
+      className="fixed inset-x-0 bottom-0 mx-auto w-full max-w-xl rounded-t-3xl bg-surface p-6 shadow-overlay"
+    >
+      <Skeleton className="h-6 w-28" />
+      <Skeleton className="mt-5 h-24 w-full rounded-xl" />
+      <Skeleton className="mt-3 h-12 w-full" />
+    </div>
   );
 }

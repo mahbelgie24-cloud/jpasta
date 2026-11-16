@@ -73,6 +73,8 @@
   --color-brand: var(--color-basil-700);
   --color-brand-strong: var(--color-basil-800);
   --color-brand-deep: var(--color-basil-975);
+  --color-brand-subtle: var(--color-basil-50);
+  --color-brand-soft: var(--color-basil-300);
   --color-accent: var(--color-copper-500);
   --color-success: var(--color-basil-600);
   --color-warning: var(--color-bronze);
@@ -307,6 +309,12 @@
   --color-brand: var(--color-basil-400);
   --color-brand-strong: var(--color-basil-300);
   --color-brand-deep: oklch(0.12 0.02 162);
+  --color-brand-subtle: color-mix(
+    in oklab,
+    var(--color-brand) 14%,
+    transparent
+  );
+  --color-brand-soft: var(--color-basil-300);
   --color-action: var(--color-basil-500);
   --color-action-hover: var(--color-basil-400);
   --color-action-text: oklch(0.14 0.02 162);
@@ -342,6 +350,12 @@
   --color-brand: var(--color-basil-300);
   --color-brand-strong: var(--color-basil-200);
   --color-brand-deep: oklch(0.12 0.014 162);
+  --color-brand-subtle: color-mix(
+    in oklab,
+    var(--color-brand) 14%,
+    transparent
+  );
+  --color-brand-soft: var(--color-basil-200);
   --color-action: var(--color-basil-500);
   --color-action-hover: var(--color-basil-400);
   --color-action-text: oklch(0.14 0.02 162);
@@ -355,77 +369,6 @@
   --shadow-lift:
     0 1px 0 oklch(1 0 0 / 0.07) inset, 0 26px 56px -22px oklch(0 0 0 / 0.9);
   --shadow-overlay: 0 30px 80px -24px oklch(0 0 0 / 0.95);
-}
-
-/* Bridge: console components were authored with primitive utilities before
-   the semantic layer existed. These overrides keep the dark themes honest
-   without a risky mechanical sweep of every file. New code must use the
-   semantic tokens directly. */
-.theme-console .bg-cream-50,
-.theme-kitchen .bg-cream-50 {
-  background-color: var(--color-surface);
-}
-.theme-console .bg-cream-100,
-.theme-kitchen .bg-cream-100 {
-  background-color: var(--color-surface-raised);
-}
-.theme-console .bg-cream-200,
-.theme-kitchen .bg-cream-200,
-.theme-console .bg-cream-300,
-.theme-kitchen .bg-cream-300 {
-  background-color: var(--color-surface-sunken);
-}
-.theme-console .bg-cream-400,
-.theme-kitchen .bg-cream-400 {
-  background-color: var(--color-border-strong);
-}
-.theme-console .text-ink,
-.theme-kitchen .text-ink {
-  color: var(--color-text-primary);
-}
-.theme-console .text-ink-soft,
-.theme-kitchen .text-ink-soft {
-  color: var(--color-text-secondary);
-}
-.theme-console .text-basil-950,
-.theme-kitchen .text-basil-950 {
-  color: var(--color-text-primary);
-}
-.theme-console .text-basil-800,
-.theme-kitchen .text-basil-800 {
-  color: var(--color-brand-strong);
-}
-.theme-console .text-basil-700,
-.theme-kitchen .text-basil-700,
-.theme-console .text-basil-600,
-.theme-kitchen .text-basil-600 {
-  color: var(--color-brand);
-}
-.theme-console .border-cream-200,
-.theme-kitchen .border-cream-200,
-.theme-console .border-cream-300,
-.theme-kitchen .border-cream-300 {
-  border-color: var(--color-border-soft);
-}
-.theme-console .border-cream-400,
-.theme-kitchen .border-cream-400 {
-  border-color: var(--color-border-strong);
-}
-.theme-console .bg-basil-50,
-.theme-kitchen .bg-basil-50 {
-  background-color: color-mix(in oklab, var(--color-brand) 14%, transparent);
-}
-.theme-console .bg-basil-100,
-.theme-kitchen .bg-basil-100 {
-  background-color: color-mix(in oklab, var(--color-brand) 20%, transparent);
-}
-.theme-console .bg-basil-50\/50,
-.theme-kitchen .bg-basil-50\/50 {
-  background-color: color-mix(in oklab, var(--color-brand) 9%, transparent);
-}
-.theme-console .hover\:bg-cream-200:hover,
-.theme-kitchen .hover\:bg-cream-200:hover {
-  background-color: var(--color-surface-sunken);
 }
 
 @layer base {
@@ -457,6 +400,14 @@
   select,
   button {
     font: inherit;
+  }
+
+  /* Our custom clear button owns search-clearing. WebKit (Safari/iOS) paints
+     a native cancel button on type=search that intercepts pointer events on
+     top of the custom one — hiding it keeps one clear affordance everywhere. */
+  input[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
   }
 
   dialog::backdrop {

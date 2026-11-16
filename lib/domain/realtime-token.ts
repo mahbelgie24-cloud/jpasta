@@ -11,7 +11,9 @@ import { hmacSha256Hex, timingSafeEqualText } from "./hash";
 
 export interface RealtimeClaims {
   sub: string;
-  role: "owner" | "staff";
+  role: "owner" | "staff" | "customer";
+  /** role=customer only: the single orderId this token may track. */
+  oid?: string;
   exp: number;
 }
 
@@ -81,12 +83,20 @@ export async function verifyRealtimeToken(
     const claims = JSON.parse(fromBase64Url(body)) as RealtimeClaims;
     if (
       typeof claims.sub !== "string" ||
-      (claims.role !== "owner" && claims.role !== "staff") ||
       typeof claims.exp !== "number" ||
       claims.exp < Math.floor(Date.now() / 1000)
     ) {
       return null;
     }
+    if (claims.role === "customer") {
+      // A customer token is a capability for exactly one order: no oid, no
+      // socket. The oid↔accessToken pair was verified by the minting route.
+      if (typeof claims.oid !== "string" || claims.oid.length === 0) {
+        return null;
+      }
+      return claims;
+    }
+    if (claims.role !== "owner" && claims.role !== "staff") return null;
     return claims;
   } catch {
     return null;

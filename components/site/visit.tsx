@@ -31,7 +31,7 @@ export async function Visit() {
             href={SITE.mapsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="group relative flex min-h-80 flex-col justify-end overflow-hidden rounded-card border border-border-soft bg-cream-200 p-6 shadow-card transition-shadow hover:shadow-lift"
+            className="group relative flex min-h-80 flex-col justify-end overflow-hidden rounded-card border border-border-soft bg-surface-sunken p-6 shadow-card transition-shadow hover:shadow-lift"
             aria-label="افتح موقع JPasta في خرائط جوجل"
           >
             <svg
@@ -69,7 +69,7 @@ export async function Visit() {
             </svg>
 
             <div className="relative rounded-2xl border border-border-soft bg-surface/95 p-4 backdrop-blur">
-              <p className="flex items-center gap-2 font-bold text-ink">
+              <p className="flex items-center gap-2 font-bold text-text-primary">
                 <MapPin className="size-4 text-brand" aria-hidden />
                 {SITE.addressAr}
               </p>
@@ -86,7 +86,7 @@ export async function Visit() {
           {/* contact card */}
           <div className="flex flex-col rounded-card border border-border-soft bg-surface p-6 shadow-card">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="type-title text-ink">كل يوم</h3>
+              <h3 className="type-title text-text-primary">كل يوم</h3>
               <OpenStatus hours={shop} />
             </div>
             <p className="mt-2 flex items-center gap-2 text-sm text-text-secondary">
@@ -97,7 +97,7 @@ export async function Visit() {
             <div className="mt-6 space-y-3">
               <a
                 href={`tel:${phone}`}
-                className="flex min-h-13 items-center justify-center gap-2 rounded-full border border-border-strong bg-paper px-5 font-bold text-ink transition-colors hover:border-brand/40"
+                className="flex min-h-13 items-center justify-center gap-2 rounded-full border border-border-strong bg-paper px-5 font-bold text-text-primary transition-colors hover:border-brand/40"
               >
                 <Phone className="size-4 text-brand" aria-hidden />
                 <span dir="ltr" className="tabular-nums">
