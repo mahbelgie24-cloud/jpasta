@@ -59,6 +59,9 @@ export async function enterPin(page: Page, pin: string): Promise<void> {
     const alerts = await page.locator('p[role="alert"]').allTextContents();
     if (alerts.some((text) => text.trim().length > 0)) return; // rejected
     const count = await enteredDigitCount(page);
+    // The login can complete while the bounded read ran (DOM swaps before
+    // page.url() settles) — the console page must never receive a pad click.
+    if (new URL(page.url()).pathname !== "/console/login") return; // navigated
     if (count < pin.length) {
       await page
         .getByRole("button", { name: pin.charAt(count), exact: true })
@@ -74,15 +77,20 @@ export async function enterPin(page: Page, pin: string): Promise<void> {
 
 /**
  * The pad's progress lives in the sr-only status node the component renders
- * for screen readers («3 من 6 أرقام» / «أدخل الرمز») — always present, so
- * reading it never waits.
+ * for screen readers («3 من 6 أرقام» / «أدخل الرمز») — present only while
+ * the pad is mounted, so the read below must stay bounded.
  */
 async function enteredDigitCount(page: Page): Promise<number> {
+  // Bounded read: textContent is an auto-waiting action, and when a login
+  // succeeds the pad unmounts mid-iteration — on the console page no
+  // [role="status"] exists, so an unbounded read hangs until the toPass
+  // budget dies ("pin entry not settled yet"). 1s covers a present element
+  // (reads resolve in ~10ms); a miss must fall through to "" immediately.
   const text =
     (await page
       .locator('[role="status"]')
       .first()
-      .textContent()
+      .textContent({ timeout: 1_000 })
       .catch(() => "")) ?? "";
   const n = Number.parseInt(text.trim(), 10);
   return Number.isFinite(n) && n >= 1 && n <= 6 ? n : 0;
