@@ -44,6 +44,27 @@ if (dbUrl && !/^postgres(ql)?:\/\//.test(dbUrl)) {
     "DATABASE_URL must be a postgres:// or postgresql:// connection string",
   );
 }
+// The deploy build prerenders the catalog from DATABASE_URL — a loopback URL
+// here ships ghost product ids that reject every cart quote (2026-11-16
+// incident). The e2e runbook exports a loopback DATABASE_URL, so this guard
+// lives in the deploy preflight only, never in dev/test tooling.
+if (dbUrl) {
+  try {
+    const host = new URL(dbUrl).hostname;
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "::1" ||
+      host === "[::1]"
+    ) {
+      problems.push(
+        "DATABASE_URL still points at a loopback host — export the production (Neon) URL before deploying",
+      );
+    }
+  } catch {
+    // Not a parseable URL — the schema check above already flagged it.
+  }
+}
 
 const ownerPin = get("JPASTA_OWNER_PIN");
 if (ownerPin && !/^\d{6}$/.test(ownerPin)) {

@@ -1,8 +1,12 @@
 import type { NextConfig } from "next";
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
-// Exposes local Cloudflare bindings during `next dev` (OpenNext docs).
-// Production paths (`next build` / deploy) are unaffected.
+// Exposes the local dev proxy (bindings from wrangler.jsonc + .dev.vars) in
+// EVERY Node process that loads this config — `next dev`, build-time
+// prerendering, and `next start` (verified 2026-11-16: the local Hyperdrive
+// binding leaked into a production build's catalog prerender). lib/db/index.ts
+// guards the build phase; `npm run deploy` preflights the shell DATABASE_URL
+// (scripts/check-env.mjs).
 initOpenNextCloudflareForDev();
 
 /**

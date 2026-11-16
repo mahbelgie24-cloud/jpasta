@@ -126,6 +126,16 @@ npm run deploy
 
 `npm run deploy` = `check-env` → OpenNext build → `wrangler deploy`.
 
+**Build-time database**: the build prerenders the catalog pages (`/`, `/menu`,
+`/privacy`) from the shell's `DATABASE_URL` (the production Neon URL —
+`check-env` refuses loopback hosts after the 2026-11-16 ghost-catalog
+incident). If a build ever runs against the wrong database, purge the sticky
+`unstable_cache` payload before rebuilding: `rm -rf .next/cache`. The local
+`npm run preview` intentionally builds against `DATABASE_URL` while running
+against the local Hyperdrive binding — export a local `DATABASE_URL` for it
+(`DATABASE_URL=postgres://postgres:postgres@127.0.0.1:54330/jpasta npm run
+preview`) to keep prerender and runtime consistent.
+
 The custom entry `worker.ts` exports `OrderFeed` + the OpenNext cache Durable
 Objects. OpenNext's own build logs a warning about DO exports because it
 validates the generated `.open-next/worker.js`; wrangler bundles `worker.ts`
