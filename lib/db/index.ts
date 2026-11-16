@@ -25,14 +25,40 @@ import { dbRequestStore } from "./request-context";
 type CloudflareEnv = { HYPERDRIVE?: { connectionString: string } };
 type DbContext = { pool: Pool; db: NodePgDatabase };
 
+/**
+ * DB URL decision, kept pure for testing. During `next build` the local dev
+ * proxy (initOpenNextCloudflareForDev) exposes a Hyperdrive binding whose
+ * connectionString is wrangler.jsonc's localConnectionString — the
+ * machine-local test database. Reading it at build time shipped a storefront
+ * prerendered with ghost product ids that reject every cart quote with
+ * «صنف غير متوفر» (caught live on 2026-11-16 after the deploy verification).
+ * Builds therefore read DATABASE_URL alone (deploy shell + .env.production*,
+ * never the dev-proxy binding); at runtime the real Hyperdrive binding keeps
+ * priority.
+ */
+export function resolveDbConnectionString(
+  phase: string | undefined,
+  hyperdriveUrl: string | undefined,
+  envUrl: string | undefined,
+): string | undefined {
+  if (phase === "phase-production-build") return envUrl;
+  if (hyperdriveUrl) return hyperdriveUrl;
+  return envUrl;
+}
+
 function connectionString(): string | undefined {
+  let hyperdriveUrl: string | undefined;
   try {
     const env = getCloudflareContext().env as CloudflareEnv;
-    if (env?.HYPERDRIVE) return env.HYPERDRIVE.connectionString;
+    if (env?.HYPERDRIVE) hyperdriveUrl = env.HYPERDRIVE.connectionString;
   } catch {
     // Not on the Workers runtime (Node process) — fall through.
   }
-  return process.env.DATABASE_URL;
+  return resolveDbConnectionString(
+    process.env.NEXT_PHASE,
+    hyperdriveUrl,
+    process.env.DATABASE_URL,
+  );
 }
 
 function createContext(): DbContext {
