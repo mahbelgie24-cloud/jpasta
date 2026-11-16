@@ -99,6 +99,26 @@ chromium وfirefox. سجل CI يقول `waiting for …` **بلا** سطر
 -e POSTGRES_DB=jpasta_test -p 127.0.0.1:54330:5432 postgres:17` ثم
   migrate+seed للقاعدتين (لباسطة `jpasta`: صدّر `.env.local` ووجّه
   DATABASE_URL ثم `npm run db:migrate && npm run db:seed -- --force`).
+  **بعد أي إعادة إنشاء للحاوية يجب إعادة دور `jpasta`** — `wrangler.jsonc`
+  يربط Hyperdrive المحلي عبر `localConnectionString` =
+  `postgres://jpasta:jpasta@127.0.0.1:54330/jpasta` (يتجاوز أي DATABASE_URL
+  مُصدَّر)، والحاوية الطازجة تنشئ postgres فقط. بدون الدور يعيد health
+  «db: down» رغم سلامة القاعدة نفسها:
+  `CREATE USER jpasta WITH PASSWORD 'jpasta'; ALTER DATABASE jpasta OWNER
+TO jpasta;` ثم GRANT ALL على جداول وsequences القاعدتين.
+- **WebKit محلياً على Fedora (بلا sudo، وُثّق 2026-11-16)**: متصفح Playwright
+  مرتبط بـ ICU 74 و`libjpeg.so.8` بينما Fedora 45 تحمل ICU 77/78، و
+  `sudo npx playwright install-deps webkit` يفشل أصلاً (لا يتعرّف على Fedora
+  ويجرب apt-get). الوصفة المجربة: استخرج `libicu74` + `libjpeg-turbo8` من
+  حزم deb أوبونتو 24.04 إلى `~/.local/lib/pw-host-libs` (ar x + tar، بدون
+  root)، ثم رقّع غلافَي MiniBrowser تحت `~/.cache/ms-playwright/webkit-*/`
+  ليحفظا `LD_LIBRARY_PATH` الخارجي بدل استبداله:
+  `export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:}${MYDIR}/lib:${MYDIR}/sys/lib"`.
+  وأطلق الـ E2E دائماً بـ:
+  `export LD_LIBRARY_PATH="$HOME/.local/lib/pw-host-libs"
+PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1`.
+  إعادة تنزيل webkit بأي إصدار جديد تمحو رقعة الغلاف (المسار يتغير برقم
+  الإصدار) — أعد الرقعة. (إن توفرت لاحقاً حزمة `icu-74` بـ dnf فهي بديل أنظف.)
 - **env لـ vitest**: `export TEST_DATABASE_URL=…/jpasta_test` (الإعدادات
   تحوّله إلى DATABASE_URL داخلياً).
 - **env لـ E2E**: صدّر **كلاهما** `TEST_DATABASE_URL` و`DATABASE_URL`
