@@ -541,16 +541,20 @@ export async function placeOrder(
       if (!order) throw new OrderError("تعذر حفظ الطلب.");
 
       await tx.insert(orderItems).values(
-        computed.map((l) => ({
-          orderId: order.id,
-          productId: l.productId,
-          nameAr: l.nameAr,
-          detailAr: l.detailAr,
-          note: l.note,
-          quantity: l.quantity,
-          unitPriceMinor: l.unitPriceMinor,
-          lineTotalMinor: l.lineTotalMinor,
-        })),
+        await Promise.all(
+          computed.map(async (l) => ({
+            orderId: order.id,
+            productId: l.productId,
+            nameAr: l.nameAr,
+            detailAr: l.detailAr,
+            // Line notes are customer-authored free text — same §13 envelope
+            // as the customer fields (2026-11-18 retention audit finding).
+            note: l.note ? await encryptPii(l.note) : null,
+            quantity: l.quantity,
+            unitPriceMinor: l.unitPriceMinor,
+            lineTotalMinor: l.lineTotalMinor,
+          })),
+        ),
       );
 
       await tx.insert(orderStatusHistory).values({
@@ -852,14 +856,21 @@ export async function getConsoleOrders() {
     .where(inArray(orders.status, ["received", "preparing", "ready"]))
     .orderBy(asc(orders.createdAt))
     // Bound the board query: a long shift must never pull an unbounded row
-    // set (each row decrypts four PII fields).
+    // set (each order decrypts four PII fields + its items' notes).
     .limit(200);
   const ids = rows.map((r) => r.id);
   const items = ids.length
     ? await db.select().from(orderItems).where(inArray(orderItems.orderId, ids))
     : [];
+  // Line notes are customer free-text at rest (spec §13) — decrypt beside
+  // the customer fields; legacy plaintext rows return untouched.
   const itemsByOrder = new Map<string, typeof items>();
-  for (const it of items) {
+  for (const it of await Promise.all(
+    items.map(async (it) => ({
+      ...it,
+      note: it.note ? await decryptPii(it.note) : it.note,
+    })),
+  )) {
     const list = itemsByOrder.get(it.orderId) ?? [];
     list.push(it);
     itemsByOrder.set(it.orderId, list);
@@ -1204,15 +1215,17 @@ export async function getOrderDetail(
     piiAnonymizedAt: order.piiAnonymizedAt,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
-    items: items.map((item) => ({
-      id: item.id,
-      nameAr: item.nameAr,
-      detailAr: item.detailAr,
-      note: item.note,
-      quantity: item.quantity,
-      unitPriceMinor: item.unitPriceMinor,
-      lineTotalMinor: item.lineTotalMinor,
-    })),
+    items: await Promise.all(
+      items.map(async (item) => ({
+        id: item.id,
+        nameAr: item.nameAr,
+        detailAr: item.detailAr,
+        note: item.note ? await decryptPii(item.note) : item.note,
+        quantity: item.quantity,
+        unitPriceMinor: item.unitPriceMinor,
+        lineTotalMinor: item.lineTotalMinor,
+      })),
+    ),
     history: history.map((entry) => ({
       id: entry.id,
       fromStatus: entry.fromStatus,
