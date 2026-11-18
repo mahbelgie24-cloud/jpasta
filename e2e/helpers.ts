@@ -109,6 +109,12 @@ export interface PlacedOrder {
   accessToken: string;
   /** Token-gated status page path, as handed out by the confirmation UI. */
   statusPath: string;
+  /**
+   * performance.now()-style epoch ms stamped the moment the confirmation
+   * heading becomes visible — the closest real-UI proxy for the DB commit,
+   * used by scripts/verify-realtime.mts for the <1s realtime gate.
+   */
+  confirmedAt: number;
 }
 
 function extractOrderNumber(text: string): string {
@@ -122,6 +128,7 @@ async function readConfirmation(page: Page): Promise<PlacedOrder> {
   const confirmation = page.getByRole("dialog", { name: "تم استلام طلبك" });
   const heading = confirmation.getByRole("heading", { name: /وصلنا/ });
   await expect(heading).toBeVisible();
+  const confirmedAt = Date.now();
   const headingText = (await heading.textContent()) ?? "";
   const orderNumber = extractOrderNumber(headingText);
 
@@ -135,7 +142,7 @@ async function readConfirmation(page: Page): Promise<PlacedOrder> {
   if (!orderId || !accessToken) {
     throw new Error(`unparseable status link: ${statusPath}`);
   }
-  return { orderNumber, orderId, accessToken, statusPath };
+  return { orderNumber, orderId, accessToken, statusPath, confirmedAt };
 }
 
 /** Add the first available product with its default selections. */
