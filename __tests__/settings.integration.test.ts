@@ -72,6 +72,11 @@ d("shop settings", () => {
       { key: "ordering_enabled", value: "maybe" },
       { key: "payment_methods", value: "cash,bogus" },
       { key: "delivery_eta_minutes", value: "999" },
+      // PII retention: 0 would anonymize every order on the next cron, so
+      // it must fall back to the default exactly like out-of-range junk.
+      { key: "pii_retention_months", value: "0" },
+      { key: "pii_retention_months", value: "999" },
+      { key: "pii_retention_months", value: "garbage" },
     ]);
     expect(parsed.opensAt).toBe(SHOP_SETTINGS_DEFAULTS.opensAt);
     expect(parsed.minOrderMinor).toBe(0);
@@ -80,6 +85,23 @@ d("shop settings", () => {
     expect(parsed.deliveryEtaMinutes).toBe(
       SHOP_SETTINGS_DEFAULTS.deliveryEtaMinutes,
     );
+    expect(parsed.piiRetentionMonths).toBe(
+      SHOP_SETTINGS_DEFAULTS.piiRetentionMonths,
+    );
+  });
+
+  it("parses a valid PII retention window round-trip", async () => {
+    // Upsert like the save action does — the seed has no such row yet.
+    await db
+      .insert(settings)
+      .values({ key: "pii_retention_months", value: "18" })
+      .onConflictDoUpdate({ target: settings.key, set: { value: "18" } });
+    try {
+      const shop = await readShopSettings();
+      expect(shop.piiRetentionMonths).toBe(18);
+    } finally {
+      await db.delete(settings).where(eq(settings.key, "pii_retention_months"));
+    }
   });
 
   it("enforces the owner-configured minimum order server-side", async () => {

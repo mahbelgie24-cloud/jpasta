@@ -56,10 +56,29 @@
 - Rotate `AUTH_PEPPER` only with a PIN re-provisioning plan (it changes every
   lookup).
 - Rotate `REALTIME_SECRET` freely (tokens live 2 minutes).
+- **PII retention (owner decision 2026-11-18):** customer name/phone/address/
+  customer note and the per-line order-item notes on orders older than
+  `pii_retention_months` (settings, default 12; a month ≈ 30 days, erring
+  early) are anonymized by the daily cron (`/api/cron/prune` →
+  `anonymizeExpiredPii`). Anonymization never deletes a row and never
+  touches `order_status_history` — the order stays reconstructable and the
+  marker (`مجهّل — سياسة الاحتفاظ` + `orders.pii_anonymized_at`) is
+  distinguishable from a decrypt failure. Owner-initiated DSAR for a single
+  order lives in `/console/settings` (owner-gated server action,
+  `pii.dsar_anonymized` log carries the order number and actor id only,
+  never PII values).
 
 ## 5. Known gaps (tracked)
 
 - No MFA/WebAuthn (PIN-only is a deliberate business constraint).
+- **`order_items.note` is stored plaintext** (found by the 2026-11-18
+  retention audit, pre-existing): the customer-authored free-text line note
+  bypasses the §13 encryption applied to customer_note/name/phone/address —
+  write sites `lib/server/orders.ts` ~232/~549, read sites ~872-877,
+  ~1185-1189 + kitchen ticket. The retention job nulls it after the window,
+  but the first-window plaintext remains. **Queued hardening**: encrypt at
+  the write sites with `encryptPii` and decrypt at the read sites, matching
+  the existing `enc:v1:` pattern.
 - ~~No field-level encryption for phone/address at rest~~ **implemented
   (2026-10-28)**: `lib/server/pii.ts` encrypts name/phone/address/note with
   AES-256-GCM (WebCrypto). **Hardened 2026-11-03:** production refuses to

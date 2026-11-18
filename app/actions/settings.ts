@@ -9,6 +9,8 @@ import { SETTINGS_TAG } from "@/lib/server/settings";
 import { requireOwner } from "@/lib/server/session";
 import { userMessageOf } from "@/lib/server/guard";
 import { isPlausiblePhone } from "@/lib/domain/phone";
+import { anonymizeOrderPiiByNumber } from "@/lib/server/maintenance";
+import { logEvent } from "@/lib/server/log";
 
 /**
  * Delivery-zone settings (Phase 2) — the owner edits fees without a deploy.
@@ -277,6 +279,12 @@ const shopSettingsSchema = z.object({
   orderingEnabled: z.boolean(),
   hoursLabel: z.string().trim().min(4, "نص الساعات قصير جداً").max(80),
   receiptFooter: z.string().trim().min(2, "النص قصير جداً").max(160),
+  // 0 would anonymize every order on the next cron — never accepted.
+  piiRetentionMonths: z
+    .number()
+    .int()
+    .min(1, "العتبة شهر واحد على الأقل")
+    .max(240),
 });
 
 export type ShopSettingsInput = z.input<typeof shopSettingsSchema>;
@@ -306,6 +314,7 @@ export async function updateShopSettings(
       { key: "ordering_enabled", value: String(d.orderingEnabled) },
       { key: "hours_label", value: d.hoursLabel },
       { key: "receipt_footer", value: d.receiptFooter },
+      { key: "pii_retention_months", value: String(d.piiRetentionMonths) },
     ];
     await db
       .insert(settings)
@@ -324,5 +333,43 @@ export async function updateShopSettings(
     return { ok: true };
   } catch (err) {
     return fail(err, "تعذر حفظ الإعدادات.");
+  }
+}
+
+// ---------- PII retention / DSAR (owner decision 2026-11-18) ----------
+
+// Same shape the orders CHECK constraint enforces — an invalid number can
+// never reach the DB layer.
+const orderNumberSchema = z
+  .string()
+  .trim()
+  .regex(/^JP-\d{6}-\d{3,}$/, "رقم الطلب بصيغة JP-YYMMDD-NNN");
+
+/**
+ * Owner-initiated DSAR: anonymize one order's customer PII on request
+ * (spec §13 privacy). Owner-gated on the server; the audit trail
+ * (order_status_history) and the money columns are untouched. Log carries
+ * the order number and actor id only — never PII values.
+ */
+export async function anonymizeOrderPii(
+  orderNumber: string,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const user = await guard();
+    const parsed = orderNumberSchema.safeParse(orderNumber);
+    if (!parsed.success) {
+      return { ok: false, error: "رقم الطلب بصيغة JP-YYMMDD-NNN" };
+    }
+    const outcome = await anonymizeOrderPiiByNumber(parsed.data);
+    if (outcome === "missing") return { ok: false, error: "الطلب غير موجود." };
+    if (outcome === "already")
+      return { ok: false, error: "بيانات هذا الطلب مُجهّرة سابقاً." };
+    logEvent("info", "pii.dsar_anonymized", {
+      orderNumber: parsed.data,
+      by: user.id,
+    });
+    return { ok: true };
+  } catch (err) {
+    return fail(err, "تعذر تجهيز بيانات الطلب.");
   }
 }

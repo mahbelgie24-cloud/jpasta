@@ -96,6 +96,10 @@ export async function fetchConsoleBoard() {
       deliveryFeeMinor: o.deliveryFeeMinor,
       customerNote: o.customerNote,
       cancelledReason: o.cancelledReason,
+      // tel: links render only while the customer PII is live.
+      piiAnonymizedAt: o.piiAnonymizedAt
+        ? o.piiAnonymizedAt.toISOString()
+        : null,
       createdAt: o.createdAt.toISOString(),
       updatedAt: o.updatedAt.toISOString(),
       items: o.items.map((it) => ({
