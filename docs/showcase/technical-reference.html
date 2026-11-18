@@ -1,0 +1,2222 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JPasta — المرجع الهندسي الكامل</title>
+<meta name="description" content="الوثيقة التقنية الشاملة لنظام JPasta: البنية التحتية على Cloudflare، دورة حياة الطلب، قواعد البيانات، واجهات البرمجة، والأمان وفق OWASP ASVS L2.">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0c2419;
+        --bg2: #0f2d1f;
+        --panel: #143725;
+        --panel2: #1b4831;
+        --line: rgba(223, 238, 226, 0.14);
+        --line2: rgba(223, 238, 226, 0.24);
+        --text: #fdfbf7;
+        --soft: #b9c9be;
+        --faint: #8fa397;
+        --basil: #5fa47c;
+        --basil-strong: #94c2a4;
+        --wheat: #d4af6e;
+        --wheat2: #b98f4c;
+        --terra: #e07b5f;
+        --code-bg: #081a11;
+        --r-s: 10px;
+        --r-m: 16px;
+        --r-l: 24px;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Alexandria", system-ui, sans-serif;
+        line-height: 1.9;
+        font-size: 16px;
+      }
+      .wrap {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      .latin {
+        font-family: "Fraunces", serif;
+      }
+      .mono {
+        font-family: "JetBrains Mono", monospace;
+        direction: ltr;
+        display: inline-block;
+      }
+      a {
+        color: var(--wheat);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+
+      /* ---------- header ---------- */
+      header {
+        padding: 72px 0 40px;
+        border-bottom: 1px solid var(--line);
+        background: radial-gradient(
+          1200px 500px at 80% -10%,
+          rgba(95, 164, 124, 0.14),
+          transparent 60%
+        );
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--line2);
+        border-radius: 999px;
+        padding: 6px 16px;
+        font-size: 13px;
+        color: var(--soft);
+        background: rgba(20, 55, 37, 0.6);
+      }
+      .chip .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--basil);
+        box-shadow: 0 0 12px var(--basil);
+      }
+      h1 {
+        font-size: clamp(30px, 5vw, 46px);
+        font-weight: 800;
+        line-height: 1.4;
+        margin: 18px 0 10px;
+      }
+      h1 .latin {
+        color: var(--wheat);
+        font-size: 0.9em;
+      }
+      .lede {
+        color: var(--soft);
+        max-width: 760px;
+        font-size: 17px;
+      }
+      .meta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 22px;
+      }
+      .meta-row .m {
+        border: 1px solid var(--line);
+        border-radius: var(--r-s);
+        padding: 8px 14px;
+        font-size: 13px;
+        color: var(--faint);
+        background: var(--bg2);
+      }
+      .meta-row .m b {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      /* ---------- stats ---------- */
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 14px;
+        margin: 36px 0 0;
+      }
+      .stat {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--r-m);
+        padding: 18px 20px;
+      }
+      .stat .n {
+        font-size: 26px;
+        font-weight: 800;
+        color: var(--wheat);
+      }
+      .stat .l {
+        font-size: 13px;
+        color: var(--soft);
+      }
+
+      /* ---------- sections ---------- */
+      section {
+        padding: 56px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      h2 {
+        font-size: clamp(22px, 3.4vw, 30px);
+        font-weight: 800;
+        margin-bottom: 8px;
+      }
+      h2 .idx {
+        color: var(--basil);
+        font-size: 0.75em;
+        font-weight: 600;
+        margin-inline-end: 10px;
+      }
+      .sub {
+        color: var(--soft);
+        max-width: 820px;
+        margin-bottom: 26px;
+      }
+      h3 {
+        font-size: 19px;
+        font-weight: 700;
+        color: var(--basil-strong);
+        margin: 30px 0 12px;
+      }
+      p {
+        color: var(--text);
+        max-width: 860px;
+      }
+      p + p {
+        margin-top: 10px;
+      }
+      .note {
+        background: rgba(212, 175, 110, 0.08);
+        border: 1px solid rgba(212, 175, 110, 0.25);
+        border-radius: var(--r-m);
+        padding: 16px 20px;
+        color: var(--soft);
+        font-size: 15px;
+        margin: 18px 0;
+      }
+      .note b {
+        color: var(--wheat);
+      }
+      .danger-note {
+        background: rgba(224, 123, 95, 0.08);
+        border-color: rgba(224, 123, 95, 0.3);
+      }
+
+      /* ---------- cards & tables ---------- */
+      .grid2 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 16px;
+        margin-top: 20px;
+      }
+      .grid3 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
+        margin-top: 20px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--r-l);
+        padding: 22px 24px;
+      }
+      .card h4 {
+        font-size: 16px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .card h4 .ico {
+        width: 34px;
+        height: 34px;
+        flex: none;
+        border-radius: 10px;
+        background: var(--panel2);
+        display: grid;
+        place-items: center;
+      }
+      .card p {
+        font-size: 14px;
+        color: var(--soft);
+      }
+      .card .tag {
+        display: inline-block;
+        margin-top: 12px;
+        font-size: 12px;
+        color: var(--basil-strong);
+        border: 1px solid rgba(95, 164, 124, 0.35);
+        border-radius: 999px;
+        padding: 2px 10px;
+        background: rgba(95, 164, 124, 0.08);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 18px;
+        font-size: 14px;
+        background: var(--bg2);
+        border: 1px solid var(--line);
+        border-radius: var(--r-m);
+        overflow: hidden;
+      }
+      th {
+        background: var(--panel);
+        color: var(--wheat);
+        font-weight: 600;
+        text-align: right;
+        padding: 12px 16px;
+        font-size: 13px;
+        border-bottom: 1px solid var(--line2);
+      }
+      td {
+        padding: 11px 16px;
+        border-bottom: 1px solid var(--line);
+        color: var(--soft);
+        vertical-align: top;
+      }
+      tr:last-child td {
+        border-bottom: none;
+      }
+      td b {
+        color: var(--text);
+        font-weight: 600;
+      }
+      td .mono {
+        font-size: 12.5px;
+        color: var(--basil-strong);
+      }
+      .table-scroll {
+        overflow-x: auto;
+        border-radius: var(--r-m);
+      }
+
+      /* ---------- code ---------- */
+      pre {
+        background: var(--code-bg);
+        border: 1px solid var(--line);
+        border-radius: var(--r-m);
+        padding: 18px 20px;
+        overflow-x: auto;
+        direction: ltr;
+        text-align: left;
+        margin: 16px 0;
+      }
+      code,
+      pre {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 13px;
+        line-height: 1.8;
+        color: #cfe3d6;
+      }
+      code.inline {
+        background: rgba(95, 164, 124, 0.12);
+        border-radius: 6px;
+        padding: 2px 8px;
+        color: var(--basil-strong);
+        direction: ltr;
+        display: inline-block;
+        font-size: 13px;
+      }
+      pre .c {
+        color: #6e8a78;
+        font-style: italic;
+      }
+      pre .k {
+        color: var(--wheat);
+      }
+      pre .s {
+        color: var(--basil-strong);
+      }
+
+      /* ---------- diagrams ---------- */
+      figure {
+        margin: 26px 0;
+        background: var(--bg2);
+        border: 1px solid var(--line);
+        border-radius: var(--r-l);
+        padding: 20px;
+      }
+      figcaption {
+        color: var(--faint);
+        font-size: 13px;
+        text-align: center;
+        margin-top: 12px;
+      }
+      figure svg {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      /* ---------- steps ---------- */
+      .steps {
+        counter-reset: step;
+        margin-top: 20px;
+      }
+      .step {
+        display: flex;
+        gap: 16px;
+        padding: 16px 0;
+        border-bottom: 1px dashed var(--line);
+      }
+      .step:last-child {
+        border-bottom: none;
+      }
+      .step::before {
+        counter-increment: step;
+        content: counter(step);
+        flex: none;
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+        background: var(--panel2);
+        border: 1px solid rgba(95, 164, 124, 0.4);
+        color: var(--wheat);
+        font-weight: 800;
+        display: grid;
+        place-items: center;
+        font-size: 15px;
+      }
+      .step .t {
+        font-weight: 700;
+        font-size: 15px;
+      }
+      .step .d {
+        color: var(--soft);
+        font-size: 14px;
+      }
+
+      /* ---------- footer ---------- */
+      footer {
+        padding: 44px 0 60px;
+        color: var(--faint);
+        font-size: 13.5px;
+        text-align: center;
+      }
+      footer .latin {
+        color: var(--wheat);
+      }
+      .toc {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 26px 0 0;
+      }
+      .toc a {
+        font-size: 13px;
+        color: var(--soft);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 6px 14px;
+        background: var(--bg2);
+      }
+      .toc a:hover {
+        color: var(--wheat);
+        border-color: rgba(212, 175, 110, 0.4);
+        text-decoration: none;
+      }
+      @media (max-width: 640px) {
+        header {
+          padding: 52px 0 32px;
+        }
+        section {
+          padding: 44px 0;
+        }
+        .wrap {
+          padding: 0 18px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap">
+        <span class="chip"
+          ><span class="dot"></span>مرجع هندسي — نسخة 2026-11-19 · الإنتاج حي
+          على <span class="latin">e81bf5c</span></span
+        >
+        <h1><span class="latin">JPasta</span> — المرجع الهندسي الكامل</h1>
+        <p class="lede">
+          الوثيقة التقنية الشاملة لنظام القائمة الرقمية والطلبات ولوحة المالك:
+          البنية التحتية، الوجهات، دورة حياة الطلب، قواعد البيانات، واجهات
+          البرمجة، الأمان طبقةً طبقةً، والبوابات التي تضمن الجودة — بتفصيل كامل
+          وبلغة واضحة.
+        </p>
+        <div class="meta-row">
+          <span class="m">المنصة: <b>Cloudflare Workers + OpenNext</b></span>
+          <span class="m"
+            >الإطار: <b>Next.js 16 · React 19 · TypeScript strict</b></span
+          >
+          <span class="m"
+            >قاعدة البيانات: <b>Neon PostgreSQL + Drizzle ORM</b></span
+          >
+          <span class="m">اللغة: <b>عربي RTL أولاً</b></span>
+        </div>
+        <nav class="toc">
+          <a href="#s1">نظرة عامة</a><a href="#s2">الوجهات</a
+          ><a href="#s3">البنية التحتية</a><a href="#s4">دورة حياة الطلب</a
+          ><a href="#s5">قواعد البيانات</a><a href="#s6">واجهات API</a
+          ><a href="#s7">الأمان</a><a href="#s8">الزمن</a
+          ><a href="#s9">الجودة</a><a href="#s10">النشر والعمليات</a
+          ><a href="#s11">العمل دون اتصال</a><a href="#s12">التكلفة</a>
+        </nav>
+        <div class="stats">
+          <div class="stat">
+            <div class="n">153</div>
+            <div class="l">اختبار آلي (29 ملفاً) أخضر</div>
+          </div>
+          <div class="stat">
+            <div class="n" dir="ltr">&lt; 1s</div>
+            <div class="l">بوابة زمن وصول التذكرة للوحة</div>
+          </div>
+          <div class="stat">
+            <div class="n">AES-256</div>
+            <div class="l">تشفير كل بيانات الزبائن أثناء التخزين</div>
+          </div>
+          <div class="stat">
+            <div class="n">$0</div>
+            <div class="l">تكلفة تشغيل — مُدقَّقة بالكامل</div>
+          </div>
+          <div class="stat">
+            <div class="n">7/7</div>
+            <div class="l">جداول مطابقة في تدريب الاستعادة</div>
+          </div>
+          <div class="stat">
+            <div class="n">v7</div>
+            <div class="l">نسخة الـ Service Worker الحالية</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <!-- ══════════════ 1. نظرة عامة ══════════════ -->
+      <section id="s1">
+        <h2><span class="idx">01</span>نظرة عامة على النظام</h2>
+        <p class="sub">
+          JPasta نظام منصة واحدة (Modular Monolith) تخدم ثلاثة وجوه: متجر طلبات
+          للزبون، لوحة تشغيل للمالك، وشاشة عرض للمطبخ — فوق بنية Cloudflare
+          الخالية من السيرفر، مع PostgreSQL كمرجع واحد للحقيقة.
+        </p>
+        <p>
+          القرار الهندسي الجوهري: <b>«مُضبوط بالمقاس لا أقصى تعقيد»</b> — محل
+          واحد بلا فروع، فلا تعدد مستأجرين ولا خدمات موزعة. كل الوحدات داخل
+          تطبيق Next.js واحد بحدود واضحة:
+          <code class="inline">lib/server/orders.ts</code> خط الطلبات،
+          <code class="inline">lib/server/session.ts</code> الهوية،
+          <code class="inline">lib/server/maintenance.ts</code> الصيانة،
+          <code class="inline">lib/server/pii.ts</code> التشفير — والمعاملات عبر
+          <b>Server Actions</b> لا REST، لأن كل حركة تمر على حارس صلاحيات في نفس
+          العملية.
+        </p>
+        <div class="grid3">
+          <div class="card">
+            <h4><span class="ico">🏪</span>المتجر — Storefront</h4>
+            <p>
+              القائمة، السلة، ورقة التخصيص، إرسال الطلب، صفحة متابعة الحالة برمز
+              سري في الرابط. تعمل كتطبيق مثبَّت (PWA) وتتعامل مع انقطاع النت بصفّ
+              محلي.
+            </p>
+            <span class="tag">لا حساب للزبون</span>
+          </div>
+          <div class="card">
+            <h4><span class="ico">📋</span>لوحة المالك — Console</h4>
+            <p>
+              لوحة الطلبات المباشرة، الإدخال اليدوي، إدارة القائمة والأسعار،
+              الإعدادات، الموظفون، التقارير، المخزون — كلها خلف جلسة PIN بموظفين
+              وصلاحيات.
+            </p>
+            <span class="tag">RBAC على السيرفر</span>
+          </div>
+          <div class="card">
+            <h4><span class="ico">🔥</span>المطبخ — KDS</h4>
+            <p>
+              تذاكر بحروف ضخمة، بتلات عمر تتلون عند ٥ و١٠ دقائق، تنبيه صوتي
+              (WebAudio) واهتزاز ووميض عنوان — تقرأ من مترين وتعمل على أي متصفح.
+            </p>
+            <span class="tag">نفس مسار البيانات</span>
+          </div>
+        </div>
+        <div class="note">
+          <b>الثوابت الحاكمة (لا تُكسر):</b> المال أعداد صحيحة بأقراص الفلُّس فقط
+          عبر <span class="mono">lib/pricing.ts</span> · كل كتابة طلب تحمل مفتاح
+          idempotency مربوطاً ببصمة الحمولة · مصدر الطلب يملكه السيرفر حصراً ·
+          الانتقالات شرطية داخل transaction مع سجل تدقيق · الوقت
+          <span class="mono">Asia/Hebron</span> حصراً · الأرقام المسلسلة بلا
+          فجوات لكل يوم محلي · المخزون لا ينزل تحت الصفر · الفشل المغلق على
+          قواعد المال والأسرار.
+        </div>
+      </section>
+
+      <!-- ══════════════ 2. الوجهات ══════════════ -->
+      <section id="s2">
+        <h2><span class="idx">02</span>الوجهات (Routes) وبوابات الوصول</h2>
+        <p class="sub">
+          كل وجهة مصنفة حسب طبقة CSP اللازمة (ديناميكية بنونص لكل طلب، أو ثابتة
+          بـ SRI) وبوابة الوصول الخاصة بها. التوجيه المبدئي للمصادقة يجري في الـ
+          Proxy — لكنه تحسين للتجربة فقط، الحارس الحقيقي في كل Server Action على
+          السيرفر.
+        </p>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>الوجهة</th>
+                <th>الوصول</th>
+                <th>CSP</th>
+                <th>الوظيفة</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><b>/</b></td>
+                <td>عام</td>
+                <td>ثابتة</td>
+                <td>
+                  الصفحة الرئيسية: هوية العلامة، الأطباق المميزة، JSON-LD
+                  للفهرسة
+                </td>
+              </tr>
+              <tr>
+                <td><b>/menu</b></td>
+                <td>عام</td>
+                <td>ثابتة + تفاعل</td>
+                <td>
+                  القائمة الرقمية والسلة وإرسال الطلب — prerender مع بيانات
+                  الكتالوج
+                </td>
+              </tr>
+              <tr>
+                <td><b>/order/status/[orderId]</b></td>
+                <td>رمز سري في الرابط</td>
+                <td>ديناميكية</td>
+                <td>
+                  متابعة حالة الطلب برمز
+                  <span class="mono">access_token</span> — بلا حساب
+                </td>
+              </tr>
+              <tr>
+                <td><b>/console/login</b></td>
+                <td>عام</td>
+                <td>ديناميكية</td>
+                <td>لوحة مفاتيح الرقم السري — دخل واحد للجلسة</td>
+              </tr>
+              <tr>
+                <td><b>/console</b></td>
+                <td>جلسة صالحة</td>
+                <td>ديناميكية</td>
+                <td>لوحة الطلبات المباشرة + الإدخال اليدوي</td>
+              </tr>
+              <tr>
+                <td><b>/console/kitchen</b></td>
+                <td>جلسة صالحة</td>
+                <td>ديناميكية</td>
+                <td>شاشة المطبخ (KDS)</td>
+              </tr>
+              <tr>
+                <td><b>/console/menu</b></td>
+                <td>مالك فقط</td>
+                <td>ديناميكية</td>
+                <td>
+                  القائمة: التوفر، الأسعار (مع سجل
+                  <span class="mono">price_changes</span>)، الصور
+                </td>
+              </tr>
+              <tr>
+                <td><b>/console/settings</b></td>
+                <td>مالك فقط</td>
+                <td>ديناميكية</td>
+                <td>
+                  ساعات العمل، الحد الأدنى، مناطق التوصيل، الخصوصية والاحتفاظ،
+                  DSAR
+                </td>
+              </tr>
+              <tr>
+                <td><b>/console/staff</b></td>
+                <td>مالك فقط</td>
+                <td>ديناميكية</td>
+                <td>إضافة/تعطيل موظفين برقم سري فريد مضمون من السيرفر</td>
+              </tr>
+              <tr>
+                <td><b>/console/inventory</b></td>
+                <td>مالك فقط</td>
+                <td>ديناميكية</td>
+                <td>المكونات، الوصفات، حركات الشراء/الهدر/التعديل</td>
+              </tr>
+              <tr>
+                <td><b>/console/reports</b></td>
+                <td>جلسة صالحة</td>
+                <td>ديناميكية</td>
+                <td>تقرير اليوم، الخزنة (Z)، ٧ أيام، الأكثر مبيعاً</td>
+              </tr>
+              <tr>
+                <td><b>/console/orders/[orderId]</b></td>
+                <td>جلسة صالحة</td>
+                <td>ديناميكية</td>
+                <td>تفاصيل الطلب + صفحة الإيصال (شعار أحادي اللون للطباعة)</td>
+              </tr>
+              <tr>
+                <td><b>/privacy</b></td>
+                <td>عام</td>
+                <td>ثابتة</td>
+                <td>سياسة الخصوصية للزبون</td>
+              </tr>
+              <tr>
+                <td><b>/api/health</b></td>
+                <td>عام</td>
+                <td>—</td>
+                <td>
+                  فحص حي: <span class="mono">{"ok":true,"db":"up"}</span> —
+                  يستعمله مراقب التشغيل والنشر
+                </td>
+              </tr>
+              <tr>
+                <td><b>/api/realtime</b></td>
+                <td>رمز موقّع ٢ دقيقة</td>
+                <td>—</td>
+                <td>
+                  WebSocket يُعترض في <span class="mono">worker.ts</span> قبل
+                  Next ويسلك إلى Durable Object
+                </td>
+              </tr>
+              <tr>
+                <td><b>/api/realtime-token</b></td>
+                <td>جلسة صالحة</td>
+                <td>ديناميكية</td>
+                <td>إصدار رمز الاتصال المباشر الموقّع بـ REALTIME_SECRET</td>
+              </tr>
+              <tr>
+                <td><b>/api/csp-report</b></td>
+                <td>عام (204)</td>
+                <td>—</td>
+                <td>
+                  حوض تقارير مخالفات CSP — يسجل الـ directive والمضيف فقط، لا
+                  عناوين كاملة
+                </td>
+              </tr>
+              <tr>
+                <td><b>/api/cron/prune</b></td>
+                <td>Bearer CRON_SECRET</td>
+                <td>—</td>
+                <td>
+                  الصيانة اليومية: جلسات منتهية، محاولات دخول قديمة، إخفاء هوية PII
+                  بعد نافذة الاحتفاظ
+                </td>
+              </tr>
+              <tr>
+                <td><b>/api/media/*</b></td>
+                <td>عام</td>
+                <td>—</td>
+                <td>صور الأطباق البديلة من R2 (الملكية محفوظة في صف الطلب)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ══════════════ 3. البنية التحتية ══════════════ -->
+      <section id="s3">
+        <h2><span class="idx">03</span>البنية التحتية — كل قطعة وماذا تفعل</h2>
+        <p class="sub">
+          أربع خدمات Cloudflare مجانية + PostgreSQL مُدار، مربوطة بـ bindings
+          معرفة في <span class="mono">wrangler.jsonc</span> — لا أسرار في الكود
+          ولا إعدادات مرسّخة.
+        </p>
+
+        <figure>
+          <svg
+            viewBox="0 0 1040 560"
+            role="img"
+            aria-label="مخطط البنية التحتية"
+          >
+            <defs>
+              <marker
+                id="ar"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <path d="M0,0 L10,5 L0,10 z" fill="#D4AF6E" />
+              </marker>
+              <marker
+                id="ar2"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <path d="M0,0 L10,5 L0,10 z" fill="#5FA47C" />
+              </marker>
+            </defs>
+            <!-- clients -->
+            <rect
+              x="30"
+              y="30"
+              width="220"
+              height="70"
+              rx="14"
+              fill="#143725"
+              stroke="rgba(223,238,226,.24)"
+            />
+            <text
+              x="140"
+              y="58"
+              text-anchor="middle"
+              fill="#FDFBF7"
+              font-size="15"
+              font-weight="700"
+            >
+              جوال الزبون
+            </text>
+            <text
+              x="140"
+              y="82"
+              text-anchor="middle"
+              fill="#8FA397"
+              font-size="12"
+            >
+              PWA · صفّ محلي عند الانقطاع
+            </text>
+            <rect
+              x="410"
+              y="30"
+              width="220"
+              height="70"
+              rx="14"
+              fill="#143725"
+              stroke="rgba(223,238,226,.24)"
+            />
+            <text
+              x="520"
+              y="58"
+              text-anchor="middle"
+              fill="#FDFBF7"
+              font-size="15"
+              font-weight="700"
+            >
+              جوال المالك / الموظف
+            </text>
+            <text
+              x="520"
+              y="82"
+              text-anchor="middle"
+              fill="#8FA397"
+              font-size="12"
+            >
+              لوحة الطلبات · إشعار صوتي
+            </text>
+            <rect
+              x="790"
+              y="30"
+              width="220"
+              height="70"
+              rx="14"
+              fill="#143725"
+              stroke="rgba(223,238,226,.24)"
+            />
+            <text
+              x="900"
+              y="58"
+              text-anchor="middle"
+              fill="#FDFBF7"
+              font-size="15"
+              font-weight="700"
+            >
+              شاشة المطبخ
+            </text>
+            <text
+              x="900"
+              y="82"
+              text-anchor="middle"
+              fill="#8FA397"
+              font-size="12"
+            >
+              KDS · تذاكر ضخمة
+            </text>
+            <!-- arrows down -->
+            <line
+              x1="140"
+              y1="100"
+              x2="420"
+              y2="170"
+              stroke="#D4AF6E"
+              stroke-width="1.6"
+              marker-end="url(#ar)"
+            />
+            <line
+              x1="520"
+              y1="100"
+              x2="520"
+              y2="168"
+              stroke="#D4AF6E"
+              stroke-width="1.6"
+              marker-end="url(#ar)"
+            />
+            <line
+              x1="900"
+              y1="100"
+              x2="620"
+              y2="170"
+              stroke="#D4AF6E"
+              stroke-width="1.6"
+              marker-end="url(#ar)"
+            />
+
+            <!-- cloudflare edge -->
+            <rect
+              x="120"
+              y="172"
+              width="800"
+              height="210"
+              rx="20"
+              fill="#0F2D1F"
+              stroke="#5FA47C"
+              stroke-width="1.4"
+            />
+            <text
+              x="520"
+              y="204"
+              text-anchor="middle"
+              fill="#D4AF6E"
+              font-size="16"
+              font-weight="800"
+            >
+              حافة Cloudflare — تطبيق Workers واحد
+            </text>
+            <rect
+              x="150"
+              y="222"
+              width="180"
+              height="58"
+              rx="12"
+              fill="#1B4831"
+              stroke="rgba(223,238,226,.2)"
+            />
+            <text
+              x="240"
+              y="246"
+              text-anchor="middle"
+              fill="#FDFBF7"
+              font-size="13"
+              font-weight="700"
+            >
+              Proxy (CSP)
+            </text>
+            <text
+              x="240"
+              y="266"
+              text-anchor="middle"
+              fill="#8FA397"
+              font-size="11"
+            >
+              نونص لكل طلب + strict-dynamic
+            </text>
+            <rect
+              x="350"
+              y="222"
+              width="180"
+              height="58"
+              rx="12"
+              fill="#1B4831"
+              stroke="rgba(223,238,226,.2)"
+            />
+            <text
+              x="440"
+              y="246"
+              text-anchor="middle"
+              fill="#FDFBF7"
+              font-size="13"
+              font-weight="700"
+            >
+              Next.js 16 App
+            </text>
+            <text
+              x="440"
+              y="266"
+              text-anchor="middle"
+              fill="#8FA397"
+              font-size="11"
+            >
+              Server Actions + RBAC
+            </text>
+            <rect
+              x="550"
+              y="222"
+              width="180"
+              height="58"
+              rx="12"
+              fill="#1B4831"
+              stroke="#D4AF6E"
+            />
+            <text
+              x="640"
+              y="246"
+              text-anchor="middle"
+              fill="#D4AF6E"
+              font-size="13"
+              font-weight="700"
+            >
+              OrderFeed DO
+            </text>
+            <text
+              x="640"
+              y="266"
+              text-anchor="middle"
+              fill="#8FA397"
+              font-size="11"
+            >
+              WebSocket + hibernation
+            </text>
+            <rect
+              x="750"
+              y="222"
+              width="150"
+              height="58"
+              rx="12"
+              fill="#1B4831"
+              stroke="rgba(223,238,226,.2)"
+            />
+            <text
+              x="825"
+              y="246"
+              text-anchor="middle"
+              fill="#FDFBF7"
+              font-size="13"
+              font-weight="700"
+            >
+              محدد المعدل
+            </text>
+            <text
+              x="825"
+              y="266"
+              text-anchor="middle"
+              fill="#8FA397"
+              font-size="11"
+            >
+              binding لكل colo
+            </text>
+            <rect
+              x="150"
+              y="300"
+              width="180"
+              height="58"
+              rx="12"
+              fill="#1B4831"
+              stroke="rgba(223,238,226,.2)"
+            />
+            <text
+              x="240"
+              y="324"
+              text-anchor="middle"
+              fill="#FDFBF7"
+              font-size="13"
+              font-weight="700"
+            >
+              R2
+            </text>
+            <text
+              x="240"
+              y="344"
+              text-anchor="middle"
+              fill="#8FA397"
+              font-size="11"
+            >
+              صور + ذاكرة ISR التزايدية
+            </text>
+            <rect
+              x="350"
+              y="300"
+              width="180"
+              height="58"
+              rx="12"
+              fill="#1B4831"
+              stroke="rgba(223,238,226,.2)"
+            />
+            <text
+              x="440"
+              y="324"
+              text-anchor="middle"
+              fill="#FDFBF7"
+              font-size="13"
+              font-weight="700"
+            >
+              D1
+            </text>
+            <text
+              x="440"
+              y="344"
+              text-anchor="middle"
+              fill="#8FA397"
+              font-size="11"
+            >
+              ذاكرة وسوم إعادة التحقق
+            </text>
+            <rect
+              x="550"
+              y="300"
+              width="180"
+              height="58"
+              rx="12"
+              fill="#1B4831"
+              stroke="rgba(223,238,226,.2)"
+            />
+            <text
+              x="640"
+              y="324"
+              text-anchor="middle"
+              fill="#FDFBF7"
+              font-size="13"
+              font-weight="700"
+            >
+              DO Queue
+            </text>
+            <text
+              x="640"
+              y="344"
+              text-anchor="middle"
+              fill="#8FA397"
+              font-size="11"
+            >
+              طابور إعادة التحقق الزمني
+            </text>
+            <rect
+              x="750"
+              y="300"
+              width="150"
+              height="58"
+              rx="12"
+              fill="#1B4831"
+              stroke="rgba(223,238,226,.2)"
+            />
+            <text
+              x="825"
+              y="324"
+              text-anchor="middle"
+              fill="#FDFBF7"
+              font-size="13"
+              font-weight="700"
+            >
+              Cron Trigger
+            </text>
+            <text
+              x="825"
+              y="344"
+              text-anchor="middle"
+              fill="#8FA397"
+              font-size="11"
+            >
+              صيانة يومية 03:00
+            </text>
+
+            <!-- hyperdrive -->
+            <rect
+              x="430"
+              y="412"
+              width="180"
+              height="52"
+              rx="12"
+              fill="#1B4831"
+              stroke="rgba(95,164,124,.5)"
+            />
+            <text
+              x="520"
+              y="434"
+              text-anchor="middle"
+              fill="#94C2A4"
+              font-size="13"
+              font-weight="700"
+            >
+              Hyperdrive
+            </text>
+            <text
+              x="520"
+              y="452"
+              text-anchor="middle"
+              fill="#8FA397"
+              font-size="11"
+            >
+              تجميع اتصالات عالمي
+            </text>
+            <line
+              x1="440"
+              y1="282"
+              x2="505"
+              y2="410"
+              stroke="#5FA47C"
+              stroke-width="1.6"
+              marker-end="url(#ar2)"
+            />
+
+            <!-- neon -->
+            <rect
+              x="330"
+              y="490"
+              width="380"
+              height="56"
+              rx="14"
+              fill="#143725"
+              stroke="#D4AF6E"
+              stroke-width="1.2"
+            />
+            <text
+              x="520"
+              y="514"
+              text-anchor="middle"
+              fill="#FDFBF7"
+              font-size="14"
+              font-weight="700"
+            >
+              Neon PostgreSQL — مرجع الحقيقة الوحيد
+            </text>
+            <text
+              x="520"
+              y="534"
+              text-anchor="middle"
+              fill="#8FA397"
+              font-size="11"
+            >
+              قيود CHECK · فهارس فريدة · سجلات تدقيق · PITR
+            </text>
+            <line
+              x1="520"
+              y1="464"
+              x2="520"
+              y2="488"
+              stroke="#5FA47C"
+              stroke-width="1.6"
+              marker-end="url(#ar2)"
+            />
+          </svg>
+          <figcaption>
+            البنية: ثلاثة وجوه عميل → تطبيق Workers واحد (Proxy CSP → Next → DO)
+            → Hyperdrive → Neon، مع R2/D1/DO-Queue لحزمة OpenNext الكاملة
+          </figcaption>
+        </figure>
+
+        <div class="grid2">
+          <div class="card">
+            <h4><span class="ico">⚡</span>OpenNext — الجسر إلى Workers</h4>
+            <p>
+              <span class="mono">@opennextjs/cloudflare</span> يحوّل مخرجات
+              Next.js إلى حزمة Worker كاملة. ذاكرة ISR التزايدية على R2 بذاكرة
+              إقليمية فوقها، طابور إعادة التحقق على Durable Object، وذاكرة وسوم
+              على D1 — أي أن <span class="mono">revalidateTag</span> يعمل فعلاً
+              عبر الجغرافيا، وKV مستبعد عمداً لأن اتساقه النهائي قد يعرض قائمة
+              قديمة بعد تعديل المالك (خطأ مالي ظاهر).
+            </p>
+            <span class="tag">open-next.config.ts</span>
+          </div>
+          <div class="card">
+            <h4><span class="ico">🔌</span>worker.ts — المدخل المخصص</h4>
+            <p>
+              يصدّر صنفَي Durable Object (<span class="mono">OrderFeed</span> للبث
+              الحي و<span class="mono">DOQueueHandler</span> للطابور — كلاهما
+              SQLite-backed أي ضمن الخطة المجانية)، ويعترض
+              <span class="mono">/api/realtime</span> قبل Next.js، ويستضيف معالج
+              <span class="mono">scheduled</span> الذي يستدعي مسار الصيانة
+              اليومية بالسر عبر مرجع ذاتي.
+            </p>
+            <span class="tag">ExportedHandler</span>
+          </div>
+          <div class="card">
+            <h4><span class="ico">🛡️</span>Hyperdrive — جسر PostgreSQL</h4>
+            <p>
+              اتصال Postgres من حافة عالمية يعني عادةً عذاب تجميع اتصالات.
+              Hyperdrive يحل التسجيل والتجزئة على منصة-side ويحفظ استعلامات
+              القراءة المتكررة — فيقرأ التطبيق قاعدة عالمية كأنها محلية، ويبقى
+              سائق <span class="mono">pg</span> العادي دون سائق serverless.
+            </p>
+            <span class="tag">connection pooling</span>
+          </div>
+          <div class="card">
+            <h4>
+              <span class="ico">🔁</span>سياق الطلب وقاعدة fresh-per-request
+            </h4>
+            <p>
+              socket الـ pg المجمَّع لا يعبر حدود الطلبات على workerd — لذلك كل
+              طلب يفتح عميل قاعدة نظيفاً عبر
+              <span class="mono">withDbRequest()</span>. قاعدة صغيرة تحمي من فئة
+              كاملة من الأخطاء المتقاطعة بين طلبين متزامنين.
+            </p>
+            <span class="tag">lib/db/request-context.ts</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════ 4. دورة حياة الطلب ══════════════ -->
+      <section id="s4">
+        <h2>
+          <span class="idx">04</span>دورة حياة الطلب — من النقرة إلى التذكرة
+        </h2>
+        <p class="sub">
+          هذه أهم مسار في النظام: كل خطوة محكومة، والمال يُحسب مرة واحدة على
+          السيرفر داخل معاملة ذرية واحدة.
+        </p>
+
+        <figure>
+          <svg viewBox="0 0 1040 300" role="img" aria-label="دورة حياة الطلب">
+            <defs>
+              <marker
+                id="ar3"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <path d="M0,0 L10,5 L0,10 z" fill="#D4AF6E" />
+              </marker>
+            </defs>
+            <g
+              font-size="12.5"
+              fill="#FDFBF7"
+              font-weight="700"
+              text-anchor="middle"
+            >
+              <rect
+                x="20"
+                y="40"
+                width="180"
+                height="86"
+                rx="14"
+                fill="#143725"
+                stroke="rgba(223,238,226,.24)"
+              />
+              <text x="110" y="72">١. إرسال السلة</text>
+              <text
+                x="110"
+                y="94"
+                fill="#8FA397"
+                font-size="11"
+                font-weight="400"
+              >
+                zod يرفض أي حقل
+              </text>
+              <text
+                x="110"
+                y="110"
+                fill="#8FA397"
+                font-size="11"
+                font-weight="400"
+              >
+                مشوه قبل كل شيء
+              </text>
+              <rect
+                x="230"
+                y="40"
+                width="180"
+                height="86"
+                rx="14"
+                fill="#143725"
+                stroke="rgba(223,238,226,.24)"
+              />
+              <text x="320" y="72">٢. تسعير سيرفري</text>
+              <text
+                x="320"
+                y="94"
+                fill="#8FA397"
+                font-size="11"
+                font-weight="400"
+              >
+                قراءة fresh للإعدادات،
+              </text>
+              <text
+                x="320"
+                y="110"
+                fill="#8FA397"
+                font-size="11"
+                font-weight="400"
+              >
+                أسعار من الكتالوج لا العميل
+              </text>
+              <rect
+                x="440"
+                y="40"
+                width="180"
+                height="86"
+                rx="14"
+                fill="#143725"
+                stroke="#D4AF6E"
+              />
+              <text x="530" y="72">٣. معاملة ذرية</text>
+              <text
+                x="530"
+                y="94"
+                fill="#8FA397"
+                font-size="11"
+                font-weight="400"
+              >
+                عداد بلا فجوات + طلب
+              </text>
+              <text
+                x="530"
+                y="110"
+                fill="#8FA397"
+                font-size="11"
+                font-weight="400"
+              >
+                + أسطر + سجل + مخزون
+              </text>
+              <rect
+                x="650"
+                y="40"
+                width="180"
+                height="86"
+                rx="14"
+                fill="#143725"
+                stroke="rgba(223,238,226,.24)"
+              />
+              <text x="740" y="72">٤. تشفير PII</text>
+              <text
+                x="740"
+                y="94"
+                fill="#8FA397"
+                font-size="11"
+                font-weight="400"
+              >
+                اسم/هاتف/عنوان/ملاحظات
+              </text>
+              <text
+                x="740"
+                y="110"
+                fill="#8FA397"
+                font-size="11"
+                font-weight="400"
+              >
+                AES-256-GCM حقل بحقل
+              </text>
+              <rect
+                x="860"
+                y="40"
+                width="160"
+                height="86"
+                rx="14"
+                fill="#143725"
+                stroke="#5FA47C"
+              />
+              <text x="940" y="72">٥. إشعار بعد الالتزام</text>
+              <text
+                x="940"
+                y="94"
+                fill="#8FA397"
+                font-size="11"
+                font-weight="400"
+              >
+                notifyOrdersChanged
+              </text>
+              <text
+                x="940"
+                y="110"
+                fill="#8FA397"
+                font-size="11"
+                font-weight="400"
+              >
+                فقط بعد نجاح commit
+              </text>
+            </g>
+            <g stroke="#D4AF6E" stroke-width="1.6">
+              <line x1="200" y1="83" x2="228" y2="83" marker-end="url(#ar3)" />
+              <line x1="410" y1="83" x2="438" y2="83" marker-end="url(#ar3)" />
+              <line x1="620" y1="83" x2="648" y2="83" marker-end="url(#ar3)" />
+              <line x1="830" y1="83" x2="858" y2="83" marker-end="url(#ar3)" />
+            </g>
+            <g font-size="11.5" fill="#94C2A4" text-anchor="middle">
+              <text x="110" y="160">الزبون يرى تأكيداً</text>
+              <text x="320" y="160">لا يمكن ملاعب السعر</text>
+              <text x="530" y="160">فشل أي خطوة = لا طلب إطلاقاً</text>
+              <text x="740" y="160">القراءة تعود نصاً للمالك فقط</text>
+              <text x="940" y="160">اللوحة والمطبخ عبر WebSocket</text>
+            </g>
+            <g
+              font-size="12.5"
+              fill="#FDFBF7"
+              font-weight="700"
+              text-anchor="middle"
+            >
+              <rect
+                x="230"
+                y="185"
+                width="360"
+                height="62"
+                rx="14"
+                fill="#1B4831"
+                stroke="rgba(95,164,124,.5)"
+              />
+              <text x="410" y="210">
+                ٦. البث الحي: OrderFeed DO يوقف Sockets النائمة
+              </text>
+              <text
+                x="410"
+                y="230"
+                fill="#8FA397"
+                font-size="11"
+                font-weight="400"
+              >
+                الزبائن النايمون (hibernation) لا يكلفون CPU — صحو فقط عند الدفع
+              </text>
+              <rect
+                x="620"
+                y="185"
+                width="340"
+                height="62"
+                rx="14"
+                fill="#1B4831"
+                stroke="rgba(95,164,124,.5)"
+              />
+              <text x="790" y="210">
+                ٧. بوابة قبول: ظهور التذكرة &lt; 1 ثانية
+              </text>
+              <text
+                x="790"
+                y="230"
+                fill="#8FA397"
+                font-size="11"
+                font-weight="400"
+              >
+                سكربت verify-realtime يقيسها عبر الواجهة الحقيقية — بوابة يدوية
+                إلزامية قبل اعتماد كل نشر
+              </text>
+            </g>
+          </svg>
+          <figcaption>
+            دورة الطلب: تحقق ← تسعير سيرفري ← معاملة ذرية ← تشفير ← إشعار بعد
+            الالتزام ← بث حي ← بوابة زمن
+          </figcaption>
+        </figure>
+
+        <h3>التفاصيل التي تصنع الفرق</h3>
+        <div class="steps">
+          <div>
+            <div class="t">Idempotency مربوط بالحمولة</div>
+            <div class="d">
+              كل طلب يحمل مفتاحاً فريداً +
+              <span class="mono">payload_hash</span> (SHA-256 للحمولة المطبعة).
+              إعادة إرسال نفس الحمولة تعيد الطلب الأصلي (زبون فقد الاستجابة)،
+              وإعادة المفتاح بحمولة مختلفة تُرفض — لا يمكن سرقة طلب غيرك. ملاحظة
+              تاريخية فقط تحمل sentinel <span class="mono">legacy:</span>.
+            </div>
+          </div>
+          <div>
+            <div class="t">الأرقام المسلسلة بلا فجوات</div>
+            <div class="d">
+              عداد يومي <span class="mono">JP-YYMMDD-NNN</span> داخل نفس
+              المعاملة — يوم المحل يتجاوز منتصف الليل والعداد يتبع تاريخ
+              <span class="mono">Asia/Hebron</span> المحلي لا UTC. فجوة في
+              الأرقام = اشتباه محاسبي، لذلك العداد محصن.
+            </div>
+          </div>
+          <div>
+            <div class="t">الانتقالات شرطية</div>
+            <div class="d">
+              <span class="mono">UPDATE … WHERE status = expected</span> داخل
+              transaction: لو غيّر جهاز آخر الحالة لحظة التنفيذ، يفشل بتعارض واضح
+              («غيّرت الحالة من جهاز آخر») بدل الكتابة فوق قرار. كل انتقال يُلحق
+              بصف في <span class="mono">order_status_history</span> — بما فيه
+              التراجع (undo) خلال ٥ دقائق لأخطاء النقر.
+            </div>
+          </div>
+          <div>
+            <div class="t">المصدر يملكه السيرفر</div>
+            <div class="d">
+              <span class="mono">placeOrder(input, { source })</span> — حقل
+              المصدر (storefront/console) لا يُقبل من حمولة العميل إطلاقاً؛ فعل
+              الـ console يثبت <span class="mono">"console"</span> بعد حارسه.
+              تلاعب العميل بالمصدر مستحيل بنيوياً.
+            </div>
+          </div>
+          <div>
+            <div class="t">رسوم التوصيل من منطقة الزبون</div>
+            <div class="d">
+              <span class="mono">zoneId</span> يتحقق سيرفرياً وأن المنطقة نشطة —
+              الرسوم تأتي من منطقة الزبون المختارة، واختيار «أرخص منطقة» بدلاً
+              منه مستحيل (سلوك قديم أُزيل عمداً).
+            </div>
+          </div>
+          <div>
+            <div class="t">خصم المخزون داخل نفس المعاملة</div>
+            <div class="d">
+              وصفة كل طبق تُخصم من مكوناتها بنفس المعاملة، وصف حركة واحد مُدقَّق
+              <span class="mono">inventory_moves</span> (reason=sale) يشير للطلب
+              — وقيود القاعدة تمنع المخزون السالب فيزيائياً.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════ 5. قواعد البيانات ══════════════ -->
+      <section id="s5">
+        <h2><span class="idx">05</span>قاعدة البيانات — القواعد قبل الجداول</h2>
+        <p class="sub">
+          الفلسفة: «كل طلب قابل لإعادة البناء الكامل، كل تغيير سعر يترك سجلاً، كل
+          حركة مخزون تحمل سبباً». القاعدة نفسها هي خط الدفاع الأخير — القيود
+          مكتوبة بـ SQL لا بالكود فقط.
+        </p>
+
+        <h3>قواعد نقدية ومحاسبية مطلقة</h3>
+        <div class="grid2">
+          <div class="card">
+            <h4><span class="ico">💰</span>المال أعداد صحيحة</h4>
+            <p>
+              كل قيمة مالية <span class="mono">INTEGER</span> بأقراص الفلُّس
+              (agorot) — لا <span class="mono">parseFloat</span> ولا أعداد عائمة
+              تلمس سعراً أبداً، والقاعدة lint تحظرها. التحويل والتنسيق من بوابة
+              واحدة: <span class="mono">lib/pricing.ts</span>.
+            </p>
+            <span class="tag">INTEGER minor units</span>
+          </div>
+          <div class="card">
+            <h4><span class="ico">🧮</span>قيود CHECK فيزيائية</h4>
+            <p>
+              القاعدة ترفض بنفسها: مجاميع سالبة، لا تساوي مجموع مكوناتها، رقم
+              طلب مخالف للصيغة، بصمة حمولة غير سداسية عشرية، إلغاء بلا سبب واضح،
+              مخزون سالب، كمية غير موجبة. حظر على مستوى SQL لا يمكن تجاوزه بكود.
+            </p>
+            <span class="tag">Postgres CHECK</span>
+          </div>
+          <div class="card">
+            <h4><span class="ico">📜</span>ثلاثة سجلات تدقيق</h4>
+            <p>
+              <span class="mono">order_status_history</span> (كل انتقال بما فيه
+              الإنشاء والتراجع — لمسته الصيانة مستحيلة)،
+              <span class="mono">price_changes</span> (كل تغيير سعر قديم/جديد
+              ومن غيّر)، <span class="mono">inventory_moves</span> (كل حركة
+              مكونات بسببها ومرجعها).
+            </p>
+            <span class="tag">audit trail</span>
+          </div>
+          <div class="card">
+            <h4><span class="ico">🔑</span>فهارس فريدة تحمي المنطق</h4>
+            <p>
+              <span class="mono">idempotency_key</span> فريد (ضمانة إعادة
+              الإرسال الأخيرة)، <span class="mono">order_number</span> فريد،
+              <span class="mono">access_token</span> فريد (رمز صفحة الحالة)،
+              <span class="mono">pin_lookup</span> فريد (HMAC يجعل البحث O(1)
+              ويمنع تكرار الأرقام السرية).
+            </p>
+            <span class="tag">UNIQUE indexes</span>
+          </div>
+        </div>
+
+        <h3>الخصوصية على مستوى الصف</h3>
+        <div class="note">
+          الاسم والهاتف والعنوان وملاحظة الزبون <b>وملاحظات أسطر الطلب</b> تخزَّن
+          بأغلفة <span class="mono">enc:v1:&lt;iv&gt;:&lt;ct&gt;</span> بـ
+          AES-256-GCM (WebCrypto) — كل قيمة IV جديد وتوثيق GCM يجعل التلاعب يفكك
+          بدل أن يعرض بايتات مزيفة. بادئة الإصدار تسمح بتدوير المفتاح صفاً صفاً.
+          أي قيمة بلا بادئة = صف قديم يقرأ كما هو (legacy passthrough). وفشل فك
+          التشفير يعرض placeholder ظاهر
+          <span class="mono">[تعذر فك التشفير]</span> — لا يعرض فراغاً يوهم أن
+          الزبون بلا اسم.
+        </div>
+        <div class="note">
+          <b>الاحتفاظ والخصوصية:</b> المهمة اليومية تجهّر بيانات الزبائن في
+          الطلبات الأقدم من النافذة التي يحددها المالك (إعداد
+          <span class="mono">pii_retention_months</span>، افتراضي ١٢ شهراً) —
+          تُستبدل بعلامة ظاهرة «مجهّل — سياسة الاحتفاظ» مع طابع زمني
+          <span class="mono">pii_anonymized_at</span> لكل صف، دون حذف أي شيء
+          ودون مساس <span class="mono">order_status_history</span> إطلاقاً.
+          الدفعة محدودة بـ ٥٠٠ صف لكل تشغيل، والمسند
+          <span class="mono">IS NULL</span> يعاد فحصه داخل الـ UPDATE فلا كتابة
+          مزدوجة. وDSAR (حق الزبون في الحذف) فورم مالك-محمي بعملية انتقالية
+          شرطية <span class="mono">SELECT FOR UPDATE</span>.
+        </div>
+
+        <pre><span class="c">-- نماذج من القيود الحية في القاعدة (migration 0003):</span>
+<span class="k">CHECK</span> (total_minor = subtotal_minor + delivery_fee_minor)
+<span class="k">CHECK</span> (order_number ~ <span class="s">'^JP-[0-9]{6}-[0-9]{3,}$'</span>)
+<span class="k">CHECK</span> (payload_hash ~ <span class="s">'^[0-9a-f]{64}$'</span> <span class="k">or</span> payload_hash <span class="k">like</span> <span class="s">'legacy:%'</span>)
+<span class="k">CHECK</span> (status &lt;&gt; <span class="s">'cancelled'</span> <span class="k">or</span> (cancelled_reason <span class="k">is not null</span> <span class="k">and</span> length(trim(cancelled_reason)) &gt;= 2))</pre>
+
+        <h3>مخطط العلاقات المركزي</h3>
+        <figure>
+          <svg
+            viewBox="0 0 1040 420"
+            role="img"
+            aria-label="مخطط جداول قاعدة البيانات"
+          >
+            <g font-size="13" text-anchor="middle">
+              <rect
+                x="400"
+                y="30"
+                width="240"
+                height="92"
+                rx="14"
+                fill="#143725"
+                stroke="#D4AF6E"
+              />
+              <text
+                x="520"
+                y="60"
+                fill="#D4AF6E"
+                font-weight="800"
+                font-size="15"
+              >
+                orders
+              </text>
+              <text x="520" y="82" fill="#8FA397" font-size="11">
+                order_number · idempotency_key · payload_hash
+              </text>
+              <text x="520" y="100" fill="#8FA397" font-size="11">
+                customer_* (مشفرة) · pii_anonymized_at · totals
+              </text>
+              <rect
+                x="60"
+                y="180"
+                width="220"
+                height="76"
+                rx="14"
+                fill="#143725"
+                stroke="rgba(223,238,226,.24)"
+              />
+              <text x="170" y="210" fill="#FDFBF7" font-weight="700">
+                order_items
+              </text>
+              <text x="170" y="230" fill="#8FA397" font-size="11">
+                nameAr · detailAr · note (مشفرة)
+              </text>
+              <text x="170" y="246" fill="#8FA397" font-size="11">
+                unit_price_minor · line_total_minor
+              </text>
+              <rect
+                x="320"
+                y="180"
+                width="220"
+                height="76"
+                rx="14"
+                fill="#143725"
+                stroke="rgba(223,238,226,.24)"
+              />
+              <text x="430" y="210" fill="#FDFBF7" font-weight="700">
+                order_status_history
+              </text>
+              <text x="430" y="230" fill="#8FA397" font-size="11">
+                from → to · actor · reason
+              </text>
+              <text x="430" y="246" fill="#8FA397" font-size="11">
+                سجل التدقيق — لا يُمس إطلاقاً
+              </text>
+              <rect
+                x="580"
+                y="180"
+                width="200"
+                height="76"
+                rx="14"
+                fill="#143725"
+                stroke="rgba(223,238,226,.24)"
+              />
+              <text x="680" y="210" fill="#FDFBF7" font-weight="700">
+                delivery_zones
+              </text>
+              <text x="680" y="230" fill="#8FA397" font-size="11">
+                fee_minor · is_active
+              </text>
+              <text x="680" y="246" fill="#8FA397" font-size="11">
+                منطقة واحدة نشطة على الأقل
+              </text>
+              <rect
+                x="820"
+                y="180"
+                width="200"
+                height="76"
+                rx="14"
+                fill="#143725"
+                stroke="rgba(223,238,226,.24)"
+              />
+              <text x="920" y="210" fill="#FDFBF7" font-weight="700">
+                order_counters
+              </text>
+              <text x="920" y="230" fill="#8FA397" font-size="11">
+                عداد يومي بلا فجوات
+              </text>
+              <text x="920" y="246" fill="#8FA397" font-size="11">
+                Asia/Hebron
+              </text>
+              <rect
+                x="60"
+                y="300"
+                width="220"
+                height="76"
+                rx="14"
+                fill="#143725"
+                stroke="rgba(223,238,226,.24)"
+              />
+              <text x="170" y="330" fill="#FDFBF7" font-weight="700">
+                categories / products
+              </text>
+              <text x="170" y="350" fill="#8FA397" font-size="11">
+                base_price_minor · is_available
+              </text>
+              <text x="170" y="366" fill="#8FA397" font-size="11">
+                modifier_groups / modifiers
+              </text>
+              <rect
+                x="320"
+                y="300"
+                width="220"
+                height="76"
+                rx="14"
+                fill="#143725"
+                stroke="rgba(223,238,226,.24)"
+              />
+              <text x="430" y="330" fill="#FDFBF7" font-weight="700">
+                ingredients / recipes
+              </text>
+              <text x="430" y="350" fill="#8FA397" font-size="11">
+                خصم تلقائي داخل معاملة الطلب
+              </text>
+              <text x="430" y="366" fill="#8FA397" font-size="11">
+                inventory_moves (reason=*)
+              </text>
+              <rect
+                x="580"
+                y="300"
+                width="200"
+                height="76"
+                rx="14"
+                fill="#143725"
+                stroke="rgba(223,238,226,.24)"
+              />
+              <text x="680" y="330" fill="#FDFBF7" font-weight="700">
+                settings
+              </text>
+              <text x="680" y="350" fill="#8FA397" font-size="11">
+                ساعات · حد أدنى · احتفاظ PII
+              </text>
+              <text x="680" y="366" fill="#8FA397" font-size="11">
+                قراءة fresh في مسار المال
+              </text>
+              <rect
+                x="820"
+                y="300"
+                width="200"
+                height="76"
+                rx="14"
+                fill="#143725"
+                stroke="rgba(223,238,226,.24)"
+              />
+              <text x="920" y="330" fill="#FDFBF7" font-weight="700">
+                users / sessions
+              </text>
+              <text x="920" y="350" fill="#8FA397" font-size="11">
+                pin_lookup HMAC فريد
+              </text>
+              <text x="920" y="366" fill="#8FA397" font-size="11">
+                توكن الجلسة sha256 في السكون
+              </text>
+            </g>
+            <g stroke="#5FA47C" stroke-width="1.4" fill="none">
+              <path d="M430,122 L430,150 L170,150 L170,178" fill="none" />
+              <line x1="430" y1="122" x2="430" y2="178" />
+              <line x1="600" y1="98" x2="680" y2="178" stroke-dasharray="4 4" />
+              <line
+                x1="620"
+                y1="122"
+                x2="900"
+                y2="178"
+                stroke-dasharray="4 4"
+              />
+              <path
+                d="M560,122 L560,280 L430,280 L430,298"
+                fill="none"
+                stroke-dasharray="2 4"
+              />
+            </g>
+            <g font-size="10.5" fill="#6E8A78">
+              <text x="178" y="150">1 — ∞</text>
+              <text x="438" y="150">1 — ∞</text>
+            </g>
+          </svg>
+          <figcaption>
+            النواة: orders في المركز — الأسطر والسجل أبناؤه بcascade، والمخزون
+            والإعدادات والموظفون مدعومون بعلاقات مفهرسة
+          </figcaption>
+        </figure>
+      </section>
+
+      <!-- ══════════════ 6. واجهات API ══════════════ -->
+      <section id="s6">
+        <h2>
+          <span class="idx">06</span>واجهات البرمجة — HTTP أين يجيء، وActions
+          أين تعيي
+        </h2>
+        <p class="sub">
+          فصل مقصود: القراءة العامة والبنية التحتية عبر مسارات HTTP، وكل عملية
+          تغيير عبر <b>Server Actions</b> — لأن الـ Action ينفّذ حارس الصلاحيات
+          في نفس سياق الاستدعاء، فلا نهاية REST مكشوفة تحتاج حماية منفصلة.
+        </p>
+        <div class="grid2">
+          <div class="card">
+            <h4><span class="ico">📥</span>القراءة والبنية</h4>
+            <p>
+              <span class="mono">GET /api/health</span> فحص حي مع فحص القاعدة ·
+              <span class="mono">GET /api/realtime-token</span> رمز WS موقّع عمره
+              دقيقتان · <span class="mono">GET /api/media/*</span> صور R2
+              البديلة · <span class="mono">WS /api/realtime</span> البث الحي
+              (اعتراض worker.ts) ·
+              <span class="mono">GET /api/cron/prune</span> الصيانة (Bearer) ·
+              <span class="mono">POST /api/csp-report</span> حوض المخالفات.
+            </p>
+            <span class="tag">Route Handlers</span>
+          </div>
+          <div class="card">
+            <h4><span class="ico">✍️</span>التحويل عبر Server Actions</h4>
+            <p>
+              <span class="mono">placeOrder</span> ·
+              <span class="mono">transitionOrder/undoLastTransition</span> ·
+              <span class="mono">updateShopSettings</span> (مناطق، أسعار،
+              احتفاظ) · <span class="mono">anonymizeOrderPii</span> (DSAR) ·
+              <span class="mono">fetchConsoleBoard</span> · إدارة الموظفين
+              والمخزون. كل واحد: zod أولاً ← حارس
+              <span class="mono">await</span> ← معاملة ← رسالة مستخدم عربية.
+            </p>
+            <span class="tag">app/actions/*</span>
+          </div>
+          <div class="card">
+            <h4><span class="ico">✅</span>التحقق موحّد بـ zod</h4>
+            <p>
+              مخطط واحد لكل مدخل: حدود نصية، أنماط (رقم الطلب
+              <span class="mono">^JP-\d{6}-\d{3,}$</span> يطابق قيد القاعدة
+              نفسه)، أرقام صحيحة للمبالغ،
+              <span class="mono">noUncheckedIndexedAccess</span> يمنع قراءة
+              عناصر غير موجودة. رسائل الخطأ عربية جاهزة للعرض.
+            </p>
+            <span class="tag">Zod 4</span>
+          </div>
+          <div class="card">
+            <h4><span class="ico">🚦</span>حدود المعدل — طبقتان</h4>
+            <p>
+              الأولى على الحافة: binding أصلي لكل colo (طلبات 10/60s للـ IP،
+              دخول 8/60s، قراءات 240/60s) — تستثنى لخادم الاختبار فقط. الثانية
+              في القاعدة: سلّم تأخير الدخول (١→٥→١٥→٦٠ دقيقة) عبر جدول
+              <span class="mono">login_attempts</span>، fail-closed.
+            </p>
+            <span class="tag">defense in depth</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════ 7. الأمان ══════════════ -->
+      <section id="s7">
+        <h2>
+          <span class="idx">07</span>الأمان — طبقة فوق طبقة، مبنية على OWASP
+          ASVS 5.0 L2
+        </h2>
+        <p class="sub">
+          المبدأ الحاكم: «الواجهة لا تخفي شيئاً مهماً» — كل حماية تُنفَّذ على
+          السيرفر، والواجهة تحسين تجربة فقط.
+        </p>
+
+        <h3>الهوية والجلسات</h3>
+        <div class="grid2">
+          <div class="card">
+            <h4><span class="ico">🔢</span>الرقم السري</h4>
+            <p>
+              بحث O(1) عبر <span class="mono">pin_lookup</span> = HMAC-SHA256
+              مربوط بـ AUTH_PEPPER — الرمز الخام لا يصل القاعدة ولا يُفهرس.
+              التحقق الفعلي bcrypt (cost 12) يعمل <b>داخل Postgres</b> عبر
+              pgcrypto على الـ HMAC المُفلفل — العدادات المكلفة خارج workerd (سقف
+              WebCrypto 100k) والرمز لا يُخزَّن ولا يُحسب في التطبيق.
+            </p>
+            <span class="tag">peppered · pgcrypto</span>
+          </div>
+          <div class="card">
+            <h4><span class="ico">🍪</span>الجلسات</h4>
+            <p>
+              توكنات مبهمة مخزنة <b>sha256-hashed</b> في القاعدة، كوكي
+              <span class="mono">__Host-</span> HttpOnly SameSite=Strict، تنتهي
+              بعد ٧ أيام وتخمل بعد ١٢ ساعة سكون، وتُسحب كلها فور تغيير الرقم
+              السري أو الدور أو التعطيل (<span class="mono">user_version</span
+              >). موظف يدخل = صلاحيات دوره فقط، وكل صفحة تتحقق ثانية على
+              السيرفر.
+            </p>
+            <span class="tag">opaque · revocable</span>
+          </div>
+        </div>
+
+        <h3>CSP — سياسة صارمة بطبقتين</h3>
+        <p>
+          المسارات الديناميكية تحمل <b>نونص لكل طلب</b> +
+          <span class="mono">strict-dynamic</span> (لا سكربت خارجي يستطيع العمل
+          حتى لو حقن). المسارات الثابتة (prerendered) لا تحمل نونصاً بنيوياً —
+          فتسمح بـ inline للحمولة فقط مع SRI على كل سكربت خارجي. وتوجيه
+          <span class="mono">upgrade-insecure-requests</span> على HTTPS فقط (درس
+          webkit: يقتل hydration على http حتى مع localhost).
+          <span class="mono">connect-src</span> مثبت على
+          <span class="mono">'self'</span> + أصل wss الصريح فقط — وكل فرع
+          غائب/تالف يفشل مغلوكاً (لا <span class="mono">wss:</span> حراً). وتقارير
+          المخالفات تسير لحوض يسجل الـ directive والمضيف فقط — عناوين الصفحات
+          تحمل رمز الحالة السري فلا تُسجَّل كاملة.
+        </p>
+
+        <h3>قواعد لا تُخترق بالواجهة</h3>
+        <div class="grid3">
+          <div class="card">
+            <h4><span class="ico">🧱</span>RBAC سيرفري شامل</h4>
+            <p>
+              كل صفحة إعدادات/موظفين/مخزون تتحقق
+              <span class="mono">role === "owner"</span> قبل الرسم، وكل Action
+              تستدعي حارساً بـ <span class="mono">await</span> — الحارس غير
+              المنتظر bug أمني بالتعريف.
+            </p>
+          </div>
+          <div class="card">
+            <h4><span class="ico">🔒</span>فشل مغلق</h4>
+            <p>
+              فشل قراءة الإعدادات يرفض الطلبات (لا «الحد الأدنى صفر افتراضاً») ·
+              مفتاح PII غائب في الإنتاج يمنع كل كتابة PII · CRON_SECRET غائب =
+              المسار يعطّل نفسه (503) لا يتكشّف.
+            </p>
+          </div>
+          <div class="card">
+            <h4><span class="ico">🕵️</span>لا أسرار ولا PII في السجلات</h4>
+            <p>
+              الأسرار عبر <span class="mono">wrangler secret put</span> فقط.
+              سجلات JSON منظمة لا تحمل قيم عملاء أبداً — حتى سجل DSAR يحمل رقم
+              الطلب ومعرّف الفاعل فقط.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════ 8. الزمن ══════════════ -->
+      <section id="s8">
+        <h2><span class="idx">08</span>الزمن — بوابة واحدة: Asia/Hebron</h2>
+        <p class="sub">
+          المحل يعمل من ١:٠٠ ظهراً إلى ١:٠٠ بعد منتصف الليل — «اليوم التجاري»
+          يعبر منتصف الليل، فأي حساب يومي بـ UTC أو بتوقيت العملية يخلط طلبات
+          منتصف الليل بين يومين. الحل:
+          <span class="mono">lib/domain/time.ts</span> بوابة واحدة للأيام
+          المحلية — أرقام الطلبات، التقارير، الخزنة، ساعات العمل، بتلات عمر
+          التذاكر — كلها منها، وقراءة توقيت العملية ممنوعة بنيوياً.
+        </p>
+      </section>
+
+      <!-- ══════════════ 9. الجودة ══════════════ -->
+      <section id="s9">
+        <h2><span class="idx">09</span>الجودة — بوابات لا نوايا</h2>
+        <p class="sub">
+          «الجودة بوابة لا نية» — كل معيار له فحص آلي يفشل الـ CI عند خرقه، ولا
+          يصل أي تعديل للإنتاج إلا من main عبر PR خضراء.
+        </p>
+        <div class="grid2">
+          <div class="card">
+            <h4><span class="ico">🧪</span>153 اختباراً في 29 ملفاً</h4>
+            <p>
+              اختبارات تكامل هادمة ضد قاعدة loopback حصراً (حرمان في CI لو غاب
+              URL — الأخضر لا يعني «بدون تغطية قاعدة»): خط الطلبات (٢٠ طلباً
+              متتالياً بمجاميع مضبوطة)، القيود، المخزون، التقارير، الهوية،
+              الصيانة، التشفير.
+            </p>
+          </div>
+          <div class="card">
+            <h4><span class="ico">🌐</span>E2E عبر المتصفحات الحقيقية</h4>
+            <p>
+              Playwright: chromium كامل + smoke عبر webkit وfirefox — والمسارات
+              عبر الواجهة الحقيقية فقط (لوحة مفاتيح PIN حقيقة، سلة حقيقية، أزرار
+              حقيقية) لأن المسارات نفسها هي العقد.
+            </p>
+          </div>
+          <div class="card">
+            <h4><span class="ico">♿</span>إتاحة وتباين وأداء</h4>
+            <p>
+              WCAG 2.2 AA: axe (serious/critical تفشل)، فاحص تباين مستقل، أهداف
+              لمس ≥44px، RTL بخصائص منطقية، Lighthouse ببوابتين (جوال صارمة +
+              سطح مكتب) وحدود حزم JS، وrespect لـ prefers-reduced-motion في كل
+              حركة.
+            </p>
+          </div>
+          <div class="card">
+            <h4><span class="ico">🧗</span>سقّة تغطية لأعلى فقط</h4>
+            <p>
+              عتبات التغطية في vitest config فوق مستوياتها الفعلية — أي تراجع في
+              التغطية يفشل البناء. والبوابات مستقلة إضافياً بمراجعَي كود وأمان
+              عدائيين على كل diff جوهري.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════ 10. النشر والعمليات ══════════════ -->
+      <section id="s10">
+        <h2>
+          <span class="idx">10</span>النشر والعمليات — خط أنابيب يحرس نفسه
+        </h2>
+        <p class="sub">
+          النشر يدوي بالقرار، لكن كل ما بعده تلقائي ومحصن — وبوابة بيئة
+          production تطلب موافقة بشرية صريحة.
+        </p>
+        <div class="steps">
+          <div>
+            <div class="t">النشر يدوي مقيّد بـ main</div>
+            <div class="d">
+              workflow_dispatch يرفض أي مرجع غير main، وتتطلب بيئة production
+              موافقة بشرية — الخطوة الأخيرة بيد الإنسان دائماً.
+            </div>
+          </div>
+          <div>
+            <div class="t">فحوصات ثم نسخة احتياطية مشفرة</div>
+            <div class="d">
+              format/lint/contrast/typecheck ثم pg_dump على endpoint المباشر
+              مباشرة، مشفرة عميلاً بمفتاح BACKUP_ENCRYPTION_KEY (لا يظهر في
+              العملية ولا الأرشيف) وتُرفع artifact لـ ٧ أيام.
+            </div>
+          </div>
+          <div>
+            <div class="t">migrate ثم provision ثم deploy</div>
+            <div class="d">
+              migrations على endpoint المباشر، provision يزرع المالك والإعدادات
+              بلا مساس الكتالوج، ثم <span class="mono">check-env</span> يرفض
+              placeholders/localhost/أسرار ناقصة قبل بناء OpenNext والرفع.
+            </div>
+          </div>
+          <div>
+            <div class="t">smoke لا يمر بصمت</div>
+            <div class="d">
+              بعد النشر: ٤ مسارات يجب أن تعيد 200، health يجب أن يرجع ok:true،
+              ووجود CSP وX-Frame-Options: DENY إلزامي — فشل أي واحد يفشل الـ
+              workflow كله.
+            </div>
+          </div>
+          <div>
+            <div class="t">تراجع بأمر واحد</div>
+            <div class="d">
+              <span class="mono">npx wrangler rollback</span> يعيد النسخة
+              السابقة فوراً. والسجلات JSON منظمة عبر
+              <span class="mono">wrangler tail</span>. وService Worker يرفع
+              VERSION عند كل تغيير هيكلي ليكسر الكاش (v7 حالياً).
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════ 11. العمل دون اتصال ══════════════ -->
+      <section id="s11">
+        <h2><span class="idx">11</span>العمل دون اتصال — PWA يتصرف كتطبيق</h2>
+        <div class="grid2">
+          <div class="card">
+            <h4><span class="ico">📴</span>صفّ الطلبات المحلي</h4>
+            <p>
+              لو انقطع النت عند الزبون بعد «إرسال»، الطلب يُحفظ في IndexedDB
+              (Dexie) ويعود تلقائياً مرة واحدة بالضبط عند العودة — مفتاح
+              idempotency معه، والقيد الفريد في القاعدة هو الضمانة الأخيرة. مُغطى
+              باختبار وحدة وتكامل.
+            </p>
+          </div>
+          <div class="card">
+            <h4><span class="ico">📦</span>صفّ التطبيق (app shell)</h4>
+            <p>
+              Service Worker v7 يخزن مسبقاً: القائمة الرئيسية، صفحة «غير متصل»
+              المُطرزة بالهوية، الأيقونات (PWA + maskable + أحادية). التثبيت على
+              شاشة الجوال الرئيسية يوفر تجربة تطبيق بلا متجر تطبيقات.
+            </p>
+          </div>
+          <div class="card">
+            <h4><span class="ico">🔔</span>إشعارات نظيفة بالتصميم</h4>
+            <p>
+              Web Push للوحة يرسل <b>نبضة فارغة</b> فقط (empty tickle) — Service
+              Worker يستيقظ ويجلب العدد من السيرفر بنفسه. بيانات زبون في إشعار =
+              صفر، بنيوياً. والصوت WebAudio محلي، والاهتزاز ووميض العنوان يدوي.
+            </p>
+          </div>
+          <div class="card">
+            <h4><span class="ico">🌗</span>ثيمات حسب الوجه</h4>
+            <p>
+              نظام تصميم «Basil Atelier» برموز دلالية: فاتح دافئ للزبون،
+              <span class="mono">theme-console</span> داكن هادئ للمالك،
+              <span class="mono">theme-kitchen</span> عالي التباين للمطبخ — نفس
+              المكونات، أجواء ثلاثة، بلا hex خام في المكونات.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════ 12. التكلفة ══════════════ -->
+      <section id="s12">
+        <h2><span class="idx">12</span>التكلفة — صفر مطلق، مُدقَّق بتاريخ محدد</h2>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>الخدمة</th>
+                <th>الحصة المجانية</th>
+                <th>الاستهلاك الفعلي المُتحقَّق (2026-11-18)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><b>GitHub Actions</b></td>
+                <td>مستودع عام = غير محدود</td>
+                <td>CI كامل + نسخ يومية + مراقبة — $0 دائماً</td>
+              </tr>
+              <tr>
+                <td><b>Cloudflare Workers</b></td>
+                <td>100k طلب/يوم · DO مجانية (SQLite-backed)</td>
+                <td>
+                  الـ DOs على <span class="mono">new_sqlite_classes</span> — ضمن
+                  الخطة المجانية
+                </td>
+              </tr>
+              <tr>
+                <td><b>Neon PostgreSQL</b></td>
+                <td>0.5 GB</td>
+                <td><b>9.2 MB (~2%)</b></td>
+              </tr>
+              <tr>
+                <td><b>R2</b></td>
+                <td>10 GB</td>
+                <td>صور الكتالوج + نسخ يومية مضغوطة</td>
+              </tr>
+              <tr>
+                <td><b>D1 + Hyperdrive</b></td>
+                <td>حصص يومية سخية</td>
+                <td>استعلامات القائمة والوسوم</td>
+              </tr>
+              <tr>
+                <td><b>التبعيات</b></td>
+                <td>—</td>
+                <td>صفر SDK مدفوع (لا Sentry ولا بوابات دفع في الشجرة)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note">
+          <b>قاعدة حاكمة:</b> صفر تكلفة مالية مطلقاً — لا خدمات مدفوعة، لا ترقية
+          خطط، لا تجاوز حصص. أي أداة جديدة تُفحص فاتورتها المستقبلية (دقائق،
+          تخزين، مقاعد) قبل سطرها الأول، والبديل المجاني يُفضَّل دائماً.
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <p>
+          <span class="latin">JPasta</span> — المرجع الهندسي · وثيقة حية تتحدث
+          مع الكود · المصدر الرسمي:
+          <span class="mono">docs/technical-spec.md</span> +
+          <span class="mono">docs/SECURITY.md</span>
+        </p>
+        <p>
+          الإنتاج حي على <span class="mono">e81bf5c</span> · بوابة النشر:
+          <span class="mono">npm run build</span> أخضر · آخر تدقيق تكلفة وأمان:
+          2026-11-18
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

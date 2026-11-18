@@ -1,0 +1,1799 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JPasta — نظام المحل الرقمي الكامل | دليل المالك</title>
+<meta name="description" content="دليل مالك المحل لنظام JPasta: كل ميزة وكيفية استخدامها وفائدتها — طلبات لحظية، تقارير تطابق الخزنة، مخزون ذكي، وتكلفة صفر مُثبتة.">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #fdfbf7;
+        --card: #f9f5ec;
+        --card2: #f2ebdb;
+        --line: #e7ddc8;
+        --line2: #d6c9ac;
+        --ink: #182620;
+        --soft: #4a5a51;
+        --faint: #7a8a80;
+        --basil: #235c3e;
+        --basil-mid: #2c714b;
+        --basil-soft: #dfeee2;
+        --basil-ink: #143725;
+        --wheat: #b98f4c;
+        --wheat-soft: #e3c98f;
+        --terra: #b3402f;
+        --r-s: 10px;
+        --r-m: 16px;
+        --r-l: 24px;
+        --r-xl: 32px;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Alexandria", system-ui, sans-serif;
+        line-height: 1.95;
+        font-size: 16.5px;
+        overflow-x: hidden;
+      }
+      .wrap {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      .latin {
+        font-family: "Fraunces", serif;
+      }
+
+      /* hero */
+      .hero {
+        background: linear-gradient(180deg, #143725 0%, #0c2419 100%);
+        color: #fdfbf7;
+        padding: 76px 0 0;
+        position: relative;
+        overflow: hidden;
+      }
+      .hero::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          900px 420px at 15% -5%,
+          rgba(212, 175, 110, 0.13),
+          transparent 60%
+        );
+        pointer-events: none;
+      }
+      .hero .wrap {
+        position: relative;
+        z-index: 2;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(253, 251, 247, 0.08);
+        border: 1px solid rgba(253, 251, 247, 0.22);
+        color: #dfeee2;
+        border-radius: 999px;
+        padding: 7px 18px;
+        font-size: 14px;
+      }
+      .badge .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #94c2a4;
+        box-shadow: 0 0 10px #94c2a4;
+      }
+      .hero h1 {
+        font-size: clamp(32px, 5.4vw, 52px);
+        font-weight: 800;
+        line-height: 1.5;
+        margin: 20px 0 14px;
+        max-width: 760px;
+      }
+      .hero h1 em {
+        font-style: normal;
+        color: var(--wheat-soft);
+      }
+      .hero .lede {
+        color: #b9c9be;
+        font-size: 18px;
+        max-width: 700px;
+      }
+      .hero-cta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin: 30px 0 0;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 52px;
+        padding: 12px 30px;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 15.5px;
+        text-decoration: none;
+        transition: transform 0.15s ease;
+      }
+      .btn.primary {
+        background: var(--wheat-soft);
+        color: #143725;
+      }
+      .btn.ghost {
+        background: rgba(253, 251, 247, 0.08);
+        color: #fdfbf7;
+        border: 1px solid rgba(253, 251, 247, 0.28);
+      }
+      .btn:hover {
+        transform: translateY(-2px);
+      }
+      .hero-devices {
+        margin-top: 44px;
+        display: flex;
+        justify-content: center;
+        gap: 32px;
+        flex-wrap: wrap;
+        align-items: flex-end;
+      }
+      .phone {
+        width: 250px;
+        flex: none;
+      }
+      .phone svg {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+      .caption {
+        color: #8fa397;
+        font-size: 13px;
+        text-align: center;
+        margin-top: 10px;
+      }
+
+      /* sections */
+      section {
+        padding: 66px 0;
+      }
+      section.alt {
+        background: var(--card);
+        border-block: 1px solid var(--line);
+      }
+      h2 {
+        font-size: clamp(24px, 3.6vw, 34px);
+        font-weight: 800;
+        line-height: 1.5;
+        margin-bottom: 10px;
+      }
+      h2 .accent {
+        color: var(--basil);
+      }
+      .sub {
+        color: var(--soft);
+        max-width: 820px;
+        font-size: 17px;
+        margin-bottom: 30px;
+      }
+      h3 {
+        font-size: 20px;
+        font-weight: 700;
+        margin: 0 0 14px;
+      }
+
+      /* compare */
+      .compare {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        max-width: 920px;
+        margin: 0 auto;
+      }
+      .cmp {
+        border-radius: var(--r-l);
+        padding: 26px 28px;
+      }
+      .cmp.before {
+        background: #fff6f3;
+        border: 1px solid rgba(179, 64, 47, 0.25);
+      }
+      .cmp.after {
+        background: var(--basil-soft);
+        border: 1px solid rgba(35, 92, 62, 0.3);
+      }
+      .cmp h3 {
+        font-size: 17px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .cmp.before h3 {
+        color: var(--terra);
+      }
+      .cmp.after h3 {
+        color: var(--basil);
+      }
+      .cmp ul {
+        list-style: none;
+        margin-top: 14px;
+      }
+      .cmp li {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 7px 0;
+        font-size: 15px;
+        color: var(--soft);
+      }
+      .cmp li .m {
+        flex: none;
+        margin-top: 8px;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+      }
+      .cmp.before .m {
+        background: var(--terra);
+      }
+      .cmp.after .m {
+        background: var(--basil);
+      }
+      @media (max-width: 760px) {
+        .compare {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* features */
+      .fgrid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 18px;
+      }
+      .feature {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: var(--r-l);
+        padding: 26px;
+        box-shadow: 0 1px 2px rgba(24, 38, 32, 0.05);
+      }
+      .feature .ico {
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        background: var(--basil-soft);
+        display: grid;
+        place-items: center;
+        margin-bottom: 14px;
+      }
+      .feature h4 {
+        font-size: 17.5px;
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+      .feature p {
+        color: var(--soft);
+        font-size: 15px;
+      }
+      .feature .how {
+        margin-top: 14px;
+        background: var(--card);
+        border-radius: var(--r-m);
+        padding: 12px 16px;
+        font-size: 14px;
+        color: var(--ink);
+        border: 1px dashed var(--line2);
+      }
+      .feature .how b {
+        color: var(--basil);
+        font-weight: 700;
+      }
+      .feature .proof {
+        display: inline-block;
+        margin-top: 12px;
+        font-size: 12.5px;
+        color: var(--basil);
+        background: var(--basil-soft);
+        border-radius: 999px;
+        padding: 3px 12px;
+        font-weight: 600;
+      }
+
+      /* steps */
+      .steps {
+        counter-reset: s;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        max-width: 980px;
+        margin: 0 auto;
+      }
+      .step {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: var(--r-l);
+        padding: 24px;
+        text-align: center;
+        position: relative;
+      }
+      .step::before {
+        counter-increment: s;
+        content: counter(s);
+        position: absolute;
+        top: -16px;
+        inset-inline-start: 50%;
+        transform: translateX(50%);
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: var(--basil);
+        color: #fff;
+        font-weight: 800;
+        display: grid;
+        place-items: center;
+        font-size: 15px;
+        box-shadow: 0 3px 10px rgba(35, 92, 62, 0.3);
+      }
+      .step h4 {
+        margin-top: 10px;
+        font-size: 16px;
+        font-weight: 700;
+      }
+      .step p {
+        font-size: 14px;
+        color: var(--soft);
+      }
+
+      /* numbers band */
+      .band {
+        background: linear-gradient(160deg, #143725, #0c2419);
+        border-radius: var(--r-xl);
+        color: #fdfbf7;
+        padding: 44px 36px;
+        max-width: 980px;
+        margin: 0 auto;
+      }
+      .band h3 {
+        color: var(--wheat-soft);
+        font-size: clamp(20px, 3vw, 26px);
+        margin-bottom: 26px;
+        text-align: center;
+      }
+      .band .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 22px;
+        text-align: center;
+      }
+      .band .n {
+        font-size: 34px;
+        font-weight: 800;
+        color: var(--wheat-soft);
+      }
+      .band .l {
+        font-size: 13.5px;
+        color: #b9c9be;
+      }
+
+      /* trust */
+      .trust {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 16px;
+      }
+      .tcard {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: var(--r-l);
+        padding: 24px;
+      }
+      .tcard h4 {
+        font-size: 16.5px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+      .tcard p {
+        font-size: 14.5px;
+        color: var(--soft);
+      }
+
+      /* faq */
+      .faq {
+        max-width: 840px;
+        margin: 0 auto;
+      }
+      .faq details {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: var(--r-m);
+        margin-bottom: 12px;
+        overflow: hidden;
+      }
+      .faq summary {
+        cursor: pointer;
+        padding: 18px 22px;
+        font-weight: 700;
+        font-size: 16px;
+        list-style: none;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        min-height: 56px;
+      }
+      .faq summary::-webkit-details-marker {
+        display: none;
+      }
+      .faq summary::after {
+        content: "+";
+        font-size: 22px;
+        color: var(--basil);
+        font-weight: 400;
+      }
+      .faq details[open] summary::after {
+        content: "−";
+      }
+      .faq .a {
+        padding: 0 22px 20px;
+        color: var(--soft);
+        font-size: 15px;
+      }
+
+      /* footer */
+      footer {
+        background: #0c2419;
+        color: #b9c9be;
+        padding: 52px 0;
+        text-align: center;
+        font-size: 14px;
+      }
+      footer .big {
+        color: #fdfbf7;
+        font-size: clamp(20px, 3vw, 26px);
+        font-weight: 800;
+        margin-bottom: 8px;
+      }
+      footer .latin {
+        color: var(--wheat-soft);
+      }
+      @media (max-width: 640px) {
+        section {
+          padding: 48px 0;
+        }
+        .hero {
+          padding-top: 56px;
+        }
+        .wrap {
+          padding: 0 18px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+        .btn:hover {
+          transform: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ══════════ HERO ══════════ -->
+    <div class="hero">
+      <div class="wrap">
+        <span class="badge"
+          ><span class="dot"></span>نظام تشغيل المحل — مبنيّ لـ JPasta ويعمل حياً
+          الآن</span
+        >
+        <h1>
+          محلك كله في جوالك: الطلبات تصل <em>لحظياً</em>، المال يُحسب بدقة، والسجل
+          لا يضيع أبداً
+        </h1>
+        <p class="lede">
+          ودّع طلبات واتساب الضائعة والحسابات اليدوية. نظام واحد يدير قائمتك،
+          طلباتك، مطبخك، مخزونك، وتقاريرك — من جهاز واحد، بلا أي تكلفة شهرية.
+        </p>
+        <div class="hero-cta">
+          <a class="btn primary" href="#features">اكتشف الميزات</a>
+          <a class="btn ghost" href="#start">ابدأ في ٥ دقائق</a>
+        </div>
+        <div class="hero-devices">
+          <figure class="phone">
+            <svg
+              viewBox="0 0 250 500"
+              role="img"
+              aria-label="قائمة الطباق الرقمية على جوال الزبون"
+            >
+              <rect
+                x="4"
+                y="4"
+                width="242"
+                height="492"
+                rx="36"
+                fill="#FDFBF7"
+                stroke="#D6C9AC"
+                stroke-width="2"
+              />
+              <rect
+                x="90"
+                y="16"
+                width="70"
+                height="10"
+                rx="5"
+                fill="#E7DDC8"
+              />
+              <rect
+                x="16"
+                y="40"
+                width="90"
+                height="26"
+                rx="13"
+                fill="#235C3E"
+              />
+              <text
+                x="61"
+                y="57"
+                text-anchor="middle"
+                fill="#FDFBF7"
+                font-size="11"
+                font-weight="700"
+              >
+                JPASTA
+              </text>
+              <rect
+                x="16"
+                y="80"
+                width="218"
+                height="34"
+                rx="17"
+                fill="#F2EBDB"
+              />
+              <circle
+                cx="36"
+                cy="97"
+                r="7"
+                fill="none"
+                stroke="#7A8A80"
+                stroke-width="2"
+              />
+              <text x="120" y="102" fill="#7A8A80" font-size="11">
+                ابحث عن طبق…
+              </text>
+              <rect
+                x="16"
+                y="126"
+                width="64"
+                height="24"
+                rx="12"
+                fill="#DFEEE2"
+              />
+              <text
+                x="48"
+                y="142"
+                text-anchor="middle"
+                fill="#235C3E"
+                font-size="10.5"
+                font-weight="700"
+              >
+                الباستا
+              </text>
+              <rect
+                x="86"
+                y="126"
+                width="64"
+                height="24"
+                rx="12"
+                fill="#F9F5EC"
+              />
+              <text
+                x="118"
+                y="142"
+                text-anchor="middle"
+                fill="#4A5A51"
+                font-size="10.5"
+              >
+                الدجاج
+              </text>
+              <rect
+                x="156"
+                y="126"
+                width="64"
+                height="24"
+                rx="12"
+                fill="#F9F5EC"
+              />
+              <text
+                x="188"
+                y="142"
+                text-anchor="middle"
+                fill="#4A5A51"
+                font-size="10.5"
+              >
+                الصوصات
+              </text>
+              <!-- dish card -->
+              <rect
+                x="16"
+                y="162"
+                width="218"
+                height="120"
+                rx="16"
+                fill="#F9F5EC"
+                stroke="#E7DDC8"
+              />
+              <rect
+                x="26"
+                y="172"
+                width="80"
+                height="66"
+                rx="10"
+                fill="#DFEEE2"
+              />
+              <ellipse cx="66" cy="206" rx="26" ry="17" fill="#FDFBF7" />
+              <ellipse cx="66" cy="204" rx="18" ry="11" fill="#E3C98F" />
+              <path
+                d="M52 200 Q66 190 80 200"
+                stroke="#B98F4C"
+                stroke-width="2.4"
+                fill="none"
+                stroke-linecap="round"
+              />
+              <rect
+                x="114"
+                y="176"
+                width="104"
+                height="13"
+                rx="6"
+                fill="#182620"
+                opacity=".85"
+              />
+              <rect
+                x="114"
+                y="196"
+                width="86"
+                height="9"
+                rx="4"
+                fill="#D6C9AC"
+              />
+              <rect
+                x="114"
+                y="212"
+                width="70"
+                height="13"
+                rx="6.5"
+                fill="#235C3E"
+              />
+              <text
+                x="149"
+                y="222"
+                text-anchor="middle"
+                fill="#FDFBF7"
+                font-size="9.5"
+                font-weight="700"
+              >
+                أضف
+              </text>
+              <text x="26" y="262" fill="#B3402F" font-size="10">
+                متوفر الآن · يُطبخ عند الطلب
+              </text>
+              <text
+                x="26"
+                y="277"
+                fill="#235C3E"
+                font-size="11"
+                font-weight="700"
+              >
+                ٢٢.٠٠ ₪
+              </text>
+              <!-- dish card 2 -->
+              <rect
+                x="16"
+                y="292"
+                width="218"
+                height="120"
+                rx="16"
+                fill="#F9F5EC"
+                stroke="#E7DDC8"
+              />
+              <rect
+                x="26"
+                y="302"
+                width="80"
+                height="66"
+                rx="10"
+                fill="#F2EBDB"
+              />
+              <ellipse cx="66" cy="336" rx="26" ry="17" fill="#FDFBF7" />
+              <ellipse cx="66" cy="334" rx="18" ry="11" fill="#DFEEE2" />
+              <path
+                d="M52 330 Q66 320 80 330"
+                stroke="#94C2A4"
+                stroke-width="2.4"
+                fill="none"
+                stroke-linecap="round"
+              />
+              <rect
+                x="114"
+                y="306"
+                width="104"
+                height="13"
+                rx="6"
+                fill="#182620"
+                opacity=".85"
+              />
+              <rect
+                x="114"
+                y="326"
+                width="86"
+                height="9"
+                rx="4"
+                fill="#D6C9AC"
+              />
+              <rect
+                x="114"
+                y="342"
+                width="70"
+                height="13"
+                rx="6.5"
+                fill="#DFEEE2"
+              />
+              <text
+                x="149"
+                y="352"
+                text-anchor="middle"
+                fill="#235C3E"
+                font-size="9.5"
+                font-weight="700"
+              >
+                أضف
+              </text>
+              <text x="26" y="392" fill="#B3402F" font-size="10">
+                متوفر الآن · صوص البيت
+              </text>
+              <text
+                x="26"
+                y="407"
+                fill="#235C3E"
+                font-size="11"
+                font-weight="700"
+              >
+                ١٨.٠٠ ₪
+              </text>
+              <!-- cart bar -->
+              <rect
+                x="16"
+                y="432"
+                width="218"
+                height="46"
+                rx="23"
+                fill="#235C3E"
+              />
+              <text
+                x="125"
+                y="452"
+                text-anchor="middle"
+                fill="#FDFBF7"
+                font-size="12"
+                font-weight="700"
+              >
+                عرض السلة
+              </text>
+              <text
+                x="125"
+                y="470"
+                text-anchor="middle"
+                fill="#DFEEE2"
+                font-size="10.5"
+              >
+                طبقان · ٤٠.٠٠ ₪
+              </text>
+            </svg>
+            <figcaption class="caption">
+              جوال الزبون — القائمة والطلب
+            </figcaption>
+          </figure>
+          <figure class="phone">
+            <svg
+              viewBox="0 0 250 500"
+              role="img"
+              aria-label="لوحة الطلبات المباشرة على جوال المالك"
+            >
+              <rect
+                x="4"
+                y="4"
+                width="242"
+                height="492"
+                rx="36"
+                fill="#0C2419"
+                stroke="#1B4831"
+                stroke-width="2"
+              />
+              <rect
+                x="16"
+                y="34"
+                width="140"
+                height="24"
+                rx="12"
+                fill="#143725"
+              />
+              <text
+                x="86"
+                y="50"
+                text-anchor="middle"
+                fill="#FDFBF7"
+                font-size="11"
+                font-weight="700"
+              >
+                الطلبات
+              </text>
+              <rect
+                x="170"
+                y="32"
+                width="66"
+                height="26"
+                rx="13"
+                fill="rgba(149,194,164,.15)"
+                stroke="#94C2A4"
+              />
+              <text
+                x="203"
+                y="49"
+                text-anchor="middle"
+                fill="#94C2A4"
+                font-size="10.5"
+                font-weight="700"
+              >
+                ● مباشر
+              </text>
+              <!-- order ticket -->
+              <rect
+                x="16"
+                y="72"
+                width="218"
+                height="150"
+                rx="16"
+                fill="#143725"
+                stroke="#D4AF6E"
+              />
+              <rect
+                x="28"
+                y="84"
+                width="90"
+                height="22"
+                rx="11"
+                fill="#235C3E"
+              />
+              <text
+                x="73"
+                y="99"
+                text-anchor="middle"
+                fill="#FDFBF7"
+                font-size="10.5"
+                font-weight="700"
+              >
+                JP-261118-007
+              </text>
+              <rect
+                x="130"
+                y="84"
+                width="92"
+                height="22"
+                rx="11"
+                fill="rgba(212,175,110,.15)"
+              />
+              <text
+                x="176"
+                y="99"
+                text-anchor="middle"
+                fill="#E3C98F"
+                font-size="10"
+              >
+                استلام · ٠:١٢
+              </text>
+              <rect
+                x="28"
+                y="116"
+                width="180"
+                height="11"
+                rx="5.5"
+                fill="#FDFBF7"
+                opacity=".9"
+              />
+              <rect
+                x="28"
+                y="134"
+                width="140"
+                height="11"
+                rx="5.5"
+                fill="#FDFBF7"
+                opacity=".55"
+              />
+              <text x="28" y="168" fill="#8FA397" font-size="10.5">
+                ✎ بدون بصل — صوص زيادة
+              </text>
+              <text
+                x="28"
+                y="188"
+                fill="#E3C98F"
+                font-size="11"
+                font-weight="700"
+              >
+                ٤٢.٠٠ ₪ · نقداً
+              </text>
+              <rect
+                x="28"
+                y="196"
+                width="90"
+                height="18"
+                rx="9"
+                fill="#2C714B"
+              />
+              <text
+                x="73"
+                y="209"
+                text-anchor="middle"
+                fill="#FDFBF7"
+                font-size="10"
+                font-weight="700"
+              >
+                قيد التحضير ✓
+              </text>
+              <!-- ticket 2 -->
+              <rect
+                x="16"
+                y="236"
+                width="218"
+                height="120"
+                rx="16"
+                fill="#143725"
+                stroke="rgba(223,238,226,.2)"
+              />
+              <rect
+                x="28"
+                y="248"
+                width="90"
+                height="22"
+                rx="11"
+                fill="#235C3E"
+              />
+              <text
+                x="73"
+                y="263"
+                text-anchor="middle"
+                fill="#FDFBF7"
+                font-size="10.5"
+                font-weight="700"
+              >
+                JP-261118-006
+              </text>
+              <rect
+                x="130"
+                y="248"
+                width="92"
+                height="22"
+                rx="11"
+                fill="rgba(224,123,95,.15)"
+              />
+              <text
+                x="176"
+                y="263"
+                text-anchor="middle"
+                fill="#E07B5F"
+                font-size="10"
+              >
+                توصيل · ٠:٢٨
+              </text>
+              <rect
+                x="28"
+                y="280"
+                width="160"
+                height="11"
+                rx="5.5"
+                fill="#FDFBF7"
+                opacity=".8"
+              />
+              <text
+                x="28"
+                y="312"
+                fill="#E3C98F"
+                font-size="11"
+                font-weight="700"
+              >
+                ٥٦.٠٠ ₪ + توصيل
+              </text>
+              <rect
+                x="28"
+                y="322"
+                width="76"
+                height="18"
+                rx="9"
+                fill="#2C714B"
+              />
+              <text
+                x="66"
+                y="335"
+                text-anchor="middle"
+                fill="#FDFBF7"
+                font-size="10"
+                font-weight="700"
+              >
+                جاهز ✓
+              </text>
+              <!-- kitchen preview strip -->
+              <rect
+                x="16"
+                y="372"
+                width="218"
+                height="72"
+                rx="16"
+                fill="#143725"
+                stroke="rgba(223,238,226,.2)"
+              />
+              <text
+                x="125"
+                y="396"
+                text-anchor="middle"
+                fill="#94C2A4"
+                font-size="11"
+                font-weight="700"
+              >
+                🔔 طلب جديد — تنبيه فوري
+              </text>
+              <rect
+                x="36"
+                y="408"
+                width="60"
+                height="22"
+                rx="11"
+                fill="#235C3E"
+              />
+              <text
+                x="66"
+                y="423"
+                text-anchor="middle"
+                fill="#FDFBF7"
+                font-size="10"
+                font-weight="700"
+              >
+                قبول
+              </text>
+              <rect
+                x="106"
+                y="408"
+                width="60"
+                height="22"
+                rx="11"
+                fill="#B3402F"
+              />
+              <text
+                x="136"
+                y="423"
+                text-anchor="middle"
+                fill="#FDFBF7"
+                font-size="10"
+                font-weight="700"
+              >
+                إلغاء
+              </text>
+              <rect
+                x="176"
+                y="408"
+                width="46"
+                height="22"
+                rx="11"
+                fill="#143725"
+                stroke="rgba(223,238,226,.3)"
+              />
+              <text
+                x="199"
+                y="423"
+                text-anchor="middle"
+                fill="#8FA397"
+                font-size="10"
+              >
+                تفاصيل
+              </text>
+              <text
+                x="125"
+                y="470"
+                text-anchor="middle"
+                fill="#6E8A78"
+                font-size="10"
+              >
+                شاشة المطبخ تعرض نفس الطلب فوراً
+              </text>
+            </svg>
+            <figcaption class="caption">
+              جوال المالك — اللوحة المباشرة
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+
+    <main>
+      <!-- ══════════ المشكلة/الحل ══════════ -->
+      <section id="why">
+        <div class="wrap">
+          <h2 style="text-align: center">
+            لماذا نظامك الحالي <span class="accent">يكلفك أكثر مما تتخيل</span>؟
+          </h2>
+          <p
+            class="sub"
+            style="text-align: center; max-width: 700px; margin-inline: auto"
+          >
+            لكل محل صغير نفس الأيام: طلب يضيع بين رسائل واتساب، سعر يتلاعب به
+            الزبون من ذاكرة «المرة الماضية»، وحساب نهاية اليوم لا يتطابق. هذا
+            بالضبط ما صُمم النظام ليقضي عليه.
+          </p>
+          <div class="compare">
+            <div class="cmp before">
+              <h3>⚠️ اليوم — بدون النظام</h3>
+              <ul>
+                <li>
+                  <span class="m"></span>طلب يضيع في ٣٠٠ رسالة واتساب — وزبون
+                  غاضب تقول له «ما وصلنا شيء»
+                </li>
+                <li>
+                  <span class="m"></span>«المرة الماضية بـ ١٥؟» — لا سجل يثبت
+                  السعر، وخسارة صامتة كل يوم
+                </li>
+                <li>
+                  <span class="m"></span>حساب نهاية اليوم بورقة وقلم — خطأ واحد
+                  يعني نقصاً لا تعرف مصدره
+                </li>
+                <li>
+                  <span class="m"></span>مكونات تنفد بلا تنبيه — تكتشف النقص وقت
+                  الطبخ
+                </li>
+                <li>
+                  <span class="m"></span>مظهر أمام الزبون = لقطات شاشة قديمة
+                  وأسعار مشوّهة
+                </li>
+              </ul>
+            </div>
+            <div class="cmp after">
+              <h3>✅ مع نظام <span class="latin">JPasta</span></h3>
+              <ul>
+                <li>
+                  <span class="m"></span>الطلب يصل للوحة بتنبيه صوتي قبل أن يغلق
+                  الزبون المتصفح — مستحيل أن يضيع
+                </li>
+                <li>
+                  <span class="m"></span>السعر يحسبه السيرفر من قائمتك — لا
+                  ملاعب ولا «مرة الماضية»
+                </li>
+                <li>
+                  <span class="m"></span>تقرير نهاية اليوم يطابق الخزنة حرفياً —
+                  مُثبت بالاختبارات الآلية
+                </li>
+                <li>
+                  <span class="m"></span>المخزون يُخصم تلقائياً مع كل طبق يُباع —
+                  وتنبيه قبل النفاد
+                </li>
+                <li>
+                  <span class="m"></span>قائمة احترافية بصور حقيقية وروابط
+                  تشاركها على إنستغرام وQR على الطاولة
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════ الميزات ══════════ -->
+      <section id="features" class="alt">
+        <div class="wrap">
+          <h2 style="text-align: center">
+            كل ميزة، <span class="accent">وكيف تستخدمها فعلاً</span>
+          </h2>
+          <p
+            class="sub"
+            style="text-align: center; max-width: 720px; margin-inline: auto"
+          >
+            ليست قائمة وعود — كل ميزة هنا مبنية وفعّالة في النظام الحي، ومعها
+            طريقة الاستخدام في سطر أو سطرين.
+          </p>
+          <div class="fgrid">
+            <div class="feature">
+              <div class="ico">
+                <svg
+                  aria-hidden="true"
+                  width="26"
+                  height="26"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#235C3E"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <path d="M4 6h16M4 12h16M4 18h10" />
+                  <circle cx="19" cy="17" r="3" />
+                </svg>
+              </div>
+              <h4>قائمة رقمية تُفخر بها</h4>
+              <p>
+                قائمة بالصور والأسعار، تخصيص لكل طبق (الصلصة، نوع الباستا،
+                الإضافات المدفوعة)، تفتح مباشرة من رابط أو QR — بدون حساب، بدون
+                تطبيق تحميل.
+              </p>
+              <div class="how">
+                <b>الاستخدام:</b> شارك الرابط على إنستغرام ستوري وطبع QR
+                للطاولات — أي تحديث للأسعار يظهر فوراً للجميع.
+              </div>
+              <span class="proof">فورية بعد كل تعديل</span>
+            </div>
+
+            <div class="feature">
+              <div class="ico">
+                <svg
+                  aria-hidden="true"
+                  width="26"
+                  height="26"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#235C3E"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <path d="M13 2L4.5 13.5H11L9.5 22 19 9.5h-6.5L13 2z" />
+                </svg>
+              </div>
+              <h4>
+                طلبات تصل <b style="color: var(--basil)">لحظياً</b> مع تنبيه لا
+                يمكن تفويته
+              </h4>
+              <p>
+                الطلب الجديد يظهر على اللوحة خلال أجزاء من الثانية مع تنبيه صوتي
+                واهتزاز ووميض — تقبله أو تلغيه بنقرة، ولا حاجة لتحديث الصفحة
+                يدوياً أبداً.
+              </p>
+              <div class="how">
+                <b>الاستخدام:</b> فعّل الإشعارات من الإعدادات مرة واحدة على جوالك
+                — وبعدها انسَ التحقق اليدوي.
+              </div>
+              <span class="proof">بوابة مضمونة: أقل من ثانية</span>
+            </div>
+
+            <div class="feature">
+              <div class="ico">
+                <svg
+                  aria-hidden="true"
+                  width="26"
+                  height="26"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#235C3E"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <rect x="3" y="4" width="18" height="16" rx="3" />
+                  <path d="M7 9h10M7 13h7M7 17h9" />
+                </svg>
+              </div>
+              <h4>ملاحظات الزبون تصل للمطبخ كما قالها</h4>
+              <p>
+                «بدون بصل» و«صوص زيادة عالجنب» تُطبع على التذكرة نفسها — لا سوء
+                فهم هاتفي، ولا «ما قلنا كذا».
+              </p>
+              <div class="how">
+                <b>الاستخدام:</b> الزبون يكتبها في السلة، وأنت تراها على التذكرة
+                وفي تفاصيل الطلب والإيصال.
+              </div>
+            </div>
+
+            <div class="feature">
+              <div class="ico">
+                <svg
+                  aria-hidden="true"
+                  width="26"
+                  height="26"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#235C3E"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <path d="M12 3v13M12 21l-4-4h8l-4 4z" />
+                  <circle cx="12" cy="3" r="1.6" fill="#235C3E" />
+                </svg>
+              </div>
+              <h4>صفحة متابعة للزبون — بلا مكالمات «وين طلبي؟»</h4>
+              <p>
+                كل طلب يولد رابطاً سرياً خاصاً يعرض حالته لحظة بلحظة: استُلم → قيد
+                التحضير → جاهز. تلقائي مع كل ضغطة لك.
+              </p>
+              <div class="how">
+                <b>الاستخدام:</b> الرابط يصل الزبون بعد تأكيد الطلب — حرّك الطلب
+                على اللوحة والصفحة تتحدث وحدها.
+              </div>
+              <span class="proof">يقلل مكالمات الاستفسار</span>
+            </div>
+
+            <div class="feature">
+              <div class="ico">
+                <svg
+                  aria-hidden="true"
+                  width="26"
+                  height="26"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#235C3E"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <path d="M8 12h8M8 8h8M8 16h5" />
+                  <rect x="3" y="3" width="18" height="18" rx="3" />
+                </svg>
+              </div>
+              <h4>إدخال يدوي لطلب الهاتف والزبون الحاضر</h4>
+              <p>
+                طلب هاتفي أو زائر؟ أدخله من نفس اللوحة بنفس مكونات السلة — يدخل
+                خط الطلبات نفسه المضمون، بمصدر «console» يفرقه عن طلبات الإنترنت
+                في التقارير.
+              </p>
+              <div class="how">
+                <b>الاستخدام:</b> زر «طلب جديد» في اللوحة → اختر الأطباق →
+                بيانات الزبون → إرسال.
+              </div>
+            </div>
+
+            <div class="feature">
+              <div class="ico">
+                <svg
+                  aria-hidden="true"
+                  width="26"
+                  height="26"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#235C3E"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <path d="M6 20V10M12 20V4M18 20v-7" />
+                  <path d="M3 20h18" />
+                </svg>
+              </div>
+              <h4>تقارير تُحاسب — لا تُزين</h4>
+              <p>
+                إيراد اليوم، عدد الطلبات، الأكثر مبيعاً، ملخص الخزنة (Z) بكل طرق
+                الدفع — مبنية من نفس سجلات الطلبات الفعلية، وتطابق العد اليدوي
+                حرفياً.
+              </p>
+              <div class="how">
+                <b>الاستخدام:</b> نهاية كل يوم افتح <b>/console/reports</b> —
+                اعرضها أمام أي محاسب وستتطابق.
+              </div>
+              <span class="proof">مُثبت باختبار ٢٠ طلباً متتالياً</span>
+            </div>
+
+            <div class="feature">
+              <div class="ico">
+                <svg
+                  aria-hidden="true"
+                  width="26"
+                  height="26"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#235C3E"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <path
+                    d="M20 7H4a2 2 0 00-2 2v0a2 2 0 002 2h16a2 2 0 002-2v0a2 2 0 00-2-2z"
+                  />
+                  <path d="M5 11v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                  <path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2" />
+                </svg>
+              </div>
+              <h4>مخزون يخصم نفسه وينذّر قبل النفاد</h4>
+              <p>
+                اربط كل طبق بوصفة مكوناته — كل بيع يخصم المكونات تلقائياً بسجل
+                مراجعة (شراء/هدر/تعديل)، وشرائط النقص تظهر قبل أن تقف بالطبخ.
+              </p>
+              <div class="how">
+                <b>الاستخدام:</b> <b>/console/inventory</b> → أدخل مكوناتك وحد
+                «إعادة الطلب» → النظام يتولى الباقي.
+              </div>
+              <span class="proof">قيود تمنع المخزون السالب</span>
+            </div>
+
+            <div class="feature">
+              <div class="ico">
+                <svg
+                  aria-hidden="true"
+                  width="26"
+                  height="26"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#235C3E"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <circle cx="9" cy="8" r="3.5" />
+                  <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" />
+                  <circle cx="17.5" cy="9.5" r="2.5" />
+                  <path d="M15.5 20c0-2.4 1.5-4.5 4-4.5 1 0 1.9.3 2.5.8" />
+                </svg>
+              </div>
+              <h4>موظفون بأرقام سرية خاصة — وصلاحيات منفصلة</h4>
+              <p>
+                أضف حساباً لكل موظف برقم سري فريد (النظام يمنع التكرار)،
+                والحسابات المنتهية تُعطَّل بلا حذف سجل. المالك يرى الإعدادات والمال
+                — والموظف يشغّل الطلبات.
+              </p>
+              <div class="how">
+                <b>الاستخدام:</b> <b>/console/staff</b> → «إضافة موظف» → أدخل
+                الرمز السري واعطِه لمن تستحق.
+              </div>
+            </div>
+
+            <div class="feature">
+              <div class="ico">
+                <svg
+                  aria-hidden="true"
+                  width="26"
+                  height="26"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#235C3E"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <path d="M14 7l6-4M10 21h6a2 2 0 002-2v-7H8v7a2 2 0 002 2z" />
+                  <path d="M3 12l7-8 7 4" />
+                  <circle cx="17" cy="16" r="1.4" fill="#235C3E" />
+                </svg>
+              </div>
+              <h4>إدارة القائمة بنقرات — بلا مبرمج وبلا انتظار</h4>
+              <p>
+                طبق انتهى؟ أوقفه بنقرة («غير متاح الآن» تظهر للزبون فوراً). سعر
+                تغيّر؟ عدّله — وكل تغيير سعر يُسجل تلقائياً (القديم والجديد ومن غيّر)
+                لدقة محاسبية كاملة.
+              </p>
+              <div class="how">
+                <b>الاستخدام:</b> <b>/console/menu</b> → مفتاح التوفر أو حقل
+                السعر → حفظ → ظاهر فوراً للزبائن.
+              </div>
+            </div>
+
+            <div class="feature">
+              <div class="ico">
+                <svg
+                  aria-hidden="true"
+                  width="26"
+                  height="26"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#235C3E"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <path d="M3 11l9-8 9 8" />
+                  <path d="M5 10v10h14V10" />
+                  <path d="M10 20v-6h4v6" />
+                </svg>
+              </div>
+              <h4>مناطق توصيل ورسوم تتحكم بها أنت</h4>
+              <p>
+                عرّف أحياء المدينة برسومها — الزبون يختار منطقته فيرى الرسوم
+                الصحيحة مطبقة سيرفرياً. لا أرخص منطقة ولا أخطاء حساب، وطلب بلا
+                منطقة نشطة لا يُقبل توصيلاً.
+              </p>
+              <div class="how">
+                <b>الاستخدام:</b> <b>/console/settings</b> → مناطق التوصيل → أضف
+                الحي ورسومه → حفظ.
+              </div>
+            </div>
+
+            <div class="feature">
+              <div class="ico">
+                <svg
+                  aria-hidden="true"
+                  width="26"
+                  height="26"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#235C3E"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <rect x="7" y="2" width="10" height="20" rx="3" />
+                  <path d="M11 18h2" />
+                </svg>
+              </div>
+              <h4>تثبيت كتطبيق — بلا متجر تطبيقات</h4>
+              <p>
+                الموقع تُثبّته على الشاشة الرئيسية كأي تطبيق، يعمل بنفس الأيقونة
+                وصفحة «غير متصل» أنيقة، وصفّ الطلبات عند انقطاع النت يُرسل تلقائياً
+                مرة واحدة بالضبط.
+              </p>
+              <div class="how">
+                <b>الاستخدام:</b> افتح الرابط على الجوال → «إضافة إلى الشاشة
+                الرئيسية» → انتهى.
+              </div>
+              <span class="proof">صفر كلفة متجر تطبيقات</span>
+            </div>
+
+            <div class="feature">
+              <div class="ico">
+                <svg
+                  aria-hidden="true"
+                  width="26"
+                  height="26"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#235C3E"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z" />
+                  <path d="M9 12l2 2 4-4" />
+                </svg>
+              </div>
+              <h4>إيصالات بخط أحادي للطابعة الحرارية</h4>
+              <p>
+                صفحة إيصال جاهزة للطباعة بشعار أحادي اللون ومبالغ جدولية — من
+                متصفح الجهاز نفسه، بلا تعريفات ولا برامج إضافية.
+              </p>
+              <div class="how">
+                <b>الاستخدام:</b> تفاصيل الطلب → «طباعة الإيصال» → اختر طابعتك
+                الحرارية.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════ البدء ══════════ -->
+      <section id="start">
+        <div class="wrap">
+          <h2 style="text-align: center">
+            جاهز للعمل في <span class="accent">٥ خطوات</span>
+          </h2>
+          <p
+            class="sub"
+            style="text-align: center; max-width: 640px; margin-inline: auto"
+          >
+            لا تركيب ولا سيرفر ولا خبرة تقنية — كل شيء جاهز ويعمل، هذه خطوات
+            التشغيل اليومي.
+          </p>
+          <div class="steps">
+            <div class="step">
+              <h4>افتح اللوحة</h4>
+              <p>من جوالك: <b>jpasta.ascendly.space/console</b></p>
+            </div>
+            <div class="step">
+              <h4>أدخل رقمك السري</h4>
+              <p>لوحة مفاتيح كبيرة بحجم إصبع — ستة أرقام وأنت داخل</p>
+            </div>
+            <div class="step">
+              <h4>فعّل الإشعارات</h4>
+              <p>من الإعدادات، مرة واحدة على هذا الجهاز</p>
+            </div>
+            <div class="step">
+              <h4>جهّز شاشة المطبخ</h4>
+              <p>افتح <b>/console/kitchen</b> على أي جهاز بجانب المقلاة</p>
+            </div>
+            <div class="step">
+              <h4>شارك قائمتك</h4>
+              <p>
+                رابط القائمة على إنستغرام + QR على الطاولة — وابدأ الاستقبال
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════ الفوائد ══════════ -->
+      <section class="alt" id="value">
+        <div class="wrap">
+          <div class="band">
+            <h3>ماذا يعني هذا النظام لصاحب المحل — بالأرقام والوقت</h3>
+            <div class="grid">
+              <div>
+                <div class="n">0</div>
+                <div class="l">طلب ضائع — كل طلب مسجل برقم وسجل كامل</div>
+              </div>
+              <div>
+                <div class="n">100%</div>
+                <div class="l">
+                  دقة مالية — الأسعار تُحسب سيرفرياً وتُطابق الخزنة
+                </div>
+              </div>
+              <div>
+                <div class="n">&lt;1s</div>
+                <div class="l">
+                  زمن وصول الطلب للمطبخ — أسرع من أن ترفع السماعة
+                </div>
+              </div>
+              <div>
+                <div class="n">0₪</div>
+                <div class="l">
+                  تكلفة شهرية — كل البنية ضمن حصص مجانية مُدققة
+                </div>
+              </div>
+              <div>
+                <div class="n">24/7</div>
+                <div class="l">
+                  القائمة مفتوحة — حتى وقت الإغلاق يستقبل ثم يطبّق ساعات عملك
+                </div>
+              </div>
+              <div>
+                <div class="n">أبد</div>
+                <div class="l">
+                  سجل لا يُحذف — كل طلب وسعر وحركة موثقة للمراجعة
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════ الثقة ══════════ -->
+      <section id="trust">
+        <div class="wrap">
+          <h2 style="text-align: center">
+            الثقة أولاً —
+            <span class="accent">بياناتك وبيانات زبائنك محمية</span>
+          </h2>
+          <p
+            class="sub"
+            style="text-align: center; max-width: 700px; margin-inline: auto"
+          >
+            نظام يعمل بمأكولات حقيقية وزبائن حقيقيين، فبُني على معايير أمان
+            عالمية (OWASP ASVS Level 2) من أول سطر — لا «سنجرم عليها لاحقاً».
+          </p>
+          <div class="trust">
+            <div class="tcard">
+              <h4>🔐 تشفير كامل لبيانات الزبائن</h4>
+              <p>
+                الاسم والهاتف والعنوان والملاحظات مشفرة حقل بحقل بـ AES-256-GCM
+                — حتى ملاحظة كل سطر. من يحصل على قاعدة البيانات لا يقرأ شيئاً.
+              </p>
+            </div>
+            <div class="tcard">
+              <h4>🧾 سجل تدقيق لا يُمحى</h4>
+              <p>
+                كل انتقال حالة وتغيير سعر وحركة مخزون مسجل بمن قام ومتى — مرجعك
+                في أي خلاف أو مراجعة محاسبية.
+              </p>
+            </div>
+            <div class="tcard">
+              <h4>💾 نسخ احتياطية مشفرة يومياً</h4>
+              <p>
+                نسخة مشفرة كل يوم + نسخة تلقائية قبل كل تحديث — وتم تدريب
+                الاستعادة فعلياً والتحقق من مطابقة كل الجداول.
+              </p>
+            </div>
+            <div class="tcard">
+              <h4>🛡️ دخول محصّن</h4>
+              <p>
+                أرقام سرية مشفرة مع قفل مؤقت بعد المحاولات الخاطئة، وحدود معدل
+                ضد الإساءة، وكل صلاحية تتحقق على السيرفر لا في الواجهة.
+              </p>
+            </div>
+            <div class="tcard">
+              <h4>🤝 خصوصية الزبون = قانونك</h4>
+              <p>
+                بعد المدة التي تحددها (افتراضي ١٢ شهراً) تُخفى هوية بيانات الزبائن
+                القديمة آلياً، وأي زبون يطلب حذف بياناته يُنفذ له من لوحة التحكم
+                بنقرة.
+              </p>
+            </div>
+            <div class="tcard">
+              <h4>💸 صفر تكلفة مُثبت</h4>
+              <p>
+                كل البنية تعمل ضمن حصص مجانية مُدققة حرفياً — لا فاتورة مفاجئة ولا
+                اشتراك مخفي ولا بطاقة دفع.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════ FAQ ══════════ -->
+      <section class="alt" id="faq">
+        <div class="wrap">
+          <h2 style="text-align: center">
+            أسئلة <span class="accent">يسألها كل صاحب محل</span>
+          </h2>
+          <div class="faq">
+            <details open>
+              <summary>هل الزبون يحتاج تحميل تطبيق أو إنشاء حساب؟</summary>
+              <div class="a">
+                لا. يفتح الرابط، يطلب، وينتهي — والموقع «يثبَّت» كتطبيق على شاشة
+                الجوال بخطوة واحدة إن أراد. صفر حواجز بينه وبين الطلب.
+              </div>
+            </details>
+            <details>
+              <summary>ماذا لو انقطع النت عند الزبون وهو يرسل الطلب؟</summary>
+              <div class="a">
+                الطلب يُحفظ في جواله ويُرسل تلقائياً مرة واحدة بالضبط عند عودة
+                الاتصال — لا ضياع ولا تكرار. والمطبخ لا يعرف بأنقطاع ذلك الجوال
+                أصلاً.
+              </div>
+            </details>
+            <details>
+              <summary>أنا لست تقنياً — هل أستطيع إدارته؟</summary>
+              <div class="a">
+                كل شيء تصميمه «بنقرة»: إيقاف طبق، تغيير سعر، إضافة منطقة توصيل،
+                طباعة إيصال. لا أوامر ولا إعدادات معقدة — والأزرار بحجم إصبع لأن
+                النظام صُمم أصلاً للتشغيل من الجوال بيد واحدة.
+              </div>
+            </details>
+            <details>
+              <summary>هل السعر الذي يراه الزبون هو الذي يقبضه؟</summary>
+              <div class="a">
+                نعم، وبدقة مضمونة: السيرفر هو من يحسب السعر من قائمتك — جوال
+                الزبون لا يملك أي كلمة في المبلغ. وكل طلب يحفظ أسعاره لحظة الطلب
+                فلا يتهادى التاريخ.
+              </div>
+            </details>
+            <details>
+              <summary>كم يكلفني تشغيله شهرياً؟</summary>
+              <div class="a">
+                صفر. النظام يعمل بالكامل ضمن حصص مجانية مُدققة بتاريخ محدد — وتم
+                التحقق من كل خدمة أن لا شيء فيها يولّد فاتورة. القاعدة الثابتة:
+                صفر تكلفة، دائماً.
+              </div>
+            </details>
+            <details>
+              <summary>ماذا لو نجح المحل وتضاعفت الطلبات؟</summary>
+              <div class="a">
+                البنية تعمل على شبكة Cloudflare العالمية — نفس البنية تخدم
+                الشركات الكبيرة، والحصص الحالية تتحمل آلاف الطلبات يومياً. النمو
+                استقبال لا مشكلة.
+              </div>
+            </details>
+            <details>
+              <summary>بيانات زبائني آمنة فعلاً؟</summary>
+              <div class="a">
+                مشفرة حقل بحقل أثناء التخزين (AES-256-GCM)، تُخفى هويتها آلياً بعد المدة
+                التي تحددها، وحذفها عند الطلب متاح بنقرة — ومع نسخ احتياطية
+                مشفرة بمفتاح لا يملكه أحد غيرك.
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <div class="big">
+          جاهز تدير محلك من جوالك —
+          <span class="latin">بلا ورق، بلا ضياع، بلا فاتورة</span>
+        </div>
+        <p>
+          النظام يعمل حياً الآن على
+          <span class="latin">jpasta.ascendly.space</span> — قائمة للزبون، لوحة
+          لك، شاشة للمطبخ.
+        </p>
+        <p style="margin-top: 14px; color: #6e8a78; font-size: 13px">
+          الوثيقة التقنية الكاملة للمراجعين والمطورين متاحة في مستودع المشروع
+          (docs/showcase/technical-reference.html)
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>
