@@ -156,8 +156,12 @@ curl -sI https://jpasta.ps/menu | grep -i content-security-policy
 # 3. DB through the worker (20 × 200)
 for i in $(seq 1 20); do curl -s -o /dev/null -w "%{http_code}\n" https://jpasta.ps/menu; done
 
-# 4. realtime: open /console on two devices, place a real order,
-#    confirm the ticket appears in < 1s and the badge says مباشر.
+# 4. realtime (two browsers through the real UI; self-cleans its test
+#    order via a documented cancellation; enforces the <1s gate on any
+#    non-local target — a non-local feed that never reaches مباشر fails):
+#    ensure JPASTA_OWNER_PIN is in .env.local (never on the command line —
+#    it would land in shell history), then:
+#    npx tsx scripts/verify-realtime.mts --base https://jpasta.ps
 
 # 5. reports: place an order at 00:30 local and check the Z report.
 
