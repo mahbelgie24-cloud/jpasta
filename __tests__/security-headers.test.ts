@@ -46,6 +46,32 @@ describe("CSP builder (v2 hardening)", () => {
     expect(csp).not.toMatch(/connect-src[^\n;]*https?:\/\//);
   });
 
+  it("fails closed when the origin is missing or malformed", () => {
+    // The old fallback returned a bare "wss:" — connect-src 'self' wss: is a
+    // WebSocket grant to ANY host. A missing/malformed origin must contribute
+    // nothing, leaving connect-src pinned to 'self' (same-origin ws/wss stays
+    // reachable through 'self' itself).
+    for (const csp of [
+      buildCsp(generateCspNonce()),
+      buildCsp(generateCspNonce(), ""),
+      buildCsp(generateCspNonce(), "not-a-url"),
+      // Opaque origins parse fine but their url.origin is the string "null" —
+      // CSP would otherwise emit a host-source literally named "null".
+      buildCsp(generateCspNonce(), "about:blank"),
+      buildCsp(generateCspNonce(), "file:///tmp/x"),
+      buildStaticCsp(),
+      buildStaticCsp(""),
+      buildStaticCsp("not-a-url"),
+      buildStaticCsp("about:blank"),
+      buildStaticCsp("file:///tmp/x"),
+    ]) {
+      expect(csp).not.toContain("wss:");
+      // No dangling separator where the origin would have been.
+      expect(csp).not.toContain("connect-src 'self' ");
+      expect(csp).toContain("connect-src 'self';");
+    }
+  });
+
   it("scopes upgrade-insecure-requests to HTTPS origins", () => {
     // WebKit applies the directive even on 127.0.0.1 over HTTP: the
     // same-origin chunks get upgraded to a TLS port the dev server does not
