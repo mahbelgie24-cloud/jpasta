@@ -3,7 +3,13 @@ import { testDatabaseUrl } from "@/test/db";
 import { eq, sql } from "drizzle-orm";
 import { db, pool } from "@/lib/db";
 import { deliveryZones, orderItems, orders, products } from "@/db/schema";
-import { orderInputSchema, placeOrder, quoteCart } from "@/lib/server/orders";
+import {
+  getConsoleOrders,
+  getOrderDetail,
+  orderInputSchema,
+  placeOrder,
+  quoteCart,
+} from "@/lib/server/orders";
 
 /**
  * Integration suite (DoD gate, spec §15 Phase 1): 20 consecutive orders with
@@ -121,6 +127,89 @@ d("placeOrder — order pipeline", () => {
       .from(orders);
     expect(revenue?.count).toBe(20);
     expect(revenue?.total).toBe(expectedRevenue);
+  });
+
+  it("encrypts line notes at rest and decrypts them on human surfaces", async () => {
+    const result = await placeOrder({
+      idempotencyKey: "test-line-note-enc-1",
+      channel: "takeaway",
+      customer: { name: "زبون الملاحظة", phone: "0566064976", address: "" },
+      lines: [
+        {
+          productId: fettuccineId,
+          quantity: 1,
+          note: "بدون بصل — سولفة خاصة",
+          selections: [],
+        },
+      ],
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const orderId = result.order.id;
+
+    // At rest: the note carries the §13 envelope, never plaintext — but a
+    // key-less contributor profile passes through unchanged (pii.ts), so
+    // the at-rest assertion is gated like pii.integration.test.ts does.
+    const [row] = await db
+      .select({ note: orderItems.note })
+      .from(orderItems)
+      .where(eq(orderItems.orderId, orderId));
+    if (process.env.PII_ENCRYPTION_KEY) {
+      expect(row?.note).toMatch(/^enc:v1:/);
+    } else {
+      expect(row?.note).toBe("بدون بصل — سولفة خاصة");
+    }
+
+    // Human surfaces see the plaintext.
+    const board = await getConsoleOrders();
+    const boardItem = board
+      .flatMap((o) => o.items)
+      .find((it) => it.orderId === orderId);
+    expect(boardItem?.note).toBe("بدون بصل — سولفة خاصة");
+
+    const detail = await getOrderDetail(orderId);
+    expect(detail?.items[0]?.note).toBe("بدون بصل — سولفة خاصة");
+
+    // Legacy plaintext rows (pre-hardening) still read untouched.
+    await db
+      .update(orderItems)
+      .set({ note: "ملاحظة قديمة نصية" })
+      .where(eq(orderItems.orderId, orderId));
+    const legacyBoard = await getConsoleOrders();
+    const legacyItem = legacyBoard
+      .flatMap((o) => o.items)
+      .find((it) => it.orderId === orderId);
+    expect(legacyItem?.note).toBe("ملاحظة قديمة نصية");
+
+    // A customer who literally types a note starting with the envelope
+    // prefix gets it RE-WRAPPED (a fresh envelope of the literal text) —
+    // the typed literal comes back, never PII_UNAVAILABLE. Production
+    // always has the key (fail-closed), so this leg is gated like the
+    // at-rest leg: in a key-less profile the raw prefix would be misread.
+    if (process.env.PII_ENCRYPTION_KEY) {
+      const literal = "enc:v1:هذه ملاحظة عادية تصادف البادئة";
+      const literalResult = await placeOrder({
+        idempotencyKey: "test-line-note-enc-2",
+        channel: "takeaway",
+        customer: { name: "زبون البادئة", phone: "0566064976", address: "" },
+        lines: [
+          {
+            productId: fettuccineId,
+            quantity: 1,
+            note: literal,
+            selections: [],
+          },
+        ],
+      });
+      expect(literalResult.ok).toBe(true);
+      if (literalResult.ok) {
+        const literalBoard = await getConsoleOrders();
+        const literalItem = literalBoard
+          .flatMap((o) => o.items)
+          .find((it) => it.orderId === literalResult.order.id);
+        expect(literalItem?.note).toBe(literal);
+      }
+    }
   });
 
   it("replays an idempotency key without duplicating the sale", async () => {

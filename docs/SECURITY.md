@@ -71,14 +71,20 @@
 ## 5. Known gaps (tracked)
 
 - No MFA/WebAuthn (PIN-only is a deliberate business constraint).
-- **`order_items.note` is stored plaintext** (found by the 2026-11-18
-  retention audit, pre-existing): the customer-authored free-text line note
-  bypasses the §13 encryption applied to customer_note/name/phone/address —
-  write sites `lib/server/orders.ts` ~232/~549, read sites ~872-877,
-  ~1185-1189 + kitchen ticket. The retention job nulls it after the window,
-  but the first-window plaintext remains. **Queued hardening**: encrypt at
-  the write sites with `encryptPii` and decrypt at the read sites, matching
-  the existing `enc:v1:` pattern.
+- Accepted edge (envelope-prefix design, pii.ts §docstring): a free-text
+  field (customer note / line note) whose literal text starts with
+  `enc:v1:` is stored re-wrapped in production (key always present,
+  fail-closed) and decrypts back to the typed literal; only a key-less
+  dev profile would render it as `PII_UNAVAILABLE`. Shared by all
+  envelope-protected free-text fields; rejecting the prefix at input was
+  assessed and rejected (obscurity, not security — false rejections).
+- ~~`order_items.note` is stored plaintext~~ **fixed 2026-11-18**: the
+  customer-authored line note now carries the same `enc:v1:` AES-256-GCM
+  envelope at insert (single write site inside `placeOrder`) and is
+  decrypted at the two human surfaces (`getConsoleOrders` → board/KDS,
+  `getOrderDetail` → detail/receipt). Legacy plaintext rows stay readable
+  via the envelope-prefix passthrough; the quote/echo paths never persist
+  notes. Found by the retention audit; verified by integration test.
 - ~~No field-level encryption for phone/address at rest~~ **implemented
   (2026-10-28)**: `lib/server/pii.ts` encrypts name/phone/address/note with
   AES-256-GCM (WebCrypto). **Hardened 2026-11-03:** production refuses to
