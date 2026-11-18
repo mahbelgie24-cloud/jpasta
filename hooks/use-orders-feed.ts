@@ -41,6 +41,8 @@ export interface FeedOrder {
   deliveryFeeMinor: number;
   customerNote: string | null;
   cancelledReason: string | null;
+  /** ISO timestamp when the customer PII was anonymized (null = live). */
+  piiAnonymizedAt: string | null;
   createdAt: string;
   updatedAt: string;
   items: FeedItem[];

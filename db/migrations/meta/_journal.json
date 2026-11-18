@@ -36,6 +36,13 @@
       "when": 1794309253668,
       "tag": "0004_pgcrypto",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795019538249,
+      "tag": "0005_known_reavers",
+      "breakpoints": true
     }
   ]
 }

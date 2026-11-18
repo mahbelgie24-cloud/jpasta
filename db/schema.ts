@@ -274,6 +274,10 @@ export const orders = pgTable(
     totalMinor: integer("total_minor").notNull(),
     customerNote: text("customer_note"),
     cancelledReason: text("cancelled_reason"),
+    // PII retention (owner decision 2026-11-18): when the customer fields are
+    // anonymized by the retention job or an owner DSAR action. Null means the
+    // PII is still live; the timestamp itself is the per-order audit mark.
+    piiAnonymizedAt: timestamp("pii_anonymized_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

@@ -38,8 +38,13 @@ export function ShopSettingsEditor({ initial }: { initial: ShopSettings }) {
   );
   const [hoursLabel, setHoursLabel] = useState(initial.hoursLabel);
   const [receiptFooter, setReceiptFooter] = useState(initial.receiptFooter);
+  const [retentionMonths, setRetentionMonths] = useState(() =>
+    String(initial.piiRetentionMonths),
+  );
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(
+    null,
+  );
 
   function toggleMethod(method: PaymentMethod) {
     setMethods((current) =>
@@ -56,30 +61,39 @@ export function ShopSettingsEditor({ initial }: { initial: ShopSettings }) {
   async function save() {
     const minOrderMinor = tryToMinorUnits(minOrder);
     if (minOrderMinor === null) {
-      setNotice("الحد الأدنى غير صحيح — استخدم رقماً مثل 15.00 أو 0");
+      setNotice({
+        ok: false,
+        text: "الحد الأدنى غير صحيح — استخدم رقماً مثل 15.00 أو 0",
+      });
       return;
     }
     setBusy(true);
     setNotice(null);
-    const result = await updateShopSettings({
-      shopName,
-      shopPhone,
-      whatsapp,
-      opensAt,
-      closesAt,
-      minOrderMinor,
-      deliveryEtaMinutes: Number.parseInt(deliveryEta, 10) || 1,
-      paymentMethods: methods,
-      orderingEnabled,
-      hoursLabel,
-      receiptFooter,
-    });
-    setBusy(false);
-    setNotice(
-      result.ok
-        ? "✓ حُفظت الإعدادات وانطبقت فوراً"
-        : (result.error ?? "تعذر الحفظ"),
-    );
+    try {
+      const result = await updateShopSettings({
+        shopName,
+        shopPhone,
+        whatsapp,
+        opensAt,
+        closesAt,
+        minOrderMinor,
+        deliveryEtaMinutes: Number.parseInt(deliveryEta, 10) || 1,
+        paymentMethods: methods,
+        orderingEnabled,
+        hoursLabel,
+        receiptFooter,
+        piiRetentionMonths: Number.parseInt(retentionMonths, 10) || 0,
+      });
+      setNotice(
+        result.ok
+          ? { ok: true, text: "✓ حُفظت الإعدادات وانطبقت فوراً" }
+          : { ok: false, text: result.error ?? "تعذر الحفظ" },
+      );
+    } catch {
+      setNotice({ ok: false, text: "تعذر الاتصال — أعد المحاولة" });
+    } finally {
+      setBusy(false);
+    }
   }
 
   const inputClass =
@@ -299,12 +313,40 @@ export function ShopSettingsEditor({ initial }: { initial: ShopSettings }) {
           />
         </div>
 
+        <div>
+          <label
+            htmlFor="cfg-retention"
+            className="text-sm font-bold text-text-primary"
+          >
+            تعمية بيانات الزبائن بعد (شهر)
+          </label>
+          <input
+            id="cfg-retention"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={240}
+            value={retentionMonths}
+            onChange={(e) => setRetentionMonths(e.target.value)}
+            className={`mt-1.5 ${inputClass} font-bold tabular-nums`}
+          />
+          <p className="mt-1.5 text-xs leading-relaxed text-text-secondary">
+            بعد هذه المدة تُجهّر الاسم والهاتف والعنوان في الطلبات القديمة آلياً
+            (الأرقام والمبالغ وسجل الحالة تبقى). الشهر يُحسب 30 يوماً — الإعداد
+            الافتراضي 12 شهراً.
+          </p>
+        </div>
+
         {notice && (
           <p
             role="status"
-            className="rounded-md bg-brand-subtle px-4 py-3 text-sm font-bold text-brand-strong"
+            className={
+              notice.ok
+                ? "rounded-md bg-brand-subtle px-4 py-3 text-sm font-bold text-brand-strong"
+                : "rounded-md bg-danger/10 px-4 py-3 text-sm font-bold text-danger"
+            }
           >
-            {notice}
+            {notice.text}
           </p>
         )}
 

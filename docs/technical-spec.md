@@ -384,7 +384,11 @@ highest-priority deliverable.** Enforced as gates, not intentions:
   order submit p95 < 1s; storefront p75 LCP < 2.0s.
 - **Privacy:** customer name/phone/address encrypted at rest (AES-256-GCM)
   when the key is set; order-status pages token-gated; privacy policy page
-  ships with the storefront.
+  ships with the storefront. Retention (owner decision 2026-11-18): PII is
+  anonymized after the owner-configured window (settings
+  `pii_retention_months`, default 12; a month ≈ 30 days, erring early) by
+  the daily job, or immediately per order via the owner DSAR action —
+  orders remain reconstructable; `order_status_history` is never touched.
 - **Compliance note:** confirm VAT/e-invoicing obligations with an
   accountant before enabling tax (settings ship with `tax_rate = 0`).
 

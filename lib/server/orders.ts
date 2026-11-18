@@ -1132,6 +1132,8 @@ export async function getOrdersForDay(
 export interface OrderDetailView extends ArchiveOrder {
   address: string | null;
   customerNote: string | null;
+  // tel: links render only while the PII is live (non-anonymized).
+  piiAnonymizedAt: Date | null;
   zoneNameAr: string | null;
   paymentMethod: "cash" | "card_terminal" | "cash_on_delivery";
   updatedAt: Date;
@@ -1198,6 +1200,8 @@ export async function getOrderDetail(
       .slice(0, 3)
       .map((item) => `${item.quantity}× ${item.nameAr}`),
     cancelledReason: order.cancelledReason,
+    // The detail view renders tel: links only for live (non-anonymized) PII.
+    piiAnonymizedAt: order.piiAnonymizedAt,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
     items: items.map((item) => ({

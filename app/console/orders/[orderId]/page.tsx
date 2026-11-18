@@ -108,14 +108,24 @@ export default async function OrderDetailPage({
             <div className="flex items-start justify-between gap-3">
               <dt className="text-text-secondary">الهاتف</dt>
               <dd>
-                <a
-                  href={`tel:${order.customerPhone}`}
-                  dir="ltr"
-                  className="inline-flex items-center gap-1 font-bold text-brand tabular-nums"
-                >
-                  <Phone className="size-3.5" aria-hidden />
-                  {order.customerPhone}
-                </a>
+                {order.piiAnonymizedAt ? (
+                  <span
+                    dir="ltr"
+                    className="inline-flex items-center gap-1 font-bold tabular-nums"
+                  >
+                    <Phone className="size-3.5" aria-hidden />
+                    {order.customerPhone}
+                  </span>
+                ) : (
+                  <a
+                    href={`tel:${order.customerPhone}`}
+                    dir="ltr"
+                    className="inline-flex items-center gap-1 font-bold text-brand tabular-nums"
+                  >
+                    <Phone className="size-3.5" aria-hidden />
+                    {order.customerPhone}
+                  </a>
+                )}
               </dd>
             </div>
             {order.address && (

@@ -290,14 +290,24 @@ export function ConsoleBoard({ ownerName }: { ownerName: string }) {
                         <p className="font-bold text-text-primary">
                           {o.customerName}
                         </p>
-                        <a
-                          href={`tel:${o.customerPhone}`}
-                          dir="ltr"
-                          className="inline-flex items-center gap-1 font-bold text-brand tabular-nums"
-                        >
-                          <Phone className="size-3" aria-hidden />
-                          {o.customerPhone}
-                        </a>
+                        {o.piiAnonymizedAt ? (
+                          <span
+                            dir="ltr"
+                            className="inline-flex items-center gap-1 font-bold tabular-nums"
+                          >
+                            <Phone className="size-3" aria-hidden />
+                            {o.customerPhone}
+                          </span>
+                        ) : (
+                          <a
+                            href={`tel:${o.customerPhone}`}
+                            dir="ltr"
+                            className="inline-flex items-center gap-1 font-bold text-brand tabular-nums"
+                          >
+                            <Phone className="size-3" aria-hidden />
+                            {o.customerPhone}
+                          </a>
+                        )}
                         {o.address && <p>📍 {o.address}</p>}
                         {o.customerNote && (
                           <p className="font-bold text-warning">

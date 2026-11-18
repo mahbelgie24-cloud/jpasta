@@ -45,6 +45,12 @@ export interface ShopSettings {
   /** Master switch ANDed with the catalog-derived ordering readiness. */
   orderingEnabled: boolean;
   receiptFooter: string;
+  /**
+   * PII retention window in months (owner decision 2026-11-18): customer
+   * fields on orders older than this are anonymized by the daily job. 1–240;
+   * 0 is never accepted — it would anonymize everything on the next cron.
+   */
+  piiRetentionMonths: number;
 }
 
 export const SHOP_SETTINGS_DEFAULTS: ShopSettings = {
@@ -60,6 +66,7 @@ export const SHOP_SETTINGS_DEFAULTS: ShopSettings = {
   paymentMethods: ["cash", "cash_on_delivery", "card_terminal"],
   orderingEnabled: true,
   receiptFooter: "شكراً لكم — JPasta، باستا طازة تُطبخ عند الطلب",
+  piiRetentionMonths: 12,
 };
 
 const CLOCK = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -83,6 +90,14 @@ function boolOr(value: string | undefined, fallback: boolean): boolean {
   if (value === "true") return true;
   if (value === "false") return false;
   return fallback;
+}
+
+function retentionMonthsOr(value: string | undefined): number {
+  if (value === undefined) return SHOP_SETTINGS_DEFAULTS.piiRetentionMonths;
+  const n = Number.parseInt(value, 10);
+  return Number.isInteger(n) && n >= 1 && n <= 240
+    ? n
+    : SHOP_SETTINGS_DEFAULTS.piiRetentionMonths;
 }
 
 function paymentMethodsOr(value: string | undefined): PaymentMethod[] {
@@ -123,6 +138,7 @@ export function parseShopSettings(
     paymentMethods: paymentMethodsOr(map.get("payment_methods")),
     orderingEnabled: boolOr(map.get("ordering_enabled"), d.orderingEnabled),
     receiptFooter: map.get("receipt_footer")?.trim() || d.receiptFooter,
+    piiRetentionMonths: retentionMonthsOr(map.get("pii_retention_months")),
   };
 }
 

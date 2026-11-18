@@ -6,6 +6,7 @@ import { ConsolePageShell } from "@/components/console/page-shell";
 import { PushToggle } from "@/components/console/push-toggle";
 import { ZonesEditor } from "./zones-editor";
 import { ShopSettingsEditor } from "./shop-settings-editor";
+import { PrivacyTools } from "./privacy-tools";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +70,7 @@ export default async function SettingsPage() {
       </section>
 
       <ZonesEditor />
+      <PrivacyTools />
     </ConsolePageShell>
   );
 }
