@@ -4,7 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>JPasta — المرجع الهندسي الكامل</title>
-<meta name="description" content="الوثيقة التقنية الشاملة لنظام JPasta: البنية التحتية على Cloudflare، دورة حياة الطلب، قواعد البيانات، واجهات البرمجة، والأمان وفق OWASP ASVS L2.">
+    <meta
+      name="description"
+      content="الوثيقة التقنية الشاملة لنظام JPasta: البنية التحتية على Cloudflare، دورة حياة الطلب، قواعد البيانات، واجهات البرمجة، والأمان وفق OWASP ASVS L2."
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -524,8 +527,8 @@
             <h4><span class="ico">🏪</span>المتجر — Storefront</h4>
             <p>
               القائمة، السلة، ورقة التخصيص، إرسال الطلب، صفحة متابعة الحالة برمز
-              سري في الرابط. تعمل كتطبيق مثبَّت (PWA) وتتعامل مع انقطاع النت بصفّ
-              محلي.
+              سري في الرابط. تعمل كتطبيق مثبَّت (PWA) وتتعامل مع انقطاع النت
+              بصفّ محلي.
             </p>
             <span class="tag">لا حساب للزبون</span>
           </div>
@@ -548,10 +551,10 @@
           </div>
         </div>
         <div class="note">
-          <b>الثوابت الحاكمة (لا تُكسر):</b> المال أعداد صحيحة بأقراص الفلُّس فقط
-          عبر <span class="mono">lib/pricing.ts</span> · كل كتابة طلب تحمل مفتاح
-          idempotency مربوطاً ببصمة الحمولة · مصدر الطلب يملكه السيرفر حصراً ·
-          الانتقالات شرطية داخل transaction مع سجل تدقيق · الوقت
+          <b>الثوابت الحاكمة (لا تُكسر):</b> المال أعداد صحيحة بأقراص الفلُّس
+          فقط عبر <span class="mono">lib/pricing.ts</span> · كل كتابة طلب تحمل
+          مفتاح idempotency مربوطاً ببصمة الحمولة · مصدر الطلب يملكه السيرفر
+          حصراً · الانتقالات شرطية داخل transaction مع سجل تدقيق · الوقت
           <span class="mono">Asia/Hebron</span> حصراً · الأرقام المسلسلة بلا
           فجوات لكل يوم محلي · المخزون لا ينزل تحت الصفر · الفشل المغلق على
           قواعد المال والأسرار.
@@ -709,8 +712,8 @@
                 <td>Bearer CRON_SECRET</td>
                 <td>—</td>
                 <td>
-                  الصيانة اليومية: جلسات منتهية، محاولات دخول قديمة، إخفاء هوية PII
-                  بعد نافذة الاحتفاظ
+                  الصيانة اليومية: جلسات منتهية، محاولات دخول قديمة، إخفاء هوية
+                  PII بعد نافذة الاحتفاظ
                 </td>
               </tr>
               <tr>
@@ -1224,9 +1227,9 @@
           <div class="card">
             <h4><span class="ico">🔌</span>worker.ts — المدخل المخصص</h4>
             <p>
-              يصدّر صنفَي Durable Object (<span class="mono">OrderFeed</span> للبث
-              الحي و<span class="mono">DOQueueHandler</span> للطابور — كلاهما
-              SQLite-backed أي ضمن الخطة المجانية)، ويعترض
+              يصدّر صنفَي Durable Object (<span class="mono">OrderFeed</span>
+              للبث الحي و<span class="mono">DOQueueHandler</span> للطابور —
+              كلاهما SQLite-backed أي ضمن الخطة المجانية)، ويعترض
               <span class="mono">/api/realtime</span> قبل Next.js، ويستضيف معالج
               <span class="mono">scheduled</span> الذي يستدعي مسار الصيانة
               اليومية بالسر عبر مرجع ذاتي.
@@ -1525,10 +1528,10 @@
             <div class="t">الانتقالات شرطية</div>
             <div class="d">
               <span class="mono">UPDATE … WHERE status = expected</span> داخل
-              transaction: لو غيّر جهاز آخر الحالة لحظة التنفيذ، يفشل بتعارض واضح
-              («غيّرت الحالة من جهاز آخر») بدل الكتابة فوق قرار. كل انتقال يُلحق
-              بصف في <span class="mono">order_status_history</span> — بما فيه
-              التراجع (undo) خلال ٥ دقائق لأخطاء النقر.
+              transaction: لو غيّر جهاز آخر الحالة لحظة التنفيذ، يفشل بتعارض
+              واضح («غيّرت الحالة من جهاز آخر») بدل الكتابة فوق قرار. كل انتقال
+              يُلحق بصف في <span class="mono">order_status_history</span> — بما
+              فيه التراجع (undo) خلال ٥ دقائق لأخطاء النقر.
             </div>
           </div>
           <div>
@@ -1563,8 +1566,8 @@
       <section id="s5">
         <h2><span class="idx">05</span>قاعدة البيانات — القواعد قبل الجداول</h2>
         <p class="sub">
-          الفلسفة: «كل طلب قابل لإعادة البناء الكامل، كل تغيير سعر يترك سجلاً، كل
-          حركة مخزون تحمل سبباً». القاعدة نفسها هي خط الدفاع الأخير — القيود
+          الفلسفة: «كل طلب قابل لإعادة البناء الكامل، كل تغيير سعر يترك سجلاً،
+          كل حركة مخزون تحمل سبباً». القاعدة نفسها هي خط الدفاع الأخير — القيود
           مكتوبة بـ SQL لا بالكود فقط.
         </p>
 
@@ -1615,14 +1618,14 @@
 
         <h3>الخصوصية على مستوى الصف</h3>
         <div class="note">
-          الاسم والهاتف والعنوان وملاحظة الزبون <b>وملاحظات أسطر الطلب</b> تخزَّن
-          بأغلفة <span class="mono">enc:v1:&lt;iv&gt;:&lt;ct&gt;</span> بـ
-          AES-256-GCM (WebCrypto) — كل قيمة IV جديد وتوثيق GCM يجعل التلاعب يفكك
-          بدل أن يعرض بايتات مزيفة. بادئة الإصدار تسمح بتدوير المفتاح صفاً صفاً.
-          أي قيمة بلا بادئة = صف قديم يقرأ كما هو (legacy passthrough). وفشل فك
-          التشفير يعرض placeholder ظاهر
-          <span class="mono">[تعذر فك التشفير]</span> — لا يعرض فراغاً يوهم أن
-          الزبون بلا اسم.
+          الاسم والهاتف والعنوان وملاحظة الزبون
+          <b>وملاحظات أسطر الطلب</b> تخزَّن بأغلفة
+          <span class="mono">enc:v1:&lt;iv&gt;:&lt;ct&gt;</span> بـ AES-256-GCM
+          (WebCrypto) — كل قيمة IV جديد وتوثيق GCM يجعل التلاعب يفكك بدل أن يعرض
+          بايتات مزيفة. بادئة الإصدار تسمح بتدوير المفتاح صفاً صفاً. أي قيمة بلا
+          بادئة = صف قديم يقرأ كما هو (legacy passthrough). وفشل فك التشفير يعرض
+          placeholder ظاهر <span class="mono">[تعذر فك التشفير]</span> — لا يعرض
+          فراغاً يوهم أن الزبون بلا اسم.
         </div>
         <div class="note">
           <b>الاحتفاظ والخصوصية:</b> المهمة اليومية تجهّر بيانات الزبائن في
@@ -1865,8 +1868,8 @@
             <h4><span class="ico">📥</span>القراءة والبنية</h4>
             <p>
               <span class="mono">GET /api/health</span> فحص حي مع فحص القاعدة ·
-              <span class="mono">GET /api/realtime-token</span> رمز WS موقّع عمره
-              دقيقتان · <span class="mono">GET /api/media/*</span> صور R2
+              <span class="mono">GET /api/realtime-token</span> رمز WS موقّع
+              عمره دقيقتان · <span class="mono">GET /api/media/*</span> صور R2
               البديلة · <span class="mono">WS /api/realtime</span> البث الحي
               (اعتراض worker.ts) ·
               <span class="mono">GET /api/cron/prune</span> الصيانة (Bearer) ·
@@ -1930,8 +1933,8 @@
               بحث O(1) عبر <span class="mono">pin_lookup</span> = HMAC-SHA256
               مربوط بـ AUTH_PEPPER — الرمز الخام لا يصل القاعدة ولا يُفهرس.
               التحقق الفعلي bcrypt (cost 12) يعمل <b>داخل Postgres</b> عبر
-              pgcrypto على الـ HMAC المُفلفل — العدادات المكلفة خارج workerd (سقف
-              WebCrypto 100k) والرمز لا يُخزَّن ولا يُحسب في التطبيق.
+              pgcrypto على الـ HMAC المُفلفل — العدادات المكلفة خارج workerd
+              (سقف WebCrypto 100k) والرمز لا يُخزَّن ولا يُحسب في التطبيق.
             </p>
             <span class="tag">peppered · pgcrypto</span>
           </div>
@@ -1959,9 +1962,9 @@
           webkit: يقتل hydration على http حتى مع localhost).
           <span class="mono">connect-src</span> مثبت على
           <span class="mono">'self'</span> + أصل wss الصريح فقط — وكل فرع
-          غائب/تالف يفشل مغلوكاً (لا <span class="mono">wss:</span> حراً). وتقارير
-          المخالفات تسير لحوض يسجل الـ directive والمضيف فقط — عناوين الصفحات
-          تحمل رمز الحالة السري فلا تُسجَّل كاملة.
+          غائب/تالف يفشل مغلوكاً (لا <span class="mono">wss:</span> حراً).
+          وتقارير المخالفات تسير لحوض يسجل الـ directive والمضيف فقط — عناوين
+          الصفحات تحمل رمز الحالة السري فلا تُسجَّل كاملة.
         </p>
 
         <h3>قواعد لا تُخترق بالواجهة</h3>
@@ -2114,8 +2117,8 @@
             <p>
               لو انقطع النت عند الزبون بعد «إرسال»، الطلب يُحفظ في IndexedDB
               (Dexie) ويعود تلقائياً مرة واحدة بالضبط عند العودة — مفتاح
-              idempotency معه، والقيد الفريد في القاعدة هو الضمانة الأخيرة. مُغطى
-              باختبار وحدة وتكامل.
+              idempotency معه، والقيد الفريد في القاعدة هو الضمانة الأخيرة.
+              مُغطى باختبار وحدة وتكامل.
             </p>
           </div>
           <div class="card">
@@ -2148,7 +2151,9 @@
 
       <!-- ══════════════ 12. التكلفة ══════════════ -->
       <section id="s12">
-        <h2><span class="idx">12</span>التكلفة — صفر مطلق، مُدقَّق بتاريخ محدد</h2>
+        <h2>
+          <span class="idx">12</span>التكلفة — صفر مطلق، مُدقَّق بتاريخ محدد
+        </h2>
         <div class="table-scroll">
           <table>
             <thead>
