@@ -39,15 +39,27 @@ export function reportToHeader(): string {
   });
 }
 
+/**
+ * The page origin as a WebSocket origin, or "" when no usable origin can be
+ * derived (missing, malformed, or opaque — e.g. "about:blank" parses but its
+ * `url.origin` is the string "null", which CSP would treat as a host named
+ * "null"). Fail-closed: a bare "wss:" here would let connect-src open a
+ * WebSocket to ANY host. Same-origin WebSockets stay reachable through
+ * 'self' regardless (CSP3 §6.7.2.4 matches http↔ws / https↔wss pairs).
+ */
 function wsOrigin(origin?: string): string {
-  if (!origin) return "wss:";
+  if (!origin) return "";
   try {
     const url = new URL(origin);
     url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-    return url.origin;
+    return url.origin === "null" ? "" : url.origin;
   } catch {
-    return "wss:";
+    return "";
   }
+}
+
+function connectSrc(origin?: string): string {
+  return ["connect-src 'self'", wsOrigin(origin)].filter(Boolean).join(" ");
 }
 
 /**
@@ -86,7 +98,7 @@ export function buildCsp(nonce: string, origin?: string): string {
     "base-uri 'none'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    `connect-src 'self' ${wsOrigin(origin)}`,
+    connectSrc(origin),
     "worker-src 'self' blob:",
     "manifest-src 'self'",
     `report-uri ${CSP_REPORT_URI}`,
@@ -115,7 +127,7 @@ export function buildStaticCsp(origin?: string): string {
     "base-uri 'none'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    `connect-src 'self' ${wsOrigin(origin)}`,
+    connectSrc(origin),
     "worker-src 'self' blob:",
     "manifest-src 'self'",
     `report-uri ${CSP_REPORT_URI}`,
